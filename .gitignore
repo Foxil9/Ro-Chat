@@ -24,6 +24,9 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+.clineignore
+.clinerules
+*.xmls
 
 # Electron
 out/

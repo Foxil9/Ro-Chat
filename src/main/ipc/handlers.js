@@ -1,12 +1,17 @@
 const { ipcMain } = require('electron');
+const axios = require('axios');
 const robloxAuth = require('../auth/robloxAuth');
 const tokenManager = require('../auth/tokenManager');
 const detector = require('../detection/detector');
 const secureStore = require('../storage/secureStore');
 const logger = require('../logging/logger');
 
+// Backend server configuration - will be loaded from environment
+const BACKEND_URL = process.env.SERVER_URL || 'http://localhost:3000';
+
 // Store reference to main window for sending events
 let mainWindow = null;
+let settingsWindow = null;
 
 /**
  * Set the main window reference
@@ -42,6 +47,21 @@ function registerHandlers() {
   ipcMain.handle('detection:getServer', handleGetServer);
   ipcMain.handle('detection:start', handleStartDetection);
   ipcMain.handle('detection:stop', handleStopDetection);
+
+  // Chat handlers
+  ipcMain.handle('chat:send', handleSendMessage);
+  ipcMain.handle('chat:history', handleLoadHistory);
+
+  // Window control handlers
+  ipcMain.handle('window:minimize', handleMinimize);
+  ipcMain.handle('window:maximize', handleMaximize);
+  ipcMain.handle('window:close', handleClose);
+  ipcMain.handle('window:setAlwaysOnTop', handleSetAlwaysOnTop);
+  ipcMain.handle('window:setOpacity', handleSetOpacity);
+  ipcMain.handle('window:openSettings', handleOpenSettings);
+
+  // Settings handlers
+  ipcMain.handle('settings:applyTheme', handleApplyTheme);
 
   logger.info('IPC handlers registered successfully');
 }
@@ -136,6 +156,245 @@ async function handleStopDetection(event) {
     logger.error('Failed to stop detection', { error: error.message });
     return { success: false, error: error.message };
   }
+}
+
+// ==================== CHAT HANDLERS ====================
+
+/**
+ * Handle send message request
+ * Sends message to backend server which then broadcasts via Socket.io
+ */
+async function handleSendMessage(event, { jobId, message }) {
+  try {
+    logger.info('Send message requested', { jobId, messageLength: message?.length });
+
+    // Get current user info
+    const user = robloxAuth.getCurrentUser();
+    if (!user) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    // Send to backend server
+    const response = await axios.post(`${BACKEND_URL}/api/chat/send`, {
+      jobId,
+      message,
+      userId: user.userId,
+      username: user.username
+    }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    logger.info('Message sent successfully', { jobId });
+    return { success: true };
+  } catch (error) {
+    logger.error('Failed to send message', { 
+      error: error.message,
+      jobId,
+      backendUrl: BACKEND_URL
+    });
+    return { 
+      success: false, 
+      error: error.response?.data?.error || 'Failed to send message' 
+    };
+  }
+}
+
+/**
+ * Handle load chat history request
+ * Fetches messages from backend server for a specific JobId
+ */
+async function handleLoadHistory(event, jobId) {
+  try {
+    logger.info('Load history requested', { jobId });
+
+    // Fetch from backend server
+    const response = await axios.get(`${BACKEND_URL}/api/chat/history`, {
+      params: { jobId, limit: 50 },
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    logger.info('History loaded successfully', { 
+      jobId, 
+      messageCount: response.data.messages?.length || 0 
+    });
+
+    return { 
+      success: true, 
+      messages: response.data.messages || [] 
+    };
+  } catch (error) {
+    logger.error('Failed to load history', { 
+      error: error.message,
+      jobId,
+      backendUrl: BACKEND_URL
+    });
+    return { 
+      success: false, 
+      error: error.response?.data?.error || 'Failed to load history',
+      messages: []
+    };
+  }
+}
+
+// ==================== WINDOW CONTROL HANDLERS ====================
+
+/**
+ * Handle window minimize - minimize to small tab
+ */
+function handleMinimize(event) {
+  if (mainWindow) {
+    const bounds = mainWindow.getBounds();
+
+    // Store original bounds and resizable state
+    if (!mainWindow.originalBounds) {
+      mainWindow.originalBounds = { ...bounds };
+      mainWindow.isMinimizedTab = false;
+    }
+
+    // Toggle between minimized tab and normal
+    if (mainWindow.isMinimizedTab) {
+      // Get current position (in case tab was moved)
+      const currentBounds = mainWindow.getBounds();
+
+      // Restore to original size but at current position
+      mainWindow.setResizable(true);
+      mainWindow.setBounds({
+        width: mainWindow.originalBounds.width,
+        height: mainWindow.originalBounds.height,
+        x: currentBounds.x,
+        y: currentBounds.y
+      }, true);
+      mainWindow.setMinimumSize(320, 450);
+      mainWindow.setMaximumSize(800, 1200);
+      mainWindow.isMinimizedTab = false;
+
+      // Remove move listener
+      if (mainWindow.moveListener) {
+        mainWindow.removeListener('move', mainWindow.moveListener);
+        mainWindow.moveListener = null;
+      }
+    } else {
+      // Save current bounds before minimizing
+      mainWindow.originalBounds = { ...bounds };
+
+      // Minimize to small tab - keep width, only change height
+      mainWindow.setResizable(false);
+      mainWindow.setMinimumSize(bounds.width, 55);
+      mainWindow.setMaximumSize(bounds.width, 55);
+      mainWindow.setBounds({
+        width: bounds.width,
+        height: 55,
+        x: bounds.x,
+        y: bounds.y
+      }, true);
+      mainWindow.isMinimizedTab = true;
+
+      // Track position changes while minimized
+      mainWindow.moveListener = () => {
+        // Position is automatically tracked by Electron
+        // No action needed - we'll get current position on restore
+      };
+      mainWindow.on('move', mainWindow.moveListener);
+    }
+  }
+  return { success: true, isMinimized: mainWindow?.isMinimizedTab || false };
+}
+
+/**
+ * Handle window maximize/restore
+ */
+function handleMaximize(event) {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  }
+  return { success: true };
+}
+
+/**
+ * Handle window close
+ */
+function handleClose(event) {
+  if (mainWindow) {
+    mainWindow.close();
+  }
+  return { success: true };
+}
+
+/**
+ * Handle set always on top
+ */
+function handleSetAlwaysOnTop(event, flag) {
+  if (mainWindow) {
+    mainWindow.setAlwaysOnTop(flag);
+  }
+  return { success: true };
+}
+
+/**
+ * Handle set opacity
+ */
+function handleSetOpacity(event, opacity) {
+  if (mainWindow) {
+    mainWindow.setOpacity(opacity);
+  }
+  return { success: true };
+}
+
+/**
+ * Handle open settings window
+ */
+function handleOpenSettings(event) {
+  const { BrowserWindow } = require('electron');
+  const path = require('path');
+
+  // If settings window already exists, focus it
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    settingsWindow.focus();
+    return { success: true };
+  }
+
+  // Create new settings window
+  settingsWindow = new BrowserWindow({
+    width: 500,
+    height: 600,
+    resizable: false,
+    frame: false,
+    backgroundColor: '#0a0c14',
+    parent: mainWindow,
+    modal: false,
+    webPreferences: {
+      preload: path.join(__dirname, '../../preload/preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true
+    }
+  });
+
+  settingsWindow.loadFile(path.join(__dirname, '../../renderer/views/settings.html'));
+
+  settingsWindow.on('closed', () => {
+    settingsWindow = null;
+  });
+
+  return { success: true };
+}
+
+/**
+ * Handle apply theme - sends theme to main window
+ */
+function handleApplyTheme(event, theme) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('theme:changed', theme);
+  }
+  return { success: true };
 }
 
 module.exports = {

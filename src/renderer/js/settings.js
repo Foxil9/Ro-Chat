@@ -4,7 +4,10 @@ class SettingsManager {
   constructor() {
     this.settings = {
       theme: 'auto',
-      autoStartDetection: false
+      autoStartDetection: false,
+      draggableHeader: true,
+      alwaysOnTop: true,
+      opacity: 100
     };
     this.isInitialized = false;
   }
@@ -63,8 +66,37 @@ class SettingsManager {
     this.applyTheme(this.settings.theme);
 
     // Update UI elements
-    document.getElementById('theme-select').value = this.settings.theme;
-    document.getElementById('auto-start-detection').checked = this.settings.autoStartDetection;
+    const themeSelect = document.getElementById('theme-select');
+    const autoStartDetection = document.getElementById('auto-start-detection');
+    const draggableHeader = document.getElementById('draggable-header');
+    const alwaysOnTop = document.getElementById('always-on-top');
+    const opacitySlider = document.getElementById('opacity-slider');
+    const opacityValue = document.getElementById('opacity-value');
+
+    if (themeSelect) themeSelect.value = this.settings.theme;
+    if (autoStartDetection) autoStartDetection.checked = this.settings.autoStartDetection;
+    if (draggableHeader) draggableHeader.checked = this.settings.draggableHeader;
+    if (alwaysOnTop) alwaysOnTop.checked = this.settings.alwaysOnTop;
+    if (opacitySlider) {
+      opacitySlider.value = this.settings.opacity;
+      if (opacityValue) opacityValue.textContent = this.settings.opacity + '%';
+    }
+
+    // Apply draggable setting
+    localStorage.setItem('draggable', this.settings.draggableHeader ? 'true' : 'false');
+    if (window.app) {
+      window.app.updateDraggable();
+    }
+
+    // Apply always on top setting
+    if (window.electronAPI?.window?.setAlwaysOnTop) {
+      window.electronAPI.window.setAlwaysOnTop(this.settings.alwaysOnTop);
+    }
+
+    // Apply opacity setting
+    if (window.electronAPI?.window?.setOpacity) {
+      window.electronAPI.window.setOpacity(this.settings.opacity / 100);
+    }
   }
 
   /**
@@ -98,23 +130,88 @@ class SettingsManager {
    * Setup event listeners
    */
   setupEventListeners() {
+    // Close settings window button
+    const closeBtn = document.getElementById('close-settings-btn');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        window.close();
+      });
+    }
+
     // Theme select
-    document.getElementById('theme-select').addEventListener('change', (e) => {
-      this.settings.theme = e.target.value;
-      this.applyTheme(this.settings.theme);
-      this.saveSettings();
-    });
+    const themeSelect = document.getElementById('theme-select');
+    if (themeSelect) {
+      themeSelect.addEventListener('change', (e) => {
+        this.settings.theme = e.target.value;
+        this.applyTheme(this.settings.theme);
+        this.saveSettings();
+
+        // Send theme change to main window
+        if (window.electronAPI?.settings?.applyTheme) {
+          window.electronAPI.settings.applyTheme(this.settings.theme);
+        }
+      });
+    }
 
     // Auto-start detection checkbox
-    document.getElementById('auto-start-detection').addEventListener('change', (e) => {
-      this.settings.autoStartDetection = e.target.checked;
-      this.saveSettings();
-    });
+    const autoStartDetection = document.getElementById('auto-start-detection');
+    if (autoStartDetection) {
+      autoStartDetection.addEventListener('change', (e) => {
+        this.settings.autoStartDetection = e.target.checked;
+        this.saveSettings();
+      });
+    }
+
+    // Draggable header checkbox
+    const draggableHeader = document.getElementById('draggable-header');
+    if (draggableHeader) {
+      draggableHeader.addEventListener('change', (e) => {
+        this.settings.draggableHeader = e.target.checked;
+        this.saveSettings();
+        localStorage.setItem('draggable', e.target.checked ? 'true' : 'false');
+        if (window.app) {
+          window.app.updateDraggable();
+        }
+      });
+    }
+
+    // Always on top checkbox
+    const alwaysOnTop = document.getElementById('always-on-top');
+    if (alwaysOnTop) {
+      alwaysOnTop.addEventListener('change', (e) => {
+        this.settings.alwaysOnTop = e.target.checked;
+        this.saveSettings();
+        if (window.electronAPI?.window?.setAlwaysOnTop) {
+          window.electronAPI.window.setAlwaysOnTop(e.target.checked);
+        }
+      });
+    }
+
+    // Opacity slider
+    const opacitySlider = document.getElementById('opacity-slider');
+    const opacityValue = document.getElementById('opacity-value');
+    if (opacitySlider) {
+      opacitySlider.addEventListener('input', (e) => {
+        const value = parseInt(e.target.value);
+        this.settings.opacity = value;
+        if (opacityValue) opacityValue.textContent = value + '%';
+        if (window.electronAPI?.window?.setOpacity) {
+          window.electronAPI.window.setOpacity(value / 100);
+        }
+      });
+
+      opacitySlider.addEventListener('change', (e) => {
+        this.saveSettings();
+      });
+    }
 
     // Logout button
-    document.getElementById('logout-btn').addEventListener('click', () => {
-      this.handleLogout();
-    });
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', () => {
+        this.handleLogout();
+      });
+    }
   }
 
   /**

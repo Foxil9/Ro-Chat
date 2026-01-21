@@ -14,8 +14,62 @@ contextBridge.exposeInMainWorld('electronAPI', {
   detection: {
     getServer: () => ipcRenderer.invoke('detection:getServer'),
     start: () => ipcRenderer.invoke('detection:start'),
-    stop: () => ipcRenderer.invoke('detection:stop')
+    stop: () => ipcRenderer.invoke('detection:stop'),
+    onServerChanged: (callback) => {
+      const listener = (event, serverInfo) => callback(serverInfo);
+      ipcRenderer.on('detection:serverChanged', listener);
+      return () => ipcRenderer.removeListener('detection:serverChanged', listener);
+    }
   },
+
+  // Chat methods
+  chat: {
+    sendMessage: (data) => ipcRenderer.invoke('chat:send', data),
+    loadHistory: (jobId) => ipcRenderer.invoke('chat:history', jobId)
+  },
+
+  // Event listeners
+  onServerChanged: (callback) => {
+    const listener = (event, serverInfo) => callback(serverInfo);
+    ipcRenderer.on('detection:serverChanged', listener);
+
+    // Return unsubscribe function
+    return () => {
+      ipcRenderer.removeListener('detection:serverChanged', listener);
+    };
+  },
+
+  onThemeChanged: (callback) => {
+    const listener = (event, theme) => callback(theme);
+    ipcRenderer.on('theme:changed', listener);
+    return () => ipcRenderer.removeListener('theme:changed', listener);
+  },
+
+  // Window controls
+  window: {
+    minimize: () => ipcRenderer.invoke('window:minimize'),
+    maximize: () => ipcRenderer.invoke('window:maximize'),
+    close: () => ipcRenderer.invoke('window:close'),
+    setAlwaysOnTop: (flag) => ipcRenderer.invoke('window:setAlwaysOnTop', flag),
+    setOpacity: (opacity) => ipcRenderer.invoke('window:setOpacity', opacity),
+    openSettings: () => ipcRenderer.invoke('window:openSettings')
+  },
+
+  // Settings
+  settings: {
+    applyTheme: (theme) => ipcRenderer.invoke('settings:applyTheme', theme)
+  }
+});
+
+// Expose unified electron API for chat.js compatibility
+contextBridge.exposeInMainWorld('electron', {
+  // Auth methods
+  logout: () => ipcRenderer.invoke('auth:logout'),
+  getAuthStatus: () => ipcRenderer.invoke('auth:getStatus'),
+
+  // Chat methods
+  sendMessage: (data) => ipcRenderer.invoke('chat:send', data),
+  loadHistory: (jobId) => ipcRenderer.invoke('chat:history', jobId),
 
   // Event listeners
   onServerChanged: (callback) => {

@@ -16,11 +16,18 @@ function saveAuth(authData) {
   try {
     logger.info('Saving authentication data', { username: authData.username });
     secureStore.set('auth', {
-      robloxToken: authData.robloxToken,
+      // OAuth2 tokens
+      accessToken: authData.accessToken,
+      refreshToken: authData.refreshToken,
+      idToken: authData.idToken,
+      tokenType: authData.tokenType,
+      // User info
       userId: authData.userId,
       username: authData.username,
-      expiresAt: authData.expiresAt,
-      refreshToken: authData.refreshToken
+      displayName: authData.displayName,
+      picture: authData.picture,
+      // Expiry
+      expiresAt: authData.expiresAt
     });
     return true;
   } catch (error) {
@@ -33,17 +40,12 @@ function saveAuth(authData) {
 function getAuth() {
   try {
     const auth = secureStore.get('auth');
-    
+
     if (!auth) {
       return null;
     }
-    
-    // Check if token is expired
-    if (Date.now() >= auth.expiresAt) {
-      logger.warn('Authentication token expired', { expiresAt: auth.expiresAt });
-      return null;
-    }
-    
+
+    // Return auth data (expiry checking is handled by robloxAuth.js with refresh logic)
     return auth;
   } catch (error) {
     logger.error('Failed to get authentication data', { error: error.message });

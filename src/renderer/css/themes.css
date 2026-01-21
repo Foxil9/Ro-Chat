@@ -1,326 +1,407 @@
-/* Theme styles for RoChat */
+/* RoChat Glassmorphism Theme Variants */
 
-/* Light Theme (default) */
+/* =========================
+   PURPLE-BLUE (Default)
+   ========================= */
+body,
+body.theme-purple-blue {
+    --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --gradient-secondary: linear-gradient(135deg, #667eea 0%, #4facfe 100%);
+    --gradient-accent: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    --gradient-purple-blue: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #4facfe 100%);
+    --accent-purple: #667eea;
+    --accent-blue: #4facfe;
+    --accent-cyan: #a8edea;
+    --accent-pink: #fed6e3;
+}
+
+body.theme-purple-blue .orb-1 {
+    background: radial-gradient(circle, #667eea, transparent);
+}
+
+body.theme-purple-blue .orb-2 {
+    background: radial-gradient(circle, #764ba2, transparent);
+}
+
+body.theme-purple-blue .orb-3 {
+    background: radial-gradient(circle, #4facfe, transparent);
+}
+
+/* =========================
+   BLUE-CYAN Variant
+   ========================= */
+body.theme-blue-cyan {
+    --gradient-primary: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    --gradient-secondary: linear-gradient(135deg, #4facfe 0%, #43e97b 100%);
+    --gradient-accent: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    --gradient-purple-blue: linear-gradient(135deg, #4facfe 0%, #00f2fe 50%, #43e97b 100%);
+    --accent-purple: #4facfe;
+    --accent-blue: #00f2fe;
+    --accent-cyan: #43e97b;
+    --accent-pink: #38f9d7;
+}
+
+body.theme-blue-cyan .logo {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+body.theme-blue-cyan .orb-1 {
+    background: radial-gradient(circle, #4facfe, transparent);
+}
+
+body.theme-blue-cyan .orb-2 {
+    background: radial-gradient(circle, #00f2fe, transparent);
+}
+
+body.theme-blue-cyan .orb-3 {
+    background: radial-gradient(circle, #43e97b, transparent);
+}
+
+body.theme-blue-cyan .session-item.active {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 50%, #43e97b 100%);
+}
+
+body.theme-blue-cyan .game-info h2,
+body.theme-blue-cyan .login-container h1,
+body.theme-blue-cyan .settings-header h2,
+body.theme-blue-cyan .msg-author,
+body.theme-blue-cyan .gradient-text {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+body.theme-blue-cyan .chat-msg.local .msg-author {
+    background: linear-gradient(135deg, #4facfe 0%, #43e97b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+body.theme-blue-cyan button#btnSend,
+body.theme-blue-cyan .btn-primary {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+body.theme-blue-cyan .chat-msg.local {
+    background: linear-gradient(135deg,
+        rgba(79, 172, 254, 0.2) 0%,
+        rgba(0, 242, 254, 0.15) 50%,
+        rgba(67, 233, 123, 0.2) 100%);
+    border-color: rgba(79, 172, 254, 0.3);
+}
+
+body.theme-blue-cyan .badge.online {
+    background: rgba(67, 233, 123, 0.2);
+    border-color: #43e97b;
+    color: #43e97b;
+}
+
+body.theme-blue-cyan .status-indicator.online {
+    background: #43e97b;
+}
+
+/* =========================
+   PINK-PURPLE Variant
+   ========================= */
+body.theme-pink-purple {
+    --gradient-primary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --gradient-secondary: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    --gradient-accent: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+    --gradient-purple-blue: linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #fa709a 100%);
+    --accent-purple: #f093fb;
+    --accent-blue: #fa709a;
+    --accent-cyan: #fee140;
+    --accent-pink: #f5576c;
+}
+
+body.theme-pink-purple .logo {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+body.theme-pink-purple .orb-1 {
+    background: radial-gradient(circle, #f093fb, transparent);
+}
+
+body.theme-pink-purple .orb-2 {
+    background: radial-gradient(circle, #f5576c, transparent);
+}
+
+body.theme-pink-purple .orb-3 {
+    background: radial-gradient(circle, #fa709a, transparent);
+}
+
+body.theme-pink-purple .session-item.active {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #fa709a 100%);
+}
+
+body.theme-pink-purple .game-info h2,
+body.theme-pink-purple .login-container h1,
+body.theme-pink-purple .settings-header h2,
+body.theme-pink-purple .msg-author,
+body.theme-pink-purple .gradient-text {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+body.theme-pink-purple .chat-msg.local .msg-author {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+body.theme-pink-purple button#btnSend,
+body.theme-pink-purple .btn-primary {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+body.theme-pink-purple .chat-msg.local {
+    background: linear-gradient(135deg,
+        rgba(240, 147, 251, 0.2) 0%,
+        rgba(245, 87, 108, 0.15) 50%,
+        rgba(250, 112, 154, 0.2) 100%);
+    border-color: rgba(240, 147, 251, 0.3);
+}
+
+body.theme-pink-purple .badge.online {
+    background: rgba(254, 225, 64, 0.2);
+    border-color: #fee140;
+    color: #fee140;
+}
+
+body.theme-pink-purple .status-indicator.online {
+    background: #fee140;
+}
+
+/* =========================
+   DARK Theme
+   ========================= */
+body.theme-dark {
+    --bg-dark-base: #0a0c14;
+    --bg-dark-primary: #0f1117;
+    --bg-dark-secondary: #1a1d2e;
+    --text-primary: #e8eaed;
+    --text-secondary: #b8bcc8;
+    --text-muted: #6e7191;
+}
+
+/* =========================
+   LIGHT Theme - Cold Light Colors
+   ========================= */
 body.theme-light {
-  background-color: #ffffff;
-  color: #333333;
+    --bg-dark-base: #e8f0ff;
+    --bg-dark-primary: #d4e4ff;
+    --bg-dark-secondary: #c0d8ff;
+    --text-primary: #1e3a5f;
+    --text-secondary: #2d4a6f;
+    --text-muted: #5a7a9f;
+    --glass-light: rgba(255, 255, 255, 0.6);
+    --glass-medium: rgba(255, 255, 255, 0.7);
 }
 
-body.theme-light .login-container {
-  background-color: #ffffff;
-  border: 1px solid #e0e0e0;
+body.theme-light {
+    background: linear-gradient(135deg, #e8f0ff 0%, #f0e8ff 100%);
 }
 
-body.theme-light .subtitle {
-  color: #666666;
-}
-
-body.theme-light .chat-header {
-  background-color: #ffffff;
-  border-bottom: 1px solid #e0e0e0;
-}
-
+body.theme-light .chat-header,
+body.theme-light .login-container,
 body.theme-light .settings-header {
-  background-color: #ffffff;
-  border-bottom: 1px solid #e0e0e0;
+    background: linear-gradient(180deg,
+        rgba(212, 228, 255, 0.95) 0%,
+        rgba(192, 216, 255, 0.9) 100%);
+    border-bottom-color: rgba(102, 126, 234, 0.5);
 }
 
-body.theme-light .settings-content {
-  background-color: #fafafa;
+body.theme-light .chat-messages {
+    background: linear-gradient(180deg,
+        rgba(232, 240, 255, 0.6) 0%,
+        rgba(212, 228, 255, 0.7) 100%);
 }
 
-body.theme-light .setting-item {
-  border-bottom: 1px solid #e8e8e8;
+body.theme-light .chat-input {
+    background: linear-gradient(180deg,
+        rgba(192, 216, 255, 0.85) 0%,
+        rgba(212, 228, 255, 0.9) 100%);
+    border-top-color: rgba(102, 126, 234, 0.4);
 }
 
-body.theme-light .setting-item select {
-  background-color: #ffffff;
-  border-color: #cccccc;
+body.theme-light .btn-icon {
+    color: #2d4a6f;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+body.theme-light .btn-icon:hover {
+    background: rgba(102, 126, 234, 0.2);
+    color: #1e3a5f;
 }
 
 body.theme-light .chat-input input {
-  background-color: #ffffff;
-  border-color: #dddddd;
-  color: #333333;
-}
-
-body.theme-light .chat-input input::placeholder {
-  color: #999999;
+    background: rgba(255, 255, 255, 0.7);
+    border-color: rgba(102, 126, 234, 0.3);
+    color: #1e3a5f;
 }
 
 body.theme-light .chat-input input:focus {
-  border-color: #1976d2;
+    background: rgba(255, 255, 255, 0.85);
+    border-color: rgba(102, 126, 234, 0.6);
 }
 
-/* Dark Theme */
-body.theme-dark {
-  background-color: #1e1e1e;
-  color: #e0e0e0;
+body.theme-light .chat-input input::placeholder {
+    color: #5a7a9f;
 }
 
-body.theme-dark .login-container {
-  background-color: #2d2d2d;
-  border: 1px solid #3d3d3d;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+body.theme-light .btn-primary {
+    background: var(--gradient-primary);
+    color: white;
+    box-shadow: 0 2px 12px rgba(102, 126, 234, 0.4);
 }
 
-body.theme-dark .subtitle {
-  color: #a0a0a0;
+body.theme-light .status-dot {
+    box-shadow: 0 0 8px currentColor;
 }
 
-body.theme-dark .status.success {
-  color: #66bb6a;
+body.theme-light::before {
+    background:
+        radial-gradient(at 40% 20%, rgba(102, 126, 234, 0.2) 0px, transparent 50%),
+        radial-gradient(at 80% 0%, rgba(79, 172, 254, 0.2) 0px, transparent 50%),
+        radial-gradient(at 0% 50%, rgba(168, 237, 234, 0.15) 0px, transparent 50%);
 }
 
-body.theme-dark .status.error {
-  color: #ef5350;
-}
-
-body.theme-dark .chat-header {
-  background-color: #2d2d2d;
-  border-bottom: 1px solid #3d3d3d;
-}
-
-body.theme-dark .server-text {
-  color: #e0e0e0;
-}
-
-body.theme-dark .user-info {
-  color: #b0b0b0;
-}
-
-body.theme-dark .chat-message.remote {
-  background-color: #3d3d3d;
-  color: #e0e0e0;
-}
-
-body.theme-dark .chat-message.error {
-  background-color: #4a2c2c;
-  color: #ef9a9a;
-}
-
-body.theme-dark .message-header {
-  color: #b0b0b0;
-}
-
-body.theme-dark .chat-input {
-  background-color: #2d2d2d;
-  border-top: 1px solid #3d3d3d;
-}
-
-body.theme-dark .chat-input input {
-  background-color: #1e1e1e;
-  border-color: #3d3d3d;
-  color: #e0e0e0;
-}
-
-body.theme-dark .chat-input input::placeholder {
-  color: #666666;
-}
-
-body.theme-dark .chat-input input:focus {
-  border-color: #42a5f5;
-  outline: none;
-}
-
-body.theme-dark .settings-header {
-  background-color: #2d2d2d;
-  border-bottom: 1px solid #3d3d3d;
-}
-
-body.theme-dark .settings-header h2 {
-  color: #e0e0e0;
-}
-
-body.theme-dark .settings-content {
-  background-color: #1e1e1e;
-}
-
-body.theme-dark .setting-group h3 {
-  color: #e0e0e0;
-}
-
-body.theme-dark .setting-item {
-  border-bottom: 1px solid #3d3d3d;
-}
-
-body.theme-dark .setting-item label {
-  color: #b0b0b0;
-}
-
-body.theme-dark .setting-item select {
-  background-color: #2d2d2d;
-  border-color: #4d4d4d;
-  color: #e0e0e0;
-}
-
-body.theme-dark .btn-primary {
-  background-color: #42a5f5;
-}
-
-body.theme-dark .btn-primary:hover:not(:disabled) {
-  background-color: #1e88e5;
-}
-
-body.theme-dark .btn-danger {
-  background-color: #ef5350;
-}
-
-body.theme-dark .btn-danger:hover:not(:disabled) {
-  background-color: #c62828;
-}
-
-body.theme-dark .btn-icon:hover {
-  background-color: #3d3d3d;
-}
-
-/* Auto Theme (inherits from system, defaults to light) */
+/* =========================
+   AUTO Theme (System Preference)
+   ========================= */
 body.theme-auto {
-  background-color: #ffffff;
-  color: #333333;
+    /* Defaults to dark */
+    --bg-dark-base: #0a0c14;
+    --bg-dark-primary: #0f1117;
+    --bg-dark-secondary: #1a1d2e;
+    --text-primary: #e8eaed;
+    --text-secondary: #b8bcc8;
+    --text-muted: #6e7191;
 }
 
-body.theme-auto .login-container {
-  background-color: #ffffff;
-  border: 1px solid #e0e0e0;
+/* Respect system dark mode preference */
+@media (prefers-color-scheme: light) {
+    body.theme-auto {
+        --bg-dark-base: #e8f0ff;
+        --bg-dark-primary: #d4e4ff;
+        --bg-dark-secondary: #c0d8ff;
+        --text-primary: #1e3a5f;
+        --text-secondary: #2d4a6f;
+        --text-muted: #5a7a9f;
+    }
+
+    body.theme-auto {
+        background: linear-gradient(135deg, #e8f0ff 0%, #f0e8ff 100%);
+    }
+
+    body.theme-auto .chat-header,
+    body.theme-auto .login-container,
+    body.theme-auto .settings-header {
+        background: linear-gradient(180deg,
+            rgba(212, 228, 255, 0.95) 0%,
+            rgba(192, 216, 255, 0.9) 100%);
+        border-bottom-color: rgba(102, 126, 234, 0.5);
+    }
+
+    body.theme-auto .chat-messages {
+        background: linear-gradient(180deg,
+            rgba(232, 240, 255, 0.6) 0%,
+            rgba(212, 228, 255, 0.7) 100%);
+    }
+
+    body.theme-auto .chat-input {
+        background: linear-gradient(180deg,
+            rgba(192, 216, 255, 0.85) 0%,
+            rgba(212, 228, 255, 0.9) 100%);
+        border-top-color: rgba(102, 126, 234, 0.4);
+    }
+
+    body.theme-auto .btn-icon {
+        color: #2d4a6f;
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    body.theme-auto .btn-icon:hover {
+        background: rgba(102, 126, 234, 0.2);
+        color: #1e3a5f;
+    }
+
+    body.theme-auto .chat-input input {
+        background: rgba(255, 255, 255, 0.7);
+        border-color: rgba(102, 126, 234, 0.3);
+        color: #1e3a5f;
+    }
+
+    body.theme-auto .chat-input input:focus {
+        background: rgba(255, 255, 255, 0.85);
+        border-color: rgba(102, 126, 234, 0.6);
+    }
+
+    body.theme-auto .chat-input input::placeholder {
+        color: #5a7a9f;
+    }
+
+    body.theme-auto .btn-primary {
+        background: var(--gradient-primary);
+        color: white;
+        box-shadow: 0 2px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    body.theme-auto .status-dot {
+        box-shadow: 0 0 8px currentColor;
+    }
+
+    body.theme-auto::before {
+        background:
+            radial-gradient(at 40% 20%, rgba(102, 126, 234, 0.2) 0px, transparent 50%),
+            radial-gradient(at 80% 0%, rgba(79, 172, 254, 0.2) 0px, transparent 50%),
+            radial-gradient(at 0% 50%, rgba(168, 237, 234, 0.15) 0px, transparent 50%);
+    }
 }
 
-body.theme-auto .chat-header {
-  background-color: #ffffff;
-  border-bottom: 1px solid #e0e0e0;
+/* =========================
+   Shared Theme Overrides
+   ========================= */
+
+/* Ensure glassmorphism effects work across all themes */
+body[class*="theme-"] .msg-avatar {
+    background: var(--gradient-primary);
 }
 
-body.theme-auto .settings-header {
-  background-color: #ffffff;
-  border-bottom: 1px solid #e0e0e0;
+body[class*="theme-"] .session-item::before {
+    background: var(--gradient-primary);
 }
 
-body.theme-auto .settings-content {
-  background-color: #fafafa;
+body[class*="theme-"] .typing-avatar {
+    background: var(--gradient-secondary);
 }
 
-body.theme-auto .chat-input {
-  background-color: #ffffff;
-  border-top: 1px solid #e0e0e0;
+body[class*="theme-"] .text-btn:hover {
+    border-color: var(--accent-purple);
 }
 
-body.theme-auto .chat-input input {
-  background-color: #ffffff;
-  border-color: #dddddd;
-  color: #333333;
+body[class*="theme-"] .input-wrapper:focus-within {
+    border-color: var(--accent-purple);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 40px rgba(102, 126, 234, 0.3);
 }
 
-/* Dark mode override for auto theme */
-@media (prefers-color-scheme: dark) {
-  body.theme-auto {
-    background-color: #1e1e1e;
-    color: #e0e0e0;
-  }
+body[class*="theme-"] select:focus {
+    border-color: var(--accent-purple);
+}
 
-  body.theme-auto .login-container {
-    background-color: #2d2d2d;
-    border: 1px solid #3d3d3d;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  }
+body[class*="theme-"] .reaction-btn:hover {
+    border-color: var(--accent-purple);
+}
 
-  body.theme-auto .subtitle {
-    color: #a0a0a0;
-  }
+body[class*="theme-"] .system-msg::before {
+    color: var(--accent-purple);
+}
 
-  body.theme-auto .chat-header {
-    background-color: #2d2d2d;
-    border-bottom: 1px solid #3d3d3d;
-  }
-
-  body.theme-auto .server-text {
-    color: #e0e0e0;
-  }
-
-  body.theme-auto .user-info {
-    color: #b0b0b0;
-  }
-
-  body.theme-auto .chat-message.remote {
-    background-color: #3d3d3d;
-    color: #e0e0e0;
-  }
-
-  body.theme-auto .chat-message.error {
-    background-color: #4a2c2c;
-    color: #ef9a9a;
-  }
-
-  body.theme-auto .message-header {
-    color: #b0b0b0;
-  }
-
-  body.theme-auto .chat-input {
-    background-color: #2d2d2d;
-    border-top: 1px solid #3d3d3d;
-  }
-
-  body.theme-auto .chat-input input {
-    background-color: #1e1e1e;
-    border-color: #3d3d3d;
-    color: #e0e0e0;
-  }
-
-  body.theme-auto .chat-input input::placeholder {
-    color: #666666;
-  }
-
-  body.theme-auto .chat-input input:focus {
-    border-color: #42a5f5;
-  }
-
-  body.theme-auto .settings-header {
-    background-color: #2d2d2d;
-    border-bottom: 1px solid #3d3d3d;
-  }
-
-  body.theme-auto .settings-header h2 {
-    color: #e0e0e0;
-  }
-
-  body.theme-auto .settings-content {
-    background-color: #1e1e1e;
-  }
-
-  body.theme-auto .setting-group h3 {
-    color: #e0e0e0;
-  }
-
-  body.theme-auto .setting-item {
-    border-bottom: 1px solid #3d3d3d;
-  }
-
-  body.theme-auto .setting-item label {
-    color: #b0b0b0;
-  }
-
-  body.theme-auto .setting-item select {
-    background-color: #2d2d2d;
-    border-color: #4d4d4d;
-    color: #e0e0e0;
-  }
-
-  body.theme-auto .btn-primary {
-    background-color: #42a5f5;
-  }
-
-  body.theme-auto .btn-primary:hover:not(:disabled) {
-    background-color: #1e88e5;
-  }
-
-  body.theme-auto .btn-danger {
-    background-color: #ef5350;
-  }
-
-  body.theme-auto .btn-danger:hover:not(:disabled) {
-    background-color: #c62828;
-  }
-
-  body.theme-auto .btn-icon:hover {
-    background-color: #3d3d3d;
-  }
+body[class*="theme-"] .scrollbar-thumb:hover {
+    box-shadow: 0 0 12px var(--accent-purple);
 }

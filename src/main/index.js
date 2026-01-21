@@ -1,12 +1,21 @@
-const { app, BrowserWindow } = require('electron');
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
+
+const { app, BrowserWindow } = require('electron');
 const logger = require('./logging/logger');
 const { registerHandlers, setMainWindow, setupDetectorEvents } = require('./ipc/handlers');
 const detector = require('./detection/detector');
 const secureStore = require('./storage/secureStore');
-require('dotenv').config();
 
 let mainWindow;
+
+// Configure app-wide command line switches before app is ready
+// These help with SSL/TLS connections and CORS
+app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors');
+
+// Disable hardware acceleration if SSL issues persist
+// Uncomment the line below if you continue to experience SSL errors
+// app.disableHardwareAcceleration();
 
 /**
  * Create main browser window
@@ -15,11 +24,19 @@ function createWindow() {
   logger.info('Creating main window');
 
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    minWidth: 800,
-    minHeight: 600,
+    width: 380,
+    height: 600,
+    minWidth: 320,
+    minHeight: 450,
+    maxWidth: 800,
+    maxHeight: 1200,
     show: false,
+    frame: false,
+    transparent: false,
+    alwaysOnTop: true,
+    resizable: true,
+    backgroundColor: '#0a0c14',
+    roundedCorners: true,
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       nodeIntegration: false,
@@ -35,11 +52,6 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     logger.info('Window ready to show');
     mainWindow.show();
-    
-    // Show DevTools in development
-    if (process.env.NODE_ENV !== 'production') {
-      mainWindow.webContents.openDevTools();
-    }
   });
 
   // Handle window closed
@@ -82,16 +94,32 @@ app.whenReady().then(() => {
   // Validate environment variables
   validateEnvironment();
   logger.info('App started');
-  
+
+  // Handle certificate errors globally (for development/debugging)
+  app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
+    // Log the certificate error
+    logger.warn('Global certificate error', { url, error });
+
+    // For development, we'll allow self-signed certificates for localhost
+    if (url.startsWith('https://localhost') || url.startsWith('https://127.0.0.1')) {
+      event.preventDefault();
+      callback(true);
+    } else {
+      // For production sites like Roblox, use default behavior
+      // This will be handled by the BrowserWindow-specific handler
+      callback(false);
+    }
+  });
+
   // Register IPC handlers
   registerHandlers();
-  
+
   // Setup detector events forwarding
   setupDetectorEvents();
-  
+
   // Create main window
   createWindow();
-  
+
   // Check if user is authenticated
   if (secureStore.isAuthenticated()) {
     logger.info('User is authenticated, starting detector');
@@ -99,7 +127,7 @@ app.whenReady().then(() => {
   } else {
     logger.info('User not authenticated, showing login view');
   }
-  
+
   // Handle macOS dock icon click
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

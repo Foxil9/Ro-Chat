@@ -57,6 +57,24 @@ server/
 
 ## Configuration
 
+### 1. Register a Roblox OAuth2 Application
+
+Before running the app, you need to create an OAuth2 application with Roblox:
+
+1. Visit [https://create.roblox.com/credentials](https://create.roblox.com/credentials)
+2. Click "Create OAuth2 App"
+3. Fill in the application details:
+   - **Name**: RoChat (or any name you prefer)
+   - **Description**: Desktop chat relay application
+   - **Redirect URLs**: Add `http://localhost:3333/callback`
+   - **Scopes**: Select:
+     - `openid` (required)
+     - `profile` (recommended)
+     - `universe-messaging-service:publish` (required for chat relay)
+4. Save the application and copy your **Client ID** and **Client Secret**
+
+### 2. Configure Environment Variables
+
 1. Copy `.env.example` to `.env`:
    ```bash
    cp .env.example .env
@@ -64,8 +82,12 @@ server/
 
 2. Edit `.env` with your configuration:
    - `DB_URL` - MongoDB connection string
-   `PORT` - Server port (default: 3000)
-   `JWT_SECRET` - Secret key for JWT tokens
+   - `PORT` - Server port (default: 3000)
+   - `JWT_SECRET` - Secret key for JWT tokens
+   - `ROBLOX_CLIENT_ID` - Your OAuth2 Client ID from step 1
+   - `ROBLOX_CLIENT_SECRET` - Your OAuth2 Client Secret from step 1
+   - `OAUTH_REDIRECT_URI` - OAuth2 callback URL (default: http://localhost:3333/callback)
+   - `OAUTH_CALLBACK_PORT` - Local server port for OAuth2 callback (default: 3333)
 
 ## Running the Application
 
@@ -92,7 +114,11 @@ server/
 
 ## How It Works
 
-1. **Authentication**: User logs in with Roblox credentials
+1. **Authentication**: User authenticates via OAuth2 using their system browser
+   - Clicking "Login" opens the Roblox login page in your default browser
+   - After successful login, you're redirected back to the app
+   - Access tokens are automatically refreshed (15-minute lifetime)
+   - Refresh tokens last for 90 days
 2. **Detection**: The app monitors Roblox logs to detect game server (JobId/PlaceId)
 3. **Connection**: App connects to the backend server using the detected JobId
 4. **Chat Relay**: Messages are relayed between the app and the server via WebSocket

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:;">
+  <title>RoChat - Settings</title>
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/themes.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg-dark-base);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .settings-window {
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .settings-header {
+      height: 50px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(180deg, rgba(15, 17, 23, 0.95) 0%, rgba(26, 29, 46, 0.9) 100%);
+      border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+      border-radius: 16px 16px 0 0;
+      -webkit-app-region: drag;
+    }
+
+    .settings-header h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .settings-header .btn-icon {
+      -webkit-app-region: no-drag;
+    }
+
+    .settings-content {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    .settings-content::-webkit-scrollbar {
+      display: none;
+    }
+
+    .settings-content {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    .setting-group {
+      margin-bottom: 32px;
+    }
+
+    .setting-group h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0 0 16px 0;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+    }
+
+    .setting-item {
+      margin-bottom: 16px;
+    }
+
+    .setting-item label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+
+    .setting-item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .setting-item select {
+      width: 100%;
+      padding: 10px 16px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .setting-item select:focus {
+      outline: none;
+      border-color: var(--accent-purple);
+    }
+
+    .slider-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .slider-value {
+      color: var(--accent-purple);
+      font-weight: 600;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      background: var(--accent-purple);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.1);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6);
+    }
+  </style>
+</head>
+<body>
+  <div class="settings-window">
+    <div class="settings-header">
+      <h2>Settings</h2>
+      <button id="close-settings-btn" class="btn-icon close-btn">✕</button>
+    </div>
+
+    <div class="settings-content">
+      <div class="setting-group">
+        <h3>Appearance</h3>
+        <div class="setting-item">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <label style="font-weight: 500; flex-shrink: 0;">Theme</label>
+            <select id="theme-select" style="flex: 1; padding: 8px 12px;">
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+              <option value="auto">Auto</option>
+            </select>
+          </div>
+        </div>
+        <div class="setting-item">
+          <div class="slider-container">
+            <div class="slider-label">
+              <span>Opacity</span>
+              <span class="slider-value" id="opacity-value">100%</span>
+            </div>
+            <input type="range" id="opacity-slider" min="30" max="100" value="100" step="5">
+          </div>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <h3>Behavior</h3>
+        <div class="setting-item">
+          <label>
+            <input type="checkbox" id="auto-start-detection">
+            Auto-start detection
+          </label>
+        </div>
+        <div class="setting-item">
+          <label>
+            <input type="checkbox" id="draggable-header" checked>
+            Draggable header
+          </label>
+        </div>
+        <div class="setting-item">
+          <label>
+            <input type="checkbox" id="always-on-top" checked>
+            Always on top
+          </label>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <h3>Account</h3>
+        <button id="logout-btn" class="btn btn-danger">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/settings.js"></script>
+</body>
+</html>

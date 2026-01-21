@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>RoChat - Dashboard</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="dark-theme">
+    <!-- Background Orbs -->
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">RC</div>
+            </div>
+            <div class="session-list" id="sessionList">
+                <div class="session-item active" title="Current Game">
+                    <span class="status-indicator online"></span>
+                    <i class="icon-game">🎮</i>
+                </div>
+            </div>
+            <div class="sidebar-footer">
+                <button id="btnSettings" class="icon-btn">⚙️</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="chat-header">
+                <div class="game-info">
+                    <h2 id="gameName">Roblox Session</h2>
+                    <span id="jobIdDisplay" class="badge">JobId: Detecting...</span>
+                </div>
+                <div class="header-actions">
+                    <button id="btnHistory" class="text-btn">History</button>
+                    <button id="btnLogout" class="text-btn danger">Logout</button>
+                </div>
+            </header>
+
+            <div class="chat-area">
+                <div id="messageContainer" class="message-container">
+                    <div class="system-msg">Connecting to Roblox logs...</div>
+                </div>
+                
+                <div class="input-container">
+                    <div class="input-wrapper">
+                        <input type="text" id="chatInput" placeholder="Type a message to relay..." autocomplete="off">
+                        <button id="btnSend">Send</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="../js/chat.js"></script>
+</body>
+</html>

@@ -14,9 +14,13 @@ class RoChatApp {
     if (this.isInitialized) return;
 
     try {
+      // Load and apply saved theme
+      const savedTheme = this.loadSavedTheme();
+      this.applyTheme(savedTheme);
+
       // Check authentication status
       const status = await window.electronAPI.auth.getStatus();
-      
+
       if (status.success && status.authenticated) {
         this.currentUser = status.user;
         this.showView('chat');
@@ -37,22 +41,88 @@ class RoChatApp {
   }
 
   /**
+   * Load saved theme from localStorage
+   */
+  loadSavedTheme() {
+    try {
+      const saved = localStorage.getItem('rochat-settings');
+      if (saved) {
+        const settings = JSON.parse(saved);
+        return settings.theme || 'dark';
+      }
+    } catch (error) {
+      console.error('Failed to load theme:', error);
+    }
+    return 'dark';
+  }
+
+  /**
    * Setup global event listeners
    */
   setupEventListeners() {
+    // Window controls (only in chat view)
+    const minimizeBtn = document.getElementById('minimize-btn');
+    const closeBtn = document.getElementById('close-btn');
+
+    if (minimizeBtn) {
+      minimizeBtn.addEventListener('click', async () => {
+        const result = await window.electronAPI.window.minimize();
+        if (result && result.isMinimized !== undefined) {
+          this.toggleMinimizedView(result.isMinimized);
+        }
+      });
+    }
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        window.electronAPI.window.close();
+      });
+    }
+
     // Login button
     document.getElementById('login-btn').addEventListener('click', () => this.handleLogin());
-    
+
     // Settings button
-    document.getElementById('settings-btn').addEventListener('click', () => this.showView('settings'));
-    
-    // Close settings button
-    document.getElementById('close-settings-btn').addEventListener('click', () => this.showView('chat'));
-    
+    const settingsBtn = document.getElementById('settings-btn');
+    if (settingsBtn) {
+      settingsBtn.addEventListener('click', () => {
+        window.electronAPI.window.openSettings();
+      });
+    }
+
     // Listen for server changes
     window.electronAPI.detection.onServerChanged((serverInfo) => {
       this.handleServerChanged(serverInfo);
     });
+
+    // Load draggable setting
+    this.updateDraggable();
+
+    // Listen for theme changes from settings window
+    if (window.electronAPI?.onThemeChanged) {
+      window.electronAPI.onThemeChanged((theme) => {
+        this.applyTheme(theme);
+      });
+    }
+  }
+
+  /**
+   * Apply theme
+   */
+  applyTheme(theme) {
+    const body = document.body;
+    body.classList.remove('theme-light', 'theme-dark', 'theme-auto');
+
+    if (theme === 'auto') {
+      // Check system preference
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        body.classList.add('theme-dark');
+      } else {
+        body.classList.add('theme-light');
+      }
+    } else {
+      body.classList.add(`theme-${theme}`);
+    }
   }
 
   /**
@@ -75,7 +145,68 @@ class RoChatApp {
 
     // Update user info if showing chat
     if (viewName === 'chat' && this.currentUser) {
-      document.getElementById('user-info').textContent = this.currentUser.username;
+      this.updateUserDisplay();
+    }
+  }
+
+  /**
+   * Update user display in header
+   */
+  updateUserDisplay() {
+    if (!this.currentUser) return;
+
+    const avatarEl = document.getElementById('user-avatar');
+    const nameEl = document.getElementById('user-name');
+
+    if (avatarEl) {
+      if (this.currentUser.picture) {
+        avatarEl.src = this.currentUser.picture;
+        avatarEl.style.display = 'block';
+        avatarEl.onerror = () => {
+          console.error('Failed to load avatar:', this.currentUser.picture);
+          avatarEl.style.display = 'none';
+        };
+      } else {
+        avatarEl.style.display = 'none';
+        console.log('No picture URL for user:', this.currentUser);
+      }
+    }
+
+    if (nameEl) {
+      nameEl.textContent = this.currentUser.username || this.currentUser.displayName || 'User';
+    }
+  }
+
+  /**
+   * Update draggable setting
+   */
+  updateDraggable() {
+    const draggable = localStorage.getItem('draggable') !== 'false';
+    const header = document.getElementById('chat-header');
+    if (header) {
+      if (draggable) {
+        header.classList.add('draggable');
+      } else {
+        header.classList.remove('draggable');
+      }
+    }
+  }
+
+  /**
+   * Toggle minimized view
+   */
+  toggleMinimizedView(isMinimized) {
+    const chatView = document.getElementById('chat-view');
+    const chatContainer = chatView?.querySelector('.chat-container');
+
+    if (chatContainer) {
+      if (isMinimized) {
+        chatContainer.classList.add('minimized');
+        document.body.classList.add('minimized');
+      } else {
+        chatContainer.classList.remove('minimized');
+        document.body.classList.remove('minimized');
+      }
     }
   }
 
@@ -154,16 +285,26 @@ class RoChatApp {
    * Handle server changed event
    */
   handleServerChanged(serverInfo) {
-    const serverInfoEl = document.getElementById('server-info');
-    const statusDot = serverInfoEl.querySelector('.status-dot');
-    const serverText = serverInfoEl.querySelector('.server-text');
+    const statusDot = document.getElementById('status-dot');
+    const serverText = document.getElementById('server-text');
+
+    if (!statusDot || !serverText) return;
 
     if (serverInfo && serverInfo.placeId && serverInfo.jobId) {
-      statusDot.className = 'status-dot online';
-      serverText.textContent = `Connected (Place: ${serverInfo.placeId})`;
-      console.log('Server changed:', serverInfo);
+      // Check if actually connected to chat
+      // For now, assume connected if we have placeId and jobId
+      // TODO: Add actual chat connection check
+      statusDot.className = 'status-dot connected';
+      serverText.textContent = 'Connected!';
+      console.log('Connected to server:', serverInfo);
+    } else if (serverInfo && serverInfo.placeId) {
+      // In-game but not connected to chat yet
+      statusDot.className = 'status-dot ingame';
+      serverText.textContent = 'In-game';
+      console.log('In-game:', serverInfo);
     } else {
-      statusDot.className = 'status-dot offline';
+      // Not connected
+      statusDot.className = 'status-dot';
       serverText.textContent = 'Not connected';
       console.log('Disconnected from server');
     }

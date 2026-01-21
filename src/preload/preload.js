@@ -25,7 +25,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Chat methods
   chat: {
     sendMessage: (data) => ipcRenderer.invoke('chat:send', data),
-    loadHistory: (jobId) => ipcRenderer.invoke('chat:history', jobId)
+    loadHistory: (data) => ipcRenderer.invoke('chat:history', data)
   },
 
   // Event listeners
@@ -45,6 +45,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('theme:changed', listener);
   },
 
+  onFocusChat: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on('keybind:focus-chat', listener);
+    return () => ipcRenderer.removeListener('keybind:focus-chat', listener);
+  },
+
   // Window controls
   window: {
     minimize: () => ipcRenderer.invoke('window:minimize'),
@@ -57,7 +63,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Settings
   settings: {
-    applyTheme: (theme) => ipcRenderer.invoke('settings:applyTheme', theme)
+    applyTheme: (theme) => ipcRenderer.invoke('settings:applyTheme', theme),
+    resetPosition: () => ipcRenderer.invoke('settings:resetPosition'),
+    registerKeybind: (keybind) => ipcRenderer.invoke('settings:registerKeybind', keybind)
   }
 });
 
@@ -69,7 +77,7 @@ contextBridge.exposeInMainWorld('electron', {
 
   // Chat methods
   sendMessage: (data) => ipcRenderer.invoke('chat:send', data),
-  loadHistory: (jobId) => ipcRenderer.invoke('chat:history', jobId),
+  loadHistory: (data) => ipcRenderer.invoke('chat:history', data),
 
   // Event listeners
   onServerChanged: (callback) => {

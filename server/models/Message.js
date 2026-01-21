@@ -3,6 +3,17 @@ const mongoose = require('mongoose');
 const messageSchema = new mongoose.Schema({
   jobId: {
     type: String,
+    required: false, // Optional for global messages
+    index: true
+  },
+  placeId: {
+    type: String,
+    required: false, // Optional for server-specific messages
+    index: true
+  },
+  chatType: {
+    type: String,
+    enum: ['server', 'global'],
     required: true,
     index: true
   },
@@ -24,7 +35,8 @@ const messageSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for efficient queries
-messageSchema.index({ jobId: 1, createdAt: -1 });
+// Indexes for efficient queries
+messageSchema.index({ jobId: 1, chatType: 1, createdAt: -1 });
+messageSchema.index({ placeId: 1, chatType: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Message', messageSchema);

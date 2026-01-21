@@ -1,15 +1,18 @@
-// Chat UI logic for RoChat - Updated for new UI design
+// Chat UI logic for RoChat - Updated with Server/Global tabs
 
 class ChatManager {
   constructor() {
-    this.messages = [];
+    this.messages = { server: [], global: [] };
     this.messageInput = null;
     this.sendButton = null;
     this.messagesContainer = null;
     this.jobIdDisplay = null;
     this.gameNameDisplay = null;
     this.currentJobId = null;
+    this.currentPlaceId = null;
+    this.activeTab = 'server'; // 'server' or 'global'
     this.isInitialized = false;
+    this.MAX_MESSAGES = 50;
   }
 
   /**
@@ -18,12 +21,15 @@ class ChatManager {
   init() {
     if (this.isInitialized) return;
 
-    // Get DOM elements (updated IDs to match new design)
-    this.messageInput = document.getElementById('chatInput');
-    this.sendButton = document.getElementById('btnSend');
-    this.messagesContainer = document.getElementById('messageContainer');
-    this.jobIdDisplay = document.getElementById('jobIdDisplay');
-    this.gameNameDisplay = document.getElementById('gameName');
+    // Get DOM elements (using correct IDs from index.html)
+    this.messageInput = document.getElementById('message-input');
+    this.sendButton = document.getElementById('send-btn');
+    this.messagesContainer = document.getElementById('chat-messages');
+    this.jobIdDisplay = document.getElementById('server-text'); // Use server-text for now
+    this.gameNameDisplay = document.getElementById('user-name');
+
+    // Create tab UI if it doesn't exist
+    this.createTabUI();
 
     // Setup event listeners
     this.setupEventListeners();
@@ -33,6 +39,41 @@ class ChatManager {
 
     this.isInitialized = true;
     console.log('Chat manager initialized');
+  }
+
+  /**
+   * Create tab UI
+   */
+  createTabUI() {
+    // Tab HTML is already in index.html, just setup click handlers
+    const serverTab = document.getElementById('tab-server');
+    const globalTab = document.getElementById('tab-global');
+
+    if (serverTab) {
+      serverTab.onclick = () => this.switchTab('server');
+    }
+
+    if (globalTab) {
+      globalTab.onclick = () => this.switchTab('global');
+    }
+  }
+
+  /**
+   * Switch between Server and Global tabs
+   */
+  switchTab(tab) {
+    if (this.activeTab === tab) return;
+
+    this.activeTab = tab;
+
+    // Update tab buttons
+    document.getElementById('tab-server').className = tab === 'server' ? 'chat-tab active' : 'chat-tab';
+    document.getElementById('tab-global').className = tab === 'global' ? 'chat-tab active' : 'chat-tab';
+
+    // Render messages for active tab
+    this.renderAllMessages();
+
+    console.log('Switched to tab:', tab);
   }
 
   /**
@@ -91,22 +132,26 @@ class ChatManager {
     if (!serverInfo) {
       // No server detected
       this.currentJobId = null;
+      this.currentPlaceId = null;
       this.updateJobIdDisplay('Detecting...');
       this.clearMessages();
-      this.addSystemMessage('Waiting for Roblox game...');
+      this.addSystemMessage('Waiting for Roblox game...', 'server');
+      this.addSystemMessage('Waiting for Roblox game...', 'global');
       return;
     }
 
     // Server detected
     const { placeId, jobId } = serverInfo;
     this.currentJobId = jobId;
-    
+    this.currentPlaceId = placeId;
+
     // Update UI
     this.updateJobIdDisplay(jobId);
     this.clearMessages();
-    this.addSystemMessage(`Connected to game server!`);
-    
-    // Load chat history for this JobId
+    this.addSystemMessage(`Connected to server!`, 'server');
+    this.addSystemMessage(`Connected to game!`, 'global');
+
+    // Load chat history for both tabs
     this.loadHistory();
 
     console.log('Server changed:', { placeId, jobId });
@@ -135,11 +180,17 @@ class ChatManager {
    */
   async sendMessage() {
     const message = this.messageInput.value.trim();
-    
+
     if (!message) return;
 
-    if (!this.currentJobId) {
-      this.addSystemMessage('No game server connected. Please join a Roblox game.');
+    // Check if connected
+    if (this.activeTab === 'server' && !this.currentJobId) {
+      this.addSystemMessage('No game server connected. Please join a Roblox game.', 'server');
+      return;
+    }
+
+    if (this.activeTab === 'global' && !this.currentPlaceId) {
+      this.addSystemMessage('No game connected. Please join a Roblox game.', 'global');
       return;
     }
 
@@ -150,7 +201,8 @@ class ChatManager {
       username: currentUser?.username || 'You',
       message: message,
       timestamp: Date.now(),
-      isLocal: true
+      isLocal: true,
+      chatType: this.activeTab
     });
 
     // Clear input
@@ -161,6 +213,8 @@ class ChatManager {
       if (window.electron && window.electron.sendMessage) {
         const result = await window.electron.sendMessage({
           jobId: this.currentJobId,
+          placeId: this.currentPlaceId,
+          chatType: this.activeTab,
           message: message
         });
 
@@ -195,28 +249,45 @@ class ChatManager {
    * Add a message to the chat
    */
   addMessage(messageData) {
+    const chatType = messageData.chatType || this.activeTab;
     const message = {
       userId: messageData.userId,
       username: messageData.username,
       message: messageData.message,
       timestamp: messageData.timestamp || Date.now(),
-      isLocal: messageData.isLocal || false
+      isLocal: messageData.isLocal || false,
+      chatType
     };
 
-    this.messages.push(message);
-    this.renderMessage(message);
-    this.scrollToBottom();
+    // Add to appropriate tab
+    this.messages[chatType].push(message);
+
+    // Enforce 50 message limit client-side
+    if (this.messages[chatType].length > this.MAX_MESSAGES) {
+      this.messages[chatType].shift();
+    }
+
+    // Only render if this is the active tab
+    if (chatType === this.activeTab) {
+      this.renderMessage(message);
+      this.scrollToBottom();
+    }
   }
 
   /**
    * Add system message
    */
-  addSystemMessage(text) {
-    const messageEl = document.createElement('div');
-    messageEl.className = 'system-msg';
-    messageEl.textContent = text;
-    this.messagesContainer.appendChild(messageEl);
-    this.scrollToBottom();
+  addSystemMessage(text, chatType) {
+    const targetType = chatType || this.activeTab;
+
+    // Only render if this is the active tab
+    if (targetType === this.activeTab) {
+      const messageEl = document.createElement('div');
+      messageEl.className = 'system-msg';
+      messageEl.textContent = text;
+      this.messagesContainer.appendChild(messageEl);
+      this.scrollToBottom();
+    }
   }
 
   /**
@@ -226,12 +297,11 @@ class ChatManager {
     const messageEl = document.createElement('div');
     messageEl.className = `chat-msg ${message.isLocal ? 'local' : 'remote'}`;
 
-    const timestamp = new Date(message.timestamp).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    const timestamp = new Date(message.timestamp).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
     });
 
-    // Create message structure matching new design
     const authorEl = document.createElement('div');
     authorEl.className = 'msg-author';
     authorEl.textContent = this.escapeHtml(message.username);
@@ -249,6 +319,20 @@ class ChatManager {
     messageEl.appendChild(timeEl);
 
     this.messagesContainer.appendChild(messageEl);
+  }
+
+  /**
+   * Render all messages for active tab
+   */
+  renderAllMessages() {
+    this.messagesContainer.innerHTML = '';
+
+    const messagesForTab = this.messages[this.activeTab] || [];
+    messagesForTab.forEach(msg => {
+      this.renderMessage(msg);
+    });
+
+    this.scrollToBottom();
   }
 
   /**
@@ -280,7 +364,7 @@ class ChatManager {
    * Clear all messages
    */
   clearMessages() {
-    this.messages = [];
+    this.messages = { server: [], global: [] };
     this.messagesContainer.innerHTML = '';
   }
 
@@ -288,45 +372,82 @@ class ChatManager {
    * Load chat history from backend
    */
   async loadHistory() {
-    if (!this.currentJobId) return;
+    try {
+      // Load both server and global history
+      await Promise.all([
+        this.loadHistoryForTab('server'),
+        this.loadHistoryForTab('global')
+      ]);
+    } catch (error) {
+      console.error('Failed to load history:', error);
+    }
+  }
+
+  /**
+   * Load history for specific tab
+   */
+  async loadHistoryForTab(chatType) {
+    const isCurrentTab = chatType === this.activeTab;
+
+    if (chatType === 'server' && !this.currentJobId) {
+      if (isCurrentTab) {
+        this.addSystemMessage('No server connected.', chatType);
+      }
+      return;
+    }
+
+    if (chatType === 'global' && !this.currentPlaceId) {
+      if (isCurrentTab) {
+        this.addSystemMessage('No game connected.', chatType);
+      }
+      return;
+    }
 
     try {
-      // Clear current messages
-      this.clearMessages();
-      this.addSystemMessage('Loading chat history...');
+      if (isCurrentTab) {
+        this.messagesContainer.innerHTML = '';
+        this.addSystemMessage('Loading chat history...', chatType);
+      }
 
       if (window.electron && window.electron.loadHistory) {
-        const result = await window.electron.loadHistory(this.currentJobId);
-        
+        const result = await window.electron.loadHistory({
+          jobId: this.currentJobId,
+          placeId: this.currentPlaceId,
+          chatType
+        });
+
         if (result.success && result.messages) {
-          // Clear loading message
-          this.clearMessages();
-          
-          // Render all messages
+          // Clear tab messages
+          this.messages[chatType] = [];
+
+          // Add all messages
           result.messages.forEach(msg => {
-            this.addMessage({
+            this.messages[chatType].push({
               userId: msg.userId,
               username: msg.username,
               message: msg.message,
               timestamp: new Date(msg.timestamp).getTime(),
-              isLocal: false
+              isLocal: false,
+              chatType
             });
           });
 
-          if (result.messages.length === 0) {
-            this.addSystemMessage('No previous messages.');
+          // Render if active tab
+          if (isCurrentTab) {
+            this.renderAllMessages();
+
+            if (result.messages.length === 0) {
+              this.addSystemMessage('No previous messages.', chatType);
+            }
           }
         }
-      } else {
-        // Mock history load
-        console.log('Mock history load for JobId:', this.currentJobId);
-        this.clearMessages();
-        this.addSystemMessage('Chat history loaded.');
       }
     } catch (error) {
-      console.error('Failed to load history:', error);
-      this.clearMessages();
-      this.addSystemMessage('Failed to load chat history.');
+      console.error(`Failed to load ${chatType} history:`, error);
+      if (isCurrentTab) {
+        this.messagesContainer.innerHTML = '';
+        this.addSystemMessage('Failed to load chat history.', chatType);
+      }
     }
   }
 
@@ -378,7 +499,7 @@ class ChatManager {
 // Initialize chat manager when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   window.chatManager = new ChatManager();
-  
+
   // Wait for app to initialize
   setTimeout(() => {
     window.chatManager.init();

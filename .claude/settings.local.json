@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(powershell -Command \"Get-Process | Where-Object {$_Name -like ''*Roblox*''} | Select-Object Name, Id\")",
+      "Bash(powershell -Command:*)",
+      "Bash(node -c:*)",
+      "Bash(node test-detection.js)",
+      "Bash(node -e:*)",
+      "Bash(node --no-warnings -e \"delete require.cache[require.resolve\\('./src/main/detection/processWatcher'\\)]; const pw = require\\('./src/main/detection/processWatcher'\\); console.log\\(pw\\);\":*)"
+    ]
+  }
+}

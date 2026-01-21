@@ -62,6 +62,8 @@ function registerHandlers() {
 
   // Settings handlers
   ipcMain.handle('settings:applyTheme', handleApplyTheme);
+  ipcMain.handle('settings:resetPosition', handleResetPosition);
+  ipcMain.handle('settings:registerKeybind', handleRegisterKeybind);
 
   logger.info('IPC handlers registered successfully');
 }
@@ -164,9 +166,9 @@ async function handleStopDetection(event) {
  * Handle send message request
  * Sends message to backend server which then broadcasts via Socket.io
  */
-async function handleSendMessage(event, { jobId, message }) {
+async function handleSendMessage(event, { jobId, placeId, chatType, message }) {
   try {
-    logger.info('Send message requested', { jobId, messageLength: message?.length });
+    logger.info('Send message requested', { chatType, jobId, placeId, messageLength: message?.length });
 
     // Get current user info
     const user = robloxAuth.getCurrentUser();
@@ -177,6 +179,8 @@ async function handleSendMessage(event, { jobId, message }) {
     // Send to backend server
     const response = await axios.post(`${BACKEND_URL}/api/chat/send`, {
       jobId,
+      placeId,
+      chatType,
       message,
       userId: user.userId,
       username: user.username
@@ -186,54 +190,60 @@ async function handleSendMessage(event, { jobId, message }) {
       }
     });
 
-    logger.info('Message sent successfully', { jobId });
+    logger.info('Message sent successfully', { chatType, jobId, placeId });
     return { success: true };
   } catch (error) {
-    logger.error('Failed to send message', { 
+    logger.error('Failed to send message', {
       error: error.message,
+      chatType,
       jobId,
+      placeId,
       backendUrl: BACKEND_URL
     });
-    return { 
-      success: false, 
-      error: error.response?.data?.error || 'Failed to send message' 
+    return {
+      success: false,
+      error: error.response?.data?.error || 'Failed to send message'
     };
   }
 }
 
 /**
  * Handle load chat history request
- * Fetches messages from backend server for a specific JobId
+ * Fetches messages from backend server for a specific JobId or PlaceId
  */
-async function handleLoadHistory(event, jobId) {
+async function handleLoadHistory(event, { jobId, placeId, chatType }) {
   try {
-    logger.info('Load history requested', { jobId });
+    logger.info('Load history requested', { chatType, jobId, placeId });
 
     // Fetch from backend server
     const response = await axios.get(`${BACKEND_URL}/api/chat/history`, {
-      params: { jobId, limit: 50 },
+      params: { jobId, placeId, chatType, limit: 50 },
       headers: {
         'Content-Type': 'application/json'
       }
     });
 
-    logger.info('History loaded successfully', { 
-      jobId, 
-      messageCount: response.data.messages?.length || 0 
+    logger.info('History loaded successfully', {
+      chatType,
+      jobId,
+      placeId,
+      messageCount: response.data.messages?.length || 0
     });
 
-    return { 
-      success: true, 
-      messages: response.data.messages || [] 
+    return {
+      success: true,
+      messages: response.data.messages || []
     };
   } catch (error) {
-    logger.error('Failed to load history', { 
+    logger.error('Failed to load history', {
       error: error.message,
+      chatType,
       jobId,
+      placeId,
       backendUrl: BACKEND_URL
     });
-    return { 
-      success: false, 
+    return {
+      success: false,
       error: error.response?.data?.error || 'Failed to load history',
       messages: []
     };
@@ -370,6 +380,7 @@ function handleOpenSettings(event) {
     backgroundColor: '#0a0c14',
     parent: mainWindow,
     modal: false,
+    center: true,
     webPreferences: {
       preload: path.join(__dirname, '../../preload/preload.js'),
       nodeIntegration: false,
@@ -388,12 +399,62 @@ function handleOpenSettings(event) {
 }
 
 /**
+ * Handle reset window positions
+ */
+function handleResetPosition(event) {
+  // Reset main window
+  if (mainWindow) {
+    mainWindow.setBounds({
+      width: 380,
+      height: 600,
+      x: undefined,
+      y: undefined
+    });
+    mainWindow.center();
+    mainWindow.originalBounds = null;
+    mainWindow.isMinimizedTab = false;
+  }
+
+  // Reset settings window
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    settingsWindow.center();
+  }
+
+  return { success: true };
+}
+
+/**
  * Handle apply theme - sends theme to main window
  */
 function handleApplyTheme(event, theme) {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('theme:changed', theme);
   }
+  return { success: true };
+}
+
+/**
+ * Handle register keybind
+ */
+function handleRegisterKeybind(event, keybind) {
+  const { globalShortcut } = require('electron');
+
+  // Unregister previous shortcut
+  globalShortcut.unregisterAll();
+
+  if (keybind) {
+    try {
+      globalShortcut.register(keybind, () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('keybind:focus-chat');
+        }
+      });
+      logger.info('Keybind registered', { keybind });
+    } catch (error) {
+      logger.error('Failed to register keybind', { error: error.message });
+    }
+  }
+
   return { success: true };
 }
 

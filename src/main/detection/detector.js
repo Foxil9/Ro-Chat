@@ -10,6 +10,7 @@ class Detector extends EventEmitter {
     this.currentServer = null; // { placeId, jobId, timestamp }
     this.lastLogUpdate = null;
     this.memoryFallbackTimeout = null;
+    this.disconnectCheckInterval = null;
     this.isRunning = false;
   }
 
@@ -43,6 +44,11 @@ class Detector extends EventEmitter {
     // Listen for log monitor events
     logMonitor.on('serverDetected', (serverInfo) => {
       this.handleServerDetected(serverInfo, 'log');
+    });
+
+    // Listen for log activity to update disconnect timer
+    logMonitor.on('logActivity', () => {
+      this.lastLogUpdate = Date.now();
     });
   }
 
@@ -86,6 +92,9 @@ class Detector extends EventEmitter {
       this.tryMemoryFallback();
     }, 10000);
 
+    // Start disconnect detection (check every 5 seconds)
+    this.startDisconnectCheck();
+
     // Emit server changed with null
     this.emit('serverChanged', null);
   }
@@ -103,6 +112,9 @@ class Detector extends EventEmitter {
       this.memoryFallbackTimeout = null;
     }
 
+    // Stop disconnect check
+    this.stopDisconnectCheck();
+
     // Clear current server if set
     const previousServer = this.currentServer;
     this.currentServer = null;
@@ -110,6 +122,56 @@ class Detector extends EventEmitter {
 
     // Emit server changed with null
     if (previousServer) {
+      this.emit('serverChanged', null);
+    }
+  }
+
+  /**
+   * Start checking for disconnects (when user leaves game but Roblox still running)
+   */
+  startDisconnectCheck() {
+    if (this.disconnectCheckInterval) {
+      clearInterval(this.disconnectCheckInterval);
+    }
+
+    this.disconnectCheckInterval = setInterval(() => {
+      this.checkForDisconnect();
+    }, 5000); // Check every 5 seconds
+  }
+
+  /**
+   * Stop disconnect checking
+   */
+  stopDisconnectCheck() {
+    if (this.disconnectCheckInterval) {
+      clearInterval(this.disconnectCheckInterval);
+      this.disconnectCheckInterval = null;
+    }
+  }
+
+  /**
+   * Check if user has disconnected from game
+   * If in a server and no log updates for 10 seconds, assume disconnected
+   */
+  checkForDisconnect() {
+    if (!this.currentServer) {
+      return; // Not in a server, nothing to check
+    }
+
+    const now = Date.now();
+    const timeSinceLastUpdate = now - (this.lastLogUpdate || now);
+
+    logger.debug('Disconnect check', {
+      timeSinceLastUpdate: Math.floor(timeSinceLastUpdate / 1000) + 's',
+      currentServer: this.currentServer.jobId
+    });
+
+    // If no updates for 10 seconds, assume disconnected (reduced from 30s for faster detection)
+    if (timeSinceLastUpdate > 10000) {
+      logger.info('No log updates for 10s, assuming disconnected from server');
+      const previousServer = this.currentServer;
+      this.currentServer = null;
+      this.lastLogUpdate = null;
       this.emit('serverChanged', null);
     }
   }

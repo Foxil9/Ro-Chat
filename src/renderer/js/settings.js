@@ -7,9 +7,11 @@ class SettingsManager {
       autoStartDetection: false,
       draggableHeader: true,
       alwaysOnTop: true,
-      opacity: 100
+      opacity: 100,
+      chatKeybind: null
     };
     this.isInitialized = false;
+    this.capturingKeybind = false;
   }
 
   /**
@@ -72,6 +74,7 @@ class SettingsManager {
     const alwaysOnTop = document.getElementById('always-on-top');
     const opacitySlider = document.getElementById('opacity-slider');
     const opacityValue = document.getElementById('opacity-value');
+    const keybindBtn = document.getElementById('keybind-btn');
 
     if (themeSelect) themeSelect.value = this.settings.theme;
     if (autoStartDetection) autoStartDetection.checked = this.settings.autoStartDetection;
@@ -80,6 +83,9 @@ class SettingsManager {
     if (opacitySlider) {
       opacitySlider.value = this.settings.opacity;
       if (opacityValue) opacityValue.textContent = this.settings.opacity + '%';
+    }
+    if (keybindBtn && this.settings.chatKeybind) {
+      keybindBtn.textContent = this.settings.chatKeybind;
     }
 
     // Apply draggable setting
@@ -205,6 +211,24 @@ class SettingsManager {
       });
     }
 
+    // Keybind capture
+    const keybindBtn = document.getElementById('keybind-btn');
+    if (keybindBtn) {
+      keybindBtn.addEventListener('click', () => {
+        this.captureKeybind(keybindBtn);
+      });
+    }
+
+    // Reset position button
+    const resetPosBtn = document.getElementById('reset-position-btn');
+    if (resetPosBtn) {
+      resetPosBtn.addEventListener('click', async () => {
+        if (window.electronAPI?.settings?.resetPosition) {
+          await window.electronAPI.settings.resetPosition();
+        }
+      });
+    }
+
     // Logout button
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
@@ -212,6 +236,47 @@ class SettingsManager {
         this.handleLogout();
       });
     }
+  }
+
+  /**
+   * Capture keybind
+   */
+  captureKeybind(button) {
+    if (this.capturingKeybind) return;
+
+    this.capturingKeybind = true;
+    button.textContent = 'Press keys...';
+    button.style.borderColor = 'var(--accent-purple)';
+
+    const handleKeyDown = (e) => {
+      e.preventDefault();
+
+      // Ignore if only modifier keys pressed
+      if (['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) {
+        return;
+      }
+
+      const keys = [];
+      if (e.ctrlKey) keys.push('Ctrl');
+      if (e.shiftKey) keys.push('Shift');
+      if (e.altKey) keys.push('Alt');
+      keys.push(e.key.toUpperCase());
+
+      const keybind = keys.join('+');
+      this.settings.chatKeybind = keybind;
+      button.textContent = keybind;
+      this.saveSettings();
+
+      if (window.electronAPI?.settings?.registerKeybind) {
+        window.electronAPI.settings.registerKeybind(keybind);
+      }
+
+      button.style.borderColor = 'rgba(102, 126, 234, 0.4)';
+      this.capturingKeybind = false;
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
   }
 
   /**

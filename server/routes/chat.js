@@ -9,38 +9,67 @@ const axios = require('axios');
  */
 router.post('/send', async (req, res) => {
   try {
-    const { jobId, message } = req.body;
+    const { jobId, placeId, chatType, message } = req.body;
     const { userId, username } = req.user;
 
-    if (!jobId || !message) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'JobId and message are required' 
+    if (!message) {
+      return res.status(400).json({
+        success: false,
+        error: 'Message is required'
+      });
+    }
+
+    if (!chatType || (chatType !== 'server' && chatType !== 'global')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid chatType (must be server or global)'
+      });
+    }
+
+    if (chatType === 'server' && !jobId) {
+      return res.status(400).json({
+        success: false,
+        error: 'JobId is required for server chat'
+      });
+    }
+
+    if (chatType === 'global' && !placeId) {
+      return res.status(400).json({
+        success: false,
+        error: 'PlaceId is required for global chat'
       });
     }
 
     if (message.length > 200) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Message too long (max 200 characters)' 
+      return res.status(400).json({
+        success: false,
+        error: 'Message too long (max 200 characters)'
       });
     }
 
     // Save message to database
     const newMessage = new Message({
-      jobId,
+      jobId: chatType === 'server' ? jobId : undefined,
+      placeId: chatType === 'global' ? placeId : undefined,
+      chatType,
       userId,
       username,
       message
     });
     await newMessage.save();
 
+    // Enforce 50 message limit - delete oldest messages
+    await enforceMessageLimit(chatType, jobId, placeId);
+
     // Get Socket.io instance from app
     const io = req.app.get('io');
 
-    // Broadcast message to all clients in the room
-    io.to(jobId).emit('message', {
+    // Broadcast message to all clients in the appropriate room
+    const roomId = chatType === 'server' ? `server:${jobId}` : `global:${placeId}`;
+    io.to(roomId).emit('message', {
       jobId,
+      placeId,
+      chatType,
       userId,
       username,
       message,
@@ -49,14 +78,18 @@ router.post('/send', async (req, res) => {
 
     // Send message to Roblox (TODO - need to implement)
     // This would send the message through Roblox's chat API
-    await sendToRoblox(jobId, message, req.user.robloxToken);
+    if (chatType === 'server') {
+      await sendToRoblox(jobId, message, req.user.robloxToken);
+    }
 
-    logger.info('Message sent', { jobId, userId, username });
+    logger.info('Message sent', { chatType, jobId, placeId, userId, username });
 
     res.json({
       success: true,
       message: {
         jobId,
+        placeId,
+        chatType,
         userId,
         username,
         message,
@@ -65,28 +98,83 @@ router.post('/send', async (req, res) => {
     });
   } catch (error) {
     logger.error('Failed to send message', { error: error.message });
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to send message' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to send message'
     });
   }
 });
 
 /**
- * Get chat history for a JobId
+ * Enforce message limit (delete oldest messages if over 50)
+ */
+async function enforceMessageLimit(chatType, jobId, placeId) {
+  try {
+    const query = { chatType };
+    if (chatType === 'server') {
+      query.jobId = jobId;
+    } else {
+      query.placeId = placeId;
+    }
+
+    const messageCount = await Message.countDocuments(query);
+
+    if (messageCount > 50) {
+      const toDelete = messageCount - 50;
+
+      // Find oldest messages
+      const oldMessages = await Message.find(query)
+        .sort({ createdAt: 1 })
+        .limit(toDelete)
+        .select('_id');
+
+      const idsToDelete = oldMessages.map(msg => msg._id);
+
+      // Delete them
+      await Message.deleteMany({ _id: { $in: idsToDelete } });
+
+      logger.info('Deleted old messages', { chatType, count: toDelete });
+    }
+  } catch (error) {
+    logger.error('Failed to enforce message limit', { error: error.message });
+  }
+}
+
+/**
+ * Get chat history for a JobId or PlaceId
  */
 router.get('/history', async (req, res) => {
   try {
-    const { jobId, limit = 50, before } = req.query;
+    const { jobId, placeId, chatType, limit = 50, before } = req.query;
 
-    if (!jobId) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'JobId is required' 
+    if (!chatType || (chatType !== 'server' && chatType !== 'global')) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid chatType (must be server or global)'
       });
     }
 
-    const query = { jobId };
+    if (chatType === 'server' && !jobId) {
+      return res.status(400).json({
+        success: false,
+        error: 'JobId is required for server chat'
+      });
+    }
+
+    if (chatType === 'global' && !placeId) {
+      return res.status(400).json({
+        success: false,
+        error: 'PlaceId is required for global chat'
+      });
+    }
+
+    const query = { chatType };
+    if (chatType === 'server') {
+      query.jobId = jobId;
+    } else {
+      query.placeId = placeId;
+    }
+
     if (before) {
       query.createdAt = { $lt: new Date(before) };
     }
@@ -101,9 +189,9 @@ router.get('/history', async (req, res) => {
     });
   } catch (error) {
     logger.error('Failed to get chat history', { error: error.message });
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to get chat history' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get chat history'
     });
   }
 });

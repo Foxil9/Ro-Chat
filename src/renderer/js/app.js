@@ -104,6 +104,14 @@ class RoChatApp {
         this.applyTheme(theme);
       });
     }
+
+    // Listen for keybind to focus chat
+    if (window.electronAPI?.onFocusChat) {
+      window.electronAPI.onFocusChat(() => {
+        const input = document.getElementById('message-input');
+        if (input) input.focus();
+      });
+    }
   }
 
   /**

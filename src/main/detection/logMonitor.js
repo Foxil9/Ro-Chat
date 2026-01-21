@@ -9,7 +9,8 @@ const LOG_DIR = process.env.LOCALAPPDATA
   : path.join(process.env.HOME, '.roblox', 'logs');
 
 // Regex patterns for parsing log lines
-const JOIN_PATTERN = /\[FLog::Output\]\s*!\s*Joining\s*game\s*['"`]?(\d+)['"`]?\s*place\s*['"`]?([0-9a-f-]+)['"`]?/i;
+// Format: [FLog::Output] ! Joining game 'jobId' place placeId at IP
+const JOIN_PATTERN = /\[FLog::Output\]\s*!\s*Joining\s*game\s*['"`]([0-9a-f-]+)['"`]\s*place\s*(\d+)/i;
 const SERVER_PATTERN = /gameplacejobid/i;
 
 class LogMonitor extends EventEmitter {
@@ -140,6 +141,10 @@ class LogMonitor extends EventEmitter {
       });
 
       stream.on('end', () => {
+        if (newData.trim().length > 0) {
+          // Emit activity event whenever we read new log data
+          this.emit('logActivity');
+        }
         this.parseLogs(newData);
         this.lastPosition = fileSize;
       });
@@ -169,10 +174,10 @@ class LogMonitor extends EventEmitter {
   parseLine(line) {
     // Try to match the join pattern
     const joinMatch = line.match(JOIN_PATTERN);
-    
+
     if (joinMatch) {
-      const placeId = joinMatch[1];
-      const jobId = joinMatch[2];
+      const jobId = joinMatch[1];      // jobId is first (UUID)
+      const placeId = joinMatch[2];    // placeId is second (number)
       const serverInfo = {
         placeId,
         jobId,
@@ -180,10 +185,10 @@ class LogMonitor extends EventEmitter {
       };
 
       // Check if server changed
-      if (!this.lastServerInfo || 
-          this.lastServerInfo.placeId !== serverInfo.placeId || 
+      if (!this.lastServerInfo ||
+          this.lastServerInfo.placeId !== serverInfo.placeId ||
           this.lastServerInfo.jobId !== serverInfo.jobId) {
-        
+
         logger.info('Server detected', { placeId, jobId });
         this.lastServerInfo = serverInfo;
         this.emit('serverDetected', serverInfo);

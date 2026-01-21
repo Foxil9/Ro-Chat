@@ -49,7 +49,7 @@ class ProcessWatcher extends EventEmitter {
 
     logger.info('Stopping process watcher');
     this.isWatching = false;
-    
+
     if (this.checkInterval) {
       clearInterval(this.checkInterval);
       this.checkInterval = null;
@@ -87,8 +87,8 @@ class ProcessWatcher extends EventEmitter {
       let command;
 
       if (platform === 'win32') {
-        // Windows: Use tasklist
-        command = `tasklist /FI "IMAGENAME eq ${ROBLOX_PROCESS}" /FI "STATUS eq running"`;
+        // Windows: Use PowerShell Get-Process which is more reliable
+        command = `powershell -Command "Get-Process -Name 'RobloxPlayerBeta' -ErrorAction SilentlyContinue | Select-Object -First 1"`;
       } else if (platform === 'darwin') {
         // macOS: Use ps
         command = `ps aux | grep -i "${ROBLOX_PROCESS}" | grep -v grep`;
@@ -100,7 +100,8 @@ class ProcessWatcher extends EventEmitter {
       const { stdout } = await execAsync(command);
 
       // Check if process name appears in output
-      return stdout.toLowerCase().includes(ROBLOX_PROCESS.toLowerCase());
+      // PowerShell will return process info if found, empty if not
+      return stdout.trim().length > 0 && stdout.toLowerCase().includes('roblox');
     } catch (error) {
       // If command fails, assume process not running
       logger.debug('Process check failed, assuming not running', { error: error.message });

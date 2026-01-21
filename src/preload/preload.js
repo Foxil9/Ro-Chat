@@ -51,6 +51,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('keybind:focus-chat', listener);
   },
 
+  onLogout: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on('auth:logout', listener);
+    return () => ipcRenderer.removeListener('auth:logout', listener);
+  },
+
   // Window controls
   window: {
     minimize: () => ipcRenderer.invoke('window:minimize'),

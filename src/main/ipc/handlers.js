@@ -77,6 +77,13 @@ async function handleLogin(event) {
   try {
     logger.info('Login requested');
     const userInfo = await robloxAuth.initiateLogin();
+
+    // Enable always-on-top after successful login with screen-saver level
+    if (mainWindow) {
+      mainWindow.setAlwaysOnTop(true, 'screen-saver');
+      logger.info('Always-on-top enabled after login');
+    }
+
     return { success: true, user: userInfo };
   } catch (error) {
     logger.error('Login failed', { error: error.message });
@@ -90,7 +97,30 @@ async function handleLogin(event) {
 async function handleLogout(event) {
   try {
     logger.info('Logout requested');
+
+    // Stop detector if running
+    if (detector.isActive()) {
+      detector.stop();
+      logger.info('Detector stopped');
+    }
+
+    // Clear authentication
     const result = tokenManager.logout();
+
+    // Reset window state for login screen
+    if (mainWindow) {
+      // Disable always-on-top when logging out
+      mainWindow.setAlwaysOnTop(false);
+      logger.info('Always-on-top disabled after logout');
+
+      // Reset window position to center
+      mainWindow.center();
+      logger.info('Window position reset to center');
+
+      // Notify main window to show login view
+      mainWindow.webContents.send('auth:logout');
+    }
+
     return { success: result };
   } catch (error) {
     logger.error('Logout failed', { error: error.message });
@@ -176,6 +206,12 @@ async function handleSendMessage(event, { jobId, placeId, chatType, message }) {
       return { success: false, error: 'Not authenticated' };
     }
 
+    // Get auth token
+    const token = tokenManager.getValidToken();
+    if (!token) {
+      return { success: false, error: 'No valid auth token' };
+    }
+
     // Send to backend server
     const response = await axios.post(`${BACKEND_URL}/api/chat/send`, {
       jobId,
@@ -186,7 +222,8 @@ async function handleSendMessage(event, { jobId, placeId, chatType, message }) {
       username: user.username
     }, {
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       }
     });
 
@@ -215,11 +252,18 @@ async function handleLoadHistory(event, { jobId, placeId, chatType }) {
   try {
     logger.info('Load history requested', { chatType, jobId, placeId });
 
+    // Get auth token
+    const token = tokenManager.getValidToken();
+    if (!token) {
+      return { success: false, error: 'No valid auth token', messages: [] };
+    }
+
     // Fetch from backend server
     const response = await axios.get(`${BACKEND_URL}/api/chat/history`, {
       params: { jobId, placeId, chatType, limit: 50 },
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       }
     });
 
@@ -340,10 +384,21 @@ function handleClose(event) {
 
 /**
  * Handle set always on top
+ * Only applies if user is authenticated
  */
 function handleSetAlwaysOnTop(event, flag) {
   if (mainWindow) {
-    mainWindow.setAlwaysOnTop(flag);
+    // Only allow always-on-top if user is authenticated
+    const isAuth = secureStore.isAuthenticated();
+    if (isAuth) {
+      // Use 'screen-saver' level for more forceful always-on-top on Windows
+      mainWindow.setAlwaysOnTop(flag, 'screen-saver');
+      logger.info('Always-on-top set to', flag);
+    } else {
+      // For login screen, always keep it false
+      mainWindow.setAlwaysOnTop(false);
+      logger.info('Always-on-top disabled (not authenticated)');
+    }
   }
   return { success: true };
 }
@@ -380,7 +435,7 @@ function handleOpenSettings(event) {
     backgroundColor: '#0a0c14',
     parent: mainWindow,
     modal: false,
-    center: true,
+    show: false, // Don't show until positioned
     webPreferences: {
       preload: path.join(__dirname, '../../preload/preload.js'),
       nodeIntegration: false,
@@ -390,6 +445,23 @@ function handleOpenSettings(event) {
   });
 
   settingsWindow.loadFile(path.join(__dirname, '../../renderer/views/settings.html'));
+
+  // Position window slightly to the left of center once ready to show
+  settingsWindow.once('ready-to-show', () => {
+    const { screen } = require('electron');
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+
+    const windowBounds = settingsWindow.getBounds();
+
+    // Calculate center position
+    const x = Math.floor((screenWidth - windowBounds.width) / 2);
+    const y = Math.floor((screenHeight - windowBounds.height) / 2);
+
+    // Offset to the left by 150 pixels
+    settingsWindow.setPosition(x - 150, y);
+    settingsWindow.show();
+  });
 
   settingsWindow.on('closed', () => {
     settingsWindow = null;

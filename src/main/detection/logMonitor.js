@@ -12,6 +12,8 @@ const LOG_DIR = process.env.LOCALAPPDATA
 // Format: [FLog::Output] ! Joining game 'jobId' place placeId at IP
 const JOIN_PATTERN = /\[FLog::Output\]\s*!\s*Joining\s*game\s*['"`]([0-9a-f-]+)['"`]\s*place\s*(\d+)/i;
 const SERVER_PATTERN = /gameplacejobid/i;
+// Disconnect patterns
+const DISCONNECT_PATTERN = /Disconnected|disconnect|leaving game|HttpRbxApiService stopped|Game has shut down|You have been kicked|Connection lost/i;
 
 class LogMonitor extends EventEmitter {
   constructor() {
@@ -141,10 +143,6 @@ class LogMonitor extends EventEmitter {
       });
 
       stream.on('end', () => {
-        if (newData.trim().length > 0) {
-          // Emit activity event whenever we read new log data
-          this.emit('logActivity');
-        }
         this.parseLogs(newData);
         this.lastPosition = fileSize;
       });
@@ -172,6 +170,15 @@ class LogMonitor extends EventEmitter {
    * Parse a single log line and emit events
    */
   parseLine(line) {
+    // Check for disconnect patterns first
+    const disconnectMatch = line.match(DISCONNECT_PATTERN);
+    if (disconnectMatch) {
+      logger.info('Disconnect detected in logs', { pattern: disconnectMatch[0] });
+      this.lastServerInfo = null;
+      this.emit('disconnected');
+      return;
+    }
+
     // Try to match the join pattern
     const joinMatch = line.match(JOIN_PATTERN);
 

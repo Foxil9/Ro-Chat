@@ -286,8 +286,13 @@ class SettingsManager {
     if (!confirm('Are you sure you want to logout?')) return;
 
     try {
-      if (window.app) {
-        await window.app.handleLogout();
+      const result = await window.electronAPI.auth.logout();
+
+      if (result.success) {
+        // Close settings window after logout
+        window.close();
+      } else {
+        alert('Failed to logout');
       }
     } catch (error) {
       console.error('Logout error:', error);

@@ -1,7 +1,11 @@
+// Load environment variables from .env file
+require('dotenv').config();
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const logger = require('./logging/logger');
+const connectDatabase = require('./config/database');
 const authRoutes = require('./routes/auth');
 const chatRoutes = require('./routes/chat');
 const authMiddleware = require('./middleware/authMiddleware');
@@ -57,6 +61,12 @@ module.exports.io = io;
 
 const PORT = process.env.PORT || 3000;
 
-server.listen(PORT, () => {
-  logger.info(`Server listening on port ${PORT}`);
+// Connect to database and start server
+connectDatabase().then(() => {
+  server.listen(PORT, () => {
+    logger.info(`Server listening on port ${PORT}`);
+  });
+}).catch((error) => {
+  logger.error('Failed to start server', { error: error.message });
+  process.exit(1);
 });

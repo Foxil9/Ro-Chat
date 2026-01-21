@@ -33,10 +33,11 @@ function createWindow() {
     show: false,
     frame: false,
     transparent: false,
-    alwaysOnTop: true,
+    alwaysOnTop: false, // Start disabled, enable after login
     resizable: true,
     backgroundColor: '#0a0c14',
     roundedCorners: true,
+    center: true,
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       nodeIntegration: false,
@@ -51,6 +52,8 @@ function createWindow() {
   // Show window when ready
   mainWindow.once('ready-to-show', () => {
     logger.info('Window ready to show');
+    // Ensure window is centered on startup
+    mainWindow.center();
     mainWindow.show();
   });
 
@@ -123,6 +126,10 @@ app.whenReady().then(() => {
   // Check if user is authenticated
   if (secureStore.isAuthenticated()) {
     logger.info('User is authenticated, starting detector');
+    // Enable always-on-top for authenticated users with screen-saver level
+    if (mainWindow) {
+      mainWindow.setAlwaysOnTop(true, 'screen-saver');
+    }
     detector.start();
   } else {
     logger.info('User not authenticated, showing login view');

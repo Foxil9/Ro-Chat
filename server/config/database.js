@@ -8,10 +8,7 @@ const MONGODB_URI = process.env.DB_URL || 'mongodb://localhost:27017/rochat';
  */
 async function connectDatabase() {
   try {
-    await mongoose.connect(MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
+    await mongoose.connect(MONGODB_URI);
     
     logger.info('Connected to MongoDB');
     

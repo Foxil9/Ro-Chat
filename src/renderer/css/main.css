@@ -1309,6 +1309,22 @@ button#btnSend {
 }
 
 /* Login Page */
+#login-view {
+    -webkit-app-region: drag;
+    cursor: move;
+}
+
+#login-view .btn,
+#login-view input,
+#login-view .status {
+    -webkit-app-region: no-drag;
+    cursor: default;
+}
+
+#login-view .btn {
+    cursor: pointer;
+}
+
 .login-container {
     width: 100%;
     max-width: 420px;
@@ -1351,10 +1367,11 @@ button#btnSend {
     transition: var(--transition-base);
     position: relative;
     overflow: hidden;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     text-align: center;
+    margin: 0 auto;
 }
 
 .btn-primary {

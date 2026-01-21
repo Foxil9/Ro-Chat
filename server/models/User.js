@@ -31,7 +31,6 @@ userSchema.pre('save', function(next) {
   next();
 });
 
-// Index for efficient queries
-userSchema.index({ userId: 1 });
+// Note: userId already has an index from unique: true
 
 module.exports = mongoose.model('User', userSchema);

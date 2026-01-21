@@ -17,23 +17,24 @@ function logout() {
 
 /**
  * Get valid token from storage
- * Roblox cookies don't have refresh tokens
+ * Returns idToken (JWT) for authentication with backend
  */
 function getValidToken() {
   const auth = secureStore.getAuth();
-  
+
   if (!auth) {
     return null;
   }
-  
-  // Cookies are long-lived, just check if expired
+
+  // Check if token is expired (tokens are auto-refreshed by robloxAuth.getAccessToken)
   if (Date.now() >= auth.expiresAt) {
     logger.info('Token expired, user must re-login');
     secureStore.clearAuth();
     return null;
   }
-  
-  return auth.robloxToken;
+
+  // Return idToken (JWT with user identity) for authentication
+  return auth.idToken;
 }
 
 /**

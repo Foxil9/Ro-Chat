@@ -112,6 +112,27 @@ class RoChatApp {
         if (input) input.focus();
       });
     }
+
+    // Listen for logout event
+    if (window.electronAPI?.onLogout) {
+      window.electronAPI.onLogout(() => {
+        console.log('Logout event received');
+        this.currentUser = null;
+        this.showView('login');
+
+        // Reset login button state
+        const loginBtn = document.getElementById('login-btn');
+        const statusEl = document.getElementById('login-status');
+        if (loginBtn) {
+          loginBtn.disabled = false;
+          loginBtn.textContent = 'Login with Roblox';
+        }
+        if (statusEl) {
+          statusEl.textContent = '';
+          statusEl.className = 'status';
+        }
+      });
+    }
   }
 
   /**

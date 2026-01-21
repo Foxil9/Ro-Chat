@@ -22,36 +22,60 @@ async function authMiddleware(req, res, next) {
     // For now, we'll just extract userId from token payload
     // In production, you would verify the token with Roblox API
     
-    // Simplified token parsing (JWT-like)
+    // Parse Roblox OAuth2 idToken (JWT)
     let payload;
     try {
-      // This is a placeholder - implement proper token verification
       const tokenParts = token.split('.');
       if (tokenParts.length === 3) {
-        payload = JSON.parse(Buffer.from(tokenParts[1], 'base64').toString());
+        // Decode JWT payload (base64url encoded)
+        const base64 = tokenParts[1].replace(/-/g, '+').replace(/_/g, '/');
+        payload = JSON.parse(Buffer.from(base64, 'base64').toString());
       } else {
-        // For non-JWT tokens, we'd need a different approach
-        return res.status(401).json({ 
-          success: false, 
-          error: 'Invalid token format' 
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid token format'
         });
       }
     } catch (error) {
       logger.error('Failed to parse token', { error: error.message });
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Invalid token' 
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid token'
       });
     }
 
-    // Find user by userId
-    const user = await User.findOne({ userId: payload.userId });
-    
-    if (!user) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'User not found' 
+    // Extract userId from token (Roblox uses 'sub' field for user ID)
+    const userIdStr = payload.sub || payload.userId;
+    const username = payload.preferred_username || payload.username;
+
+    if (!userIdStr) {
+      return res.status(401).json({
+        success: false,
+        error: 'Token missing user ID'
       });
+    }
+
+    // Convert userId to number (Roblox user IDs are numeric)
+    const userId = parseInt(userIdStr);
+    if (isNaN(userId)) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid user ID format'
+      });
+    }
+
+    // Find user by userId, create if not exists (auto-register)
+    let user = await User.findOne({ userId: userId });
+
+    if (!user) {
+      // Auto-register user from valid token
+      user = new User({
+        userId: userId,
+        username: username || `User${userId}`,
+        displayName: payload.name || payload.nickname || username
+      });
+      await user.save();
+      logger.info('Auto-registered user from token', { userId, username });
     }
 
     // Attach user to request

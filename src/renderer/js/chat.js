@@ -158,19 +158,18 @@ class ChatManager {
   }
 
   /**
-   * Update JobId display badge
+   * Update status display
    */
   updateJobIdDisplay(jobId) {
     if (this.jobIdDisplay) {
+      const statusDot = document.getElementById('status-dot');
+
       if (jobId === 'Detecting...') {
-        this.jobIdDisplay.textContent = 'JobId: Detecting...';
-        this.jobIdDisplay.className = 'badge';
+        this.jobIdDisplay.textContent = 'Not connected';
+        if (statusDot) statusDot.className = 'status-dot';
       } else {
-        // Show shortened JobId
-        const shortId = jobId.substring(0, 8) + '...';
-        this.jobIdDisplay.textContent = `JobId: ${shortId}`;
-        this.jobIdDisplay.className = 'badge online';
-        this.jobIdDisplay.title = jobId; // Full ID on hover
+        this.jobIdDisplay.textContent = 'Connected';
+        if (statusDot) statusDot.className = 'status-dot connected';
       }
     }
   }

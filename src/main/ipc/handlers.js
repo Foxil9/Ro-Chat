@@ -207,14 +207,18 @@ async function handleSendMessage(event, { jobId, placeId, chatType, message }) {
     // Get current user info
     const user = robloxAuth.getCurrentUser();
     if (!user) {
-      return { success: false, error: 'Not authenticated' };
+      logger.error('User not authenticated - getCurrentUser returned null');
+      return { success: false, error: 'Not authenticated. Please log in again.' };
     }
 
     // Get auth token
     const token = tokenManager.getValidToken();
     if (!token) {
-      return { success: false, error: 'No valid auth token' };
+      logger.error('No valid token - getValidToken returned null');
+      return { success: false, error: 'No valid auth token. Please log in again.' };
     }
+
+    logger.info('Sending message with auth', { userId: user.userId, hasToken: !!token });
 
     // Send to backend server
     const response = await axios.post(`${BACKEND_URL}/api/chat/send`, {

@@ -15,6 +15,8 @@ class ChatManager {
     this.MAX_MESSAGES = 50;
     this.serverWakeupWarningShown = false;
     this.SLOW_REQUEST_THRESHOLD = 3000; // 3 seconds
+    this.cooldownTimer = null;
+    this.cooldownEndTime = null;
   }
 
   /**
@@ -298,6 +300,16 @@ class ChatManager {
           if (lastMessage && lastMessage.isLocal && lastMessage.message === message) {
             messages.pop();
             this.renderAllMessages();
+          }
+
+          // Check if it's a rate limit error (429)
+          if (result.error && result.error.includes('Slow down')) {
+            // Extract wait time from error message
+            const match = result.error.match(/(\d+) seconds/);
+            if (match) {
+              const waitSeconds = parseInt(match[1]);
+              this.startCooldown(waitSeconds);
+            }
           }
 
           // Show server error
@@ -673,6 +685,74 @@ class ChatManager {
    */
   showSettings() {
     window.location.href = 'settings.html';
+  }
+
+  /**
+   * Start cooldown timer
+   */
+  startCooldown(seconds) {
+    // Clear any existing cooldown
+    if (this.cooldownTimer) {
+      clearInterval(this.cooldownTimer);
+    }
+
+    // Set cooldown end time
+    this.cooldownEndTime = Date.now() + (seconds * 1000);
+
+    // Disable input and send button
+    if (this.messageInput) {
+      this.messageInput.disabled = true;
+      this.messageInput.placeholder = `Cooldown: ${seconds}s`;
+    }
+    if (this.sendButton) {
+      this.sendButton.disabled = true;
+      this.sendButton.textContent = `Wait ${seconds}s`;
+      this.sendButton.style.opacity = '0.5';
+      this.sendButton.style.cursor = 'not-allowed';
+    }
+
+    // Update countdown every second
+    this.cooldownTimer = setInterval(() => {
+      const remaining = Math.ceil((this.cooldownEndTime - Date.now()) / 1000);
+
+      if (remaining <= 0) {
+        this.endCooldown();
+      } else {
+        if (this.messageInput) {
+          this.messageInput.placeholder = `Cooldown: ${remaining}s`;
+        }
+        if (this.sendButton) {
+          this.sendButton.textContent = `Wait ${remaining}s`;
+        }
+      }
+    }, 100); // Update every 100ms for smooth countdown
+  }
+
+  /**
+   * End cooldown timer
+   */
+  endCooldown() {
+    // Clear timer
+    if (this.cooldownTimer) {
+      clearInterval(this.cooldownTimer);
+      this.cooldownTimer = null;
+    }
+
+    this.cooldownEndTime = null;
+
+    // Re-enable input and send button
+    if (this.messageInput) {
+      this.messageInput.disabled = false;
+      this.messageInput.placeholder = 'Type a message...';
+    }
+    if (this.sendButton) {
+      this.sendButton.disabled = false;
+      this.sendButton.textContent = 'Send';
+      this.sendButton.style.opacity = '1';
+      this.sendButton.style.cursor = 'pointer';
+    }
+
+    console.log('Cooldown ended - you can send messages again');
   }
 }
 

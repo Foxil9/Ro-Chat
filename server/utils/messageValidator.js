@@ -18,38 +18,45 @@ const profanityMatcher = new RegExpMatcher({
 });
 
 // Additional custom regex patterns to catch spacing/special char bypasses
-// Word boundaries (\b) prevent matching substrings (e.g., "hello" won't match "hell")
+// More aggressive to catch multiple asterisks and other bypass attempts
 const customPatterns = [
-  // fuck variations: f u c k, f.u.c.k, f-u-c-k, f_u_c_k, f**k, phuck
-  /\bf+[\s.*\-_]*u+[\s.*\-_]*c+[\s.*\-_]*k+\b/gi,
+  // fuck variations: f u c k, f.u.c.k, f-u-c-k, f_u_c_k, f*k, f**k, f***k, phuck
+  /\bf+[\s.*\-_]*u*[\s.*\-_]*c+[\s.*\-_]*k+\b/gi,
   /\bp+h+[\s.*\-_]*u+[\s.*\-_]*c+[\s.*\-_]*k+\b/gi,
 
-  // shit variations: s h i t, s.h.i.t, s-h-i-t, s_h_i_t, sh*t
-  /\bs+[\s.*\-_]*h+[\s.*\-_]*i+[\s.*\-_]*t+\b/gi,
+  // More aggressive fuck patterns - catches f**k, f***k, fck, fuk, etc.
+  /\bf+[*\s._\-]*[*\s._\-]+[*\s._\-]*k+\b/gi,  // f + multiple special chars + k
+  /\bf+[u\*]{0,3}c*k+\b/gi,  // fk, fuk, f*k, f**k, fck
 
-  // bitch variations: b i t c h, b.i.t.c.h
-  /\bb+[\s.*\-_]*i+[\s.*\-_]*t+[\s.*\-_]*c+[\s.*\-_]*h+\b/gi,
+  // shit variations: s h i t, s.h.i.t, s-h-i-t, s_h_i_t, sh*t, sh**t, sht
+  /\bs+[\s.*\-_]*h+[\s.*\-_]*i*[\s.*\-_]*t+\b/gi,
+  /\bs+h+[*\s._\-]*[*\s._\-]*t+\b/gi,  // sht, sh*t, sh**t
 
-  // ass variations: a s s, a.s.s (but not "class", "pass", etc.)
+  // bitch variations: b i t c h, b.i.t.c.h, b**ch, btch
+  /\bb+[\s.*\-_]*i*[\s.*\-_]*t+[\s.*\-_]*c+[\s.*\-_]*h+\b/gi,
+  /\bb+[*\s._\-]*t+c+h+\b/gi,
+
+  // ass variations: a s s, a.s.s, a**
   /\ba+[\s.*\-_]*s+[\s.*\-_]*s+\b/gi,
+  /\ba+[*\s._\-]+s*\b/gi,
 
-  // damn variations: d a m n, d.a.m.n
-  /\bd+[\s.*\-_]*a+[\s.*\-_]*m+[\s.*\-_]*n+\b/gi,
+  // damn variations: d a m n, d.a.m.n, d**n
+  /\bd+[\s.*\-_]*a*[\s.*\-_]*m+[\s.*\-_]*n+\b/gi,
 
-  // hell variations: h e l l, h.e.l.l (but not "hello", "shell")
-  /\bh+[\s.*\-_]*e+[\s.*\-_]*l+[\s.*\-_]*l+\b/gi,
+  // hell variations: h e l l, h.e.l.l, h**l
+  /\bh+[\s.*\-_]*e*[\s.*\-_]*l+[\s.*\-_]*l+\b/gi,
 
-  // crap variations: c r a p, c.r.a.p
-  /\bc+[\s.*\-_]*r+[\s.*\-_]*a+[\s.*\-_]*p+\b/gi,
+  // crap variations: c r a p, c.r.a.p, cr*p
+  /\bc+[\s.*\-_]*r+[\s.*\-_]*a*[\s.*\-_]*p+\b/gi,
 
-  // dick variations: d i c k, d.i.c.k
-  /\bd+[\s.*\-_]*i+[\s.*\-_]*c+[\s.*\-_]*k+\b/gi,
+  // dick variations: d i c k, d.i.c.k, d**k
+  /\bd+[\s.*\-_]*i*[\s.*\-_]*c+[\s.*\-_]*k+\b/gi,
 
   // pussy variations: p u s s y, p.u.s.s.y
   /\bp+[\s.*\-_]*u+[\s.*\-_]*s+[\s.*\-_]*s+[\s.*\-_]*y+\b/gi,
 
   // cock variations: c o c k, c.o.c.k
-  /\bc+[\s.*\-_]*o+[\s.*\-_]*c+[\s.*\-_]*k+\b/gi,
+  /\bc+[\s.*\-_]*o*[\s.*\-_]*c+[\s.*\-_]*k+\b/gi,
 ];
 
 // Initialize text censor for replacement (if needed later)

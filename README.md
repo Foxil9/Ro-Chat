@@ -144,4 +144,4 @@ Before running the app, you need to create an OAuth2 application with Roblox:
 
 ## License
 
-MIT
+This project is licensed under the terms of the MIT license. See the `LICENSE` file for details.

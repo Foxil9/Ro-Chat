@@ -6,6 +6,7 @@ const logger = require('./logging/logger');
 const { registerHandlers, setMainWindow, setupDetectorEvents } = require('./ipc/handlers');
 const detector = require('./detection/detector');
 const secureStore = require('./storage/secureStore');
+const { setupAutoUpdater } = require('./updater');
 
 let mainWindow;
 
@@ -122,6 +123,9 @@ app.whenReady().then(() => {
 
   // Create main window
   createWindow();
+
+  // Setup auto-updater
+  setupAutoUpdater(mainWindow);
 
   // Check if user is authenticated
   if (secureStore.isAuthenticated()) {

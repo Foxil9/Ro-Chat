@@ -9,6 +9,7 @@ const connectDatabase = require('./config/database');
 const authRoutes = require('./routes/auth');
 const chatRoutes = require('./routes/chat');
 const authMiddleware = require('./middleware/authMiddleware');
+const sessionManager = require('./utils/sessionManager');
 
 const app = express();
 const server = http.createServer(app);
@@ -41,17 +42,20 @@ app.get('/health', (req, res) => {
 io.on('connection', (socket) => {
   logger.info('Client connected', { socketId: socket.id });
 
-  socket.on('join-room', (jobId) => {
-    socket.join(jobId);
-    logger.info('Client joined room', { socketId: socket.id, jobId });
+  socket.on('join-room', (roomId) => {
+    socket.join(roomId);
+    sessionManager.joinRoom(socket.id, roomId);
+    logger.info('Client joined room', { socketId: socket.id, roomId });
   });
 
-  socket.on('leave-room', (jobId) => {
-    socket.leave(jobId);
-    logger.info('Client left room', { socketId: socket.id, jobId });
+  socket.on('leave-room', (roomId) => {
+    socket.leave(roomId);
+    sessionManager.leaveRoom(socket.id, roomId);
+    logger.info('Client left room', { socketId: socket.id, roomId });
   });
 
   socket.on('disconnect', () => {
+    sessionManager.handleDisconnect(socket.id);
     logger.info('Client disconnected', { socketId: socket.id });
   });
 });

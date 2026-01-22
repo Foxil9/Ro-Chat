@@ -3,6 +3,7 @@ const processWatcher = require('./processWatcher');
 const logMonitor = require('./logMonitor');
 const memoryReader = require('./memoryReader');
 const logger = require('../logging/logger');
+const socketClient = require('../socket/socketClient');
 
 class Detector extends EventEmitter {
   constructor() {
@@ -25,6 +26,9 @@ class Detector extends EventEmitter {
 
     logger.info('Starting detector');
     this.isRunning = true;
+
+    // Connect to Socket.io server
+    socketClient.connect();
 
     // Start process watcher
     processWatcher.startWatching();
@@ -62,6 +66,9 @@ class Detector extends EventEmitter {
 
     logger.info('Stopping detector');
     this.isRunning = false;
+
+    // Disconnect from Socket.io server
+    socketClient.disconnect();
 
     // Stop all watchers
     processWatcher.stopWatching();
@@ -113,6 +120,9 @@ class Detector extends EventEmitter {
     this.currentServer = null;
     this.lastLogUpdate = null;
 
+    // Leave all Socket.io rooms
+    socketClient.leaveAllRooms();
+
     // Emit server changed with null
     if (previousServer) {
       this.emit('serverChanged', null);
@@ -131,6 +141,10 @@ class Detector extends EventEmitter {
     const previousServer = this.currentServer;
     this.currentServer = null;
     this.lastLogUpdate = null;
+
+    // Leave all Socket.io rooms
+    socketClient.leaveAllRooms();
+
     this.emit('serverChanged', null);
   }
 
@@ -150,17 +164,21 @@ class Detector extends EventEmitter {
     }
 
     // Check if server changed
-    if (!this.currentServer || 
-        this.currentServer.placeId !== serverInfo.placeId || 
+    if (!this.currentServer ||
+        this.currentServer.placeId !== serverInfo.placeId ||
         this.currentServer.jobId !== serverInfo.jobId) {
-      
-      logger.info('Server changed', { 
-        placeId: serverInfo.placeId, 
+
+      logger.info('Server changed', {
+        placeId: serverInfo.placeId,
         jobId: serverInfo.jobId,
-        source 
+        source
       });
-      
+
       this.currentServer = serverInfo;
+
+      // Join Socket.io rooms for this server
+      socketClient.joinRoom(serverInfo.jobId, serverInfo.placeId);
+
       this.emit('serverChanged', serverInfo);
     }
   }

@@ -24,6 +24,7 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+.claude/
 *.swo
 .clineignore
 .clinerules

@@ -67,8 +67,8 @@ const PORT = process.env.PORT || 3000;
 
 // Connect to database and start server
 connectDatabase().then(() => {
-  server.listen(PORT, () => {
-    logger.info(`Server listening on port ${PORT}`);
+  server.listen(PORT, '0.0.0.0', () => {
+    logger.info(`Server listening on port ${PORT} on 0.0.0.0`);
   });
 }).catch((error) => {
   logger.error('Failed to start server', { error: error.message });

@@ -1,7 +1,24 @@
 const winston = require('winston');
 const path = require('path');
+const { app } = require('electron');
+const fs = require('fs');
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
+
+// Get writable log directory (works in both dev and production)
+let logDir;
+if (app && app.getPath) {
+  // Production: use Electron's logs directory
+  logDir = app.getPath('logs');
+} else {
+  // Fallback for development or if app is not ready
+  logDir = path.join(__dirname, '../../../logs');
+}
+
+// Ensure log directory exists
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir, { recursive: true });
+}
 
 // Define log format
 const logFormat = winston.format.combine(
@@ -31,13 +48,13 @@ const logger = winston.createLogger({
     }),
     // File transport - all logs
     new winston.transports.File({
-      filename: path.join(__dirname, '../../../logs/app.log'),
+      filename: path.join(logDir, 'app.log'),
       maxsize: 5 * 1024 * 1024, // 5MB
       maxFiles: 5
     }),
     // Error file transport - errors only
     new winston.transports.File({
-      filename: path.join(__dirname, '../../../logs/error.log'),
+      filename: path.join(logDir, 'error.log'),
       level: 'error',
       maxsize: 5 * 1024 * 1024, // 5MB
       maxFiles: 5

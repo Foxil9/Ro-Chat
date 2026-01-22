@@ -6,6 +6,9 @@ const axios = require('axios');
 const { rateLimiter } = require('../middleware/rateLimiter');
 const { validateMessage, sanitizeMessage } = require('../utils/messageValidator');
 
+// Track last global message time per user for high-traffic cooldown
+const userGlobalMessageTimes = new Map();
+
 /**
  * Send a chat message
  * Rate limiting applied via middleware
@@ -14,6 +17,45 @@ router.post('/send', rateLimiter, async (req, res) => {
   try {
     const { jobId, placeId, chatType, message } = req.body;
     const { userId, username } = req.user;
+
+    // Additional global chat cooldown for high-traffic scenarios (100+ users)
+    if (chatType === 'global' && placeId) {
+      const io = req.app.get('io');
+      const globalRoom = `global:${placeId}`;
+      const roomSize = io.sockets.adapter.rooms.get(globalRoom)?.size || 0;
+
+      // If 100+ users, enforce 10-second cooldown
+      if (roomSize >= 100) {
+        const userKey = `${userId}_${placeId}`;
+        const lastGlobalMessage = userGlobalMessageTimes.get(userKey) || 0;
+        const now = Date.now();
+        const timeSinceLastMessage = now - lastGlobalMessage;
+        const GLOBAL_COOLDOWN_MS = 10000; // 10 seconds
+
+        if (timeSinceLastMessage < GLOBAL_COOLDOWN_MS) {
+          const remainingSeconds = Math.ceil((GLOBAL_COOLDOWN_MS - timeSinceLastMessage) / 1000);
+          logger.warn('Global chat cooldown active', { userId, roomSize, remainingSeconds });
+          return res.status(429).json({
+            success: false,
+            error: `High traffic! Please wait ${remainingSeconds} seconds before sending another message.`,
+            retryAfter: remainingSeconds
+          });
+        }
+
+        // Update last message time
+        userGlobalMessageTimes.set(userKey, now);
+
+        // Cleanup old entries (older than 1 hour)
+        if (userGlobalMessageTimes.size > 10000) {
+          const oneHourAgo = now - 3600000;
+          for (const [key, time] of userGlobalMessageTimes.entries()) {
+            if (time < oneHourAgo) {
+              userGlobalMessageTimes.delete(key);
+            }
+          }
+        }
+      }
+    }
 
     if (!message) {
       return res.status(400).json({

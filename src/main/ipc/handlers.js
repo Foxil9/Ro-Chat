@@ -240,14 +240,26 @@ async function handleSendMessage(event, { jobId, placeId, chatType, message }) {
   } catch (error) {
     logger.error('Failed to send message', {
       error: error.message,
+      status: error.response?.status,
+      responseData: error.response?.data,
       chatType,
       jobId,
       placeId,
       backendUrl: BACKEND_URL
     });
+
+    // Extract error message from response
+    let errorMessage = 'Failed to send message';
+    if (error.response?.data?.error) {
+      errorMessage = error.response.data.error;
+    } else if (error.response?.status === 429) {
+      errorMessage = 'Slow down! Please wait before sending another message.';
+    }
+
     return {
       success: false,
-      error: error.response?.data?.error || 'Failed to send message'
+      error: errorMessage,
+      status: error.response?.status
     };
   }
 }

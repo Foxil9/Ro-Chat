@@ -302,14 +302,12 @@ class ChatManager {
             this.renderAllMessages();
           }
 
-          // Check if it's a rate limit error (429)
-          if (result.error && result.error.includes('Slow down')) {
+          // Check if it's a rate limit error (429 or "Slow down" in message)
+          if (result.status === 429 || (result.error && result.error.includes('Slow down'))) {
             // Extract wait time from error message
             const match = result.error.match(/(\d+) seconds/);
-            if (match) {
-              const waitSeconds = parseInt(match[1]);
-              this.startCooldown(waitSeconds);
-            }
+            const waitSeconds = match ? parseInt(match[1]) : 30; // Default 30s if can't parse
+            this.startCooldown(waitSeconds);
           }
 
           // Show server error

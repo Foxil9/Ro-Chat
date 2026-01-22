@@ -2,21 +2,26 @@
 
 RoChat - A New Way of Communication
 
+## About
+
+RoChat is an alternative chat system for Roblox that provides a reliable, unrestricted communication platform. Instead of relying on Roblox's built-in chat system, RoChat offers a dedicated desktop application that allows players to communicate freely across Roblox games.
+
 ## Features
 
-- Roblox Authentication (OAuth/Token-based)
-- Real-time server detection (JobId/PlaceId)
-- Chat monitoring and relaying
+- Roblox Authentication (OAuth2-based)
+- Automatic game server detection (JobId/PlaceId)
+- **Dual Chat System**: Server chat (per game instance) and Global chat (per game)
+- Real-time WebSocket communication
+- Automatic message cleanup for privacy
 - Secure token storage (electron-store)
-- WebSocket-based real-time communication
 - Cross-platform support (Windows, macOS, Linux)
 
 ## Architecture
 
 The application consists of two main components:
 
-1. **Electron Client** - Desktop application for monitoring Roblox and displaying chat
-2. **Express Server** - Backend server for chat relay and authentication
+1. **Electron Client** - Desktop application for monitoring Roblox and providing chat interface
+2. **Express Server** - Backend server for managing chat sessions and authentication
 
 ### Electron Client Structure
 
@@ -65,12 +70,11 @@ Before running the app, you need to create an OAuth2 application with Roblox:
 2. Click "Create OAuth2 App"
 3. Fill in the application details:
    - **Name**: RoChat (or any name you prefer)
-   - **Description**: Desktop chat relay application
+   - **Description**: Alternative chat application for Roblox
    - **Redirect URLs**: Add `http://localhost:3333/callback`
    - **Scopes**: Select:
      - `openid` (required)
      - `profile` (recommended)
-     - `universe-messaging-service:publish` (required for chat relay)
 4. Save the application and copy your **Client ID** and **Client Secret**
 
 ### 2. Configure Environment Variables
@@ -119,9 +123,12 @@ Before running the app, you need to create an OAuth2 application with Roblox:
    - After successful login, you're redirected back to the app
    - Access tokens are automatically refreshed (15-minute lifetime)
    - Refresh tokens last for 90 days
-2. **Detection**: The app monitors Roblox logs to detect game server (JobId/PlaceId)
-3. **Connection**: App connects to the backend server using the detected JobId
-4. **Chat Relay**: Messages are relayed between the app and the server via WebSocket
+2. **Game Detection**: The app monitors Roblox logs to detect which game server you're in (JobId/PlaceId)
+3. **Chat Sessions**: Two chat channels are automatically created:
+   - **Server Chat**: Private to your specific game instance (JobId)
+   - **Global Chat**: Shared across all instances of the same game (PlaceId)
+4. **Real-time Communication**: Messages are sent and received via WebSocket for instant delivery
+5. **Privacy**: When all players leave a chat session, messages are automatically deleted after 1 minute
 
 ## Security Notes
 

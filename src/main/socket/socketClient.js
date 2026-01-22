@@ -10,7 +10,7 @@ class SocketClient {
     this.socket = null;
     this.connected = false;
     this.currentRooms = new Set(); // Track joined rooms
-    this.BACKEND_URL = process.env.SERVER_URL || 'http://localhost:3000';
+    this.BACKEND_URL = 'https://ro-chat-zqks.onrender.com';
   }
 
   /**

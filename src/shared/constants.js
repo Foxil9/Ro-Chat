@@ -34,7 +34,7 @@ const API = {
     GAMES: 'https://games.roblox.com',
     CHAT: 'https://chat.roblox.com/v2'
   },
-  SERVER: process.env.SERVER_URL || 'http://localhost:3000'
+  SERVER: 'https://ro-chat-zqks.onrender.com'
 };
 
 // Storage Keys

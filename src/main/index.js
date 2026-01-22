@@ -77,17 +77,10 @@ function createWindow() {
  * Validate environment variables
  */
 function validateEnvironment() {
-  const requiredEnvVars = [];
-  
   // MongoDB is required for server
   // The client doesn't need DB_URL, but server does
   if (process.env.NODE_ENV !== 'production') {
     logger.info('Running in development mode');
-  }
-  
-  // Warn if server URL not configured
-  if (!process.env.SERVER_URL) {
-    logger.warn('SERVER_URL not set, using default: http://localhost:3000');
   }
 }
 

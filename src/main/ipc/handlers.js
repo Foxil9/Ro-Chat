@@ -6,8 +6,8 @@ const detector = require('../detection/detector');
 const secureStore = require('../storage/secureStore');
 const logger = require('../logging/logger');
 
-// Backend server configuration - will be loaded from environment
-const BACKEND_URL = process.env.SERVER_URL || 'http://localhost:3000';
+// Backend server configuration
+const BACKEND_URL = 'https://ro-chat-zqks.onrender.com';
 
 // Store reference to main window for sending events
 let mainWindow = null;

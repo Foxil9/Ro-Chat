@@ -9,11 +9,11 @@ const secureStore = require('../storage/secureStore');
 
 // OAuth2 Configuration
 const OAUTH_BASE_URL = 'https://apis.roblox.com/oauth';
-const CLIENT_ID = process.env.ROBLOX_CLIENT_ID;
-const REDIRECT_URI = process.env.OAUTH_REDIRECT_URI || 'http://localhost:3333/callback';
-const CALLBACK_PORT = parseInt(process.env.OAUTH_CALLBACK_PORT || '3333');
+const CLIENT_ID = '7532859285329729546';
+const REDIRECT_URI = 'http://localhost:3333/callback';
+const CALLBACK_PORT = 3333;
 const SCOPES = 'openid profile';
-const SERVER_URL = (process.env.SERVER_URL || 'http://localhost:3000').replace(/\/$/, '');
+const SERVER_URL = 'https://ro-chat-zqks.onrender.com';
 
 // Store PKCE verifier temporarily during auth flow
 let currentCodeVerifier = null;

@@ -293,8 +293,8 @@ class ChatManager {
         }
 
         if (!result.success) {
-          // Server rejected the message (rate limit, profanity, etc.)
-          // Remove the optimistically added message
+          // Server rejected message (rate limit, profanity, etc.)
+          // Remove optimistically added message
           const messages = this.messages[this.activeTab];
           const lastMessage = messages[messages.length - 1];
           if (lastMessage && lastMessage.isLocal && lastMessage.message === message) {
@@ -302,11 +302,20 @@ class ChatManager {
             this.renderAllMessages();
           }
 
-          // Check if it's a rate limit error (429 or "Slow down" in message)
-          if (result.status === 429 || (result.error && result.error.includes('Slow down'))) {
-            // Extract wait time from error message
-            const match = result.error.match(/(\d+) seconds/);
+          console.log('Server returned error:', result);
+
+          // Check if it's a rate limit error (429 status or specific error messages)
+          if (result.status === 429 || 
+              (result.error && (
+                result.error.includes('Wait') && result.error.includes('seconds') ||
+                result.error.includes('seconds') && (result.error.includes('slow') || result.error.includes('spam') || result.error.includes('fast')) ||
+                result.error.includes('CHILL OUT')
+              ))) {
+            // Extract wait time from error message - look for any number followed by 'seconds'
+            const match = result.error.match(/(\d+)\s*seconds?/i);
             const waitSeconds = match ? parseInt(match[1]) : 30; // Default 30s if can't parse
+            
+            console.log('Cooldown triggered, waiting', waitSeconds, 'seconds');
             this.startCooldown(waitSeconds);
           }
 
@@ -694,17 +703,51 @@ class ChatManager {
       clearInterval(this.cooldownTimer);
     }
 
+    console.log(`Starting ${seconds} second cooldown`);
+
     // Set cooldown end time
     this.cooldownEndTime = Date.now() + (seconds * 1000);
 
     // Get cooldown warning elements
-    const cooldownWarning = document.getElementById('cooldown-warning');
-    const cooldownText = document.getElementById('cooldown-text');
+    let cooldownWarning = document.getElementById('cooldown-warning');
+    let cooldownText = document.getElementById('cooldown-text');
+
+    // Create cooldown warning element dynamically if it doesn't exist
+    if (!cooldownWarning) {
+      console.warn('Cooldown warning element not found, creating it');
+      
+      // Find chat container
+      const chatContainer = document.querySelector('.chat-container');
+      if (!chatContainer) {
+        console.error('Chat container not found!');
+        return;
+      }
+
+      // Create cooldown warning element
+      cooldownWarning = document.createElement('div');
+      cooldownWarning.id = 'cooldown-warning';
+      cooldownWarning.className = 'cooldown-warning hidden';
+      cooldownWarning.innerHTML = '⏱️ <span id="cooldown-text">Cooldown: 0s</span>';
+      
+      // Insert before chat input
+      const chatInput = chatContainer.querySelector('.chat-input');
+      if (chatInput) {
+        chatContainer.insertBefore(cooldownWarning, chatInput);
+      } else {
+        chatContainer.appendChild(cooldownWarning);
+      }
+
+      // Get the text element after creating
+      cooldownText = document.getElementById('cooldown-text');
+    }
 
     // Show cooldown warning
     if (cooldownWarning) {
       cooldownWarning.classList.remove('hidden');
       cooldownWarning.classList.add('visible');
+      console.log('Cooldown warning shown');
+    } else {
+      console.error('Failed to show cooldown warning');
     }
 
     // Disable input and send button

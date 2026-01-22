@@ -267,6 +267,7 @@ body::after {
     border-radius: 50%;
     padding: 2px;
     background: var(--gradient-primary);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
@@ -1685,38 +1686,6 @@ input[type="checkbox"] {
 
 /* Coffee Link Styles */
 .coffee-link-container {    text-align: center;    margin-top: 6px;    padding: 0;}.coffee-link {    display: inline-flex;    align-items: center;    gap: 4px;    color: #764ba2;    font-weight: 600;    font-size: 11px;    text-decoration: none;    padding: 4px 10px;    border-radius: 6px;    background: rgba(118, 75, 162, 0.08);    border: 1px solid rgba(118, 75, 162, 0.25);    transition: var(--transition-base);    cursor: pointer;    opacity: 0.85;}.coffee-link:hover {    background: rgba(118, 75, 162, 0.15);    border-color: rgba(118, 75, 162, 0.4);    transform: translateY(-1px);    box-shadow: 0 2px 8px rgba(118, 75, 162, 0.25);    opacity: 1;}.coffee-link:active {    transform: translateY(0);}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-}
 
 /* Modal/Dialog Styles */
 .modal-overlay {

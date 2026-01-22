@@ -24,11 +24,11 @@ class ChatManager {
     if (this.isInitialized) return;
 
     // Get DOM elements (using correct IDs from index.html)
-    this.messageInput = document.getElementById('chatInput');
-    this.sendButton = document.getElementById('btnSend');
-    this.messagesContainer = document.getElementById('messageContainer');
-    this.jobIdDisplay = document.getElementById('statusDisplay');
-    this.gameNameDisplay = document.getElementById('gameName');
+    this.messageInput = document.getElementById('message-input');
+    this.sendButton = document.getElementById('send-btn');
+    this.messagesContainer = document.getElementById('chat-messages');
+    this.jobIdDisplay = document.getElementById('server-text');
+    this.gameNameDisplay = document.getElementById('user-name');
 
     // Create tab UI if it doesn't exist
     this.createTabUI();

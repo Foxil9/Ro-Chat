@@ -162,11 +162,11 @@ class ChatManager {
       btnSettings.addEventListener('click', () => this.showSettings());
     }
 
-    // History button
-    const btnHistory = document.getElementById('btnHistory');
-    if (btnHistory) {
-      btnHistory.addEventListener('click', () => this.loadHistory());
-    }
+    // History feature removed - users only see messages sent after they join
+    // const btnHistory = document.getElementById('btnHistory');
+    // if (btnHistory) {
+    //   btnHistory.addEventListener('click', () => this.loadHistory());
+    // }
 
     // Connect button
     const btnConnect = document.getElementById('connect-btn');
@@ -240,8 +240,7 @@ class ChatManager {
 
     this.addSystemMessage(`Connected to game!`, 'global');
 
-    // Load chat history for both tabs
-    this.loadHistory();
+    // No history loading - users only see messages sent after they join
 
     console.log('Server changed:', { placeId, jobId, isServerChange });
   }

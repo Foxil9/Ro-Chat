@@ -1,4 +1,4 @@
-const { ipcMain } = require('electron');
+const { ipcMain, shell } = require('electron');
 const axios = require('axios');
 const robloxAuth = require('../auth/robloxAuth');
 const tokenManager = require('../auth/tokenManager');
@@ -64,6 +64,10 @@ function registerHandlers() {
   ipcMain.handle('settings:applyTheme', handleApplyTheme);
   ipcMain.handle('settings:resetPosition', handleResetPosition);
   ipcMain.handle('settings:registerKeybind', handleRegisterKeybind);
+  ipcMain.on('settings:setMessageOpacity', handleSetMessageOpacity);
+
+  // Shell handlers
+  ipcMain.handle('shell:openExternal', handleOpenExternal);
 
   logger.info('IPC handlers registered successfully');
 }
@@ -528,6 +532,32 @@ function handleRegisterKeybind(event, keybind) {
   }
 
   return { success: true };
+}
+
+/**
+ * Handle message opacity setting
+ */
+function handleSetMessageOpacity(event, opacity) {
+  // Forward to main window
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('settings:messageOpacityChanged', opacity);
+  }
+}
+
+// ==================== SHELL HANDLERS ====================
+
+/**
+ * Handle opening external URL
+ */
+async function handleOpenExternal(event, url) {
+  try {
+    logger.info('Opening external URL', { url });
+    await shell.openExternal(url);
+    return { success: true };
+  } catch (error) {
+    logger.error('Failed to open external URL', { error: error.message, url });
+    return { success: false, error: error.message };
+  }
 }
 
 module.exports = {

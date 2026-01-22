@@ -13,6 +13,8 @@ class ChatManager {
     this.activeTab = 'server'; // 'server' or 'global'
     this.isInitialized = false;
     this.MAX_MESSAGES = 50;
+    this.serverWakeupWarningShown = false;
+    this.SLOW_REQUEST_THRESHOLD = 3000; // 3 seconds
   }
 
   /**
@@ -22,11 +24,11 @@ class ChatManager {
     if (this.isInitialized) return;
 
     // Get DOM elements (using correct IDs from index.html)
-    this.messageInput = document.getElementById('message-input');
-    this.sendButton = document.getElementById('send-btn');
-    this.messagesContainer = document.getElementById('chat-messages');
-    this.jobIdDisplay = document.getElementById('server-text'); // Use server-text for now
-    this.gameNameDisplay = document.getElementById('user-name');
+    this.messageInput = document.getElementById('chatInput');
+    this.sendButton = document.getElementById('btnSend');
+    this.messagesContainer = document.getElementById('messageContainer');
+    this.jobIdDisplay = document.getElementById('statusDisplay');
+    this.gameNameDisplay = document.getElementById('gameName');
 
     // Create tab UI if it doesn't exist
     this.createTabUI();
@@ -37,8 +39,38 @@ class ChatManager {
     // Listen for server detection changes
     this.setupServerListener();
 
+    // Apply message opacity from settings
+    this.applyMessageOpacity();
+
+    // Set Buy Me a Coffee link (replace with your actual link)
+    if (window.externalLinkHandler) {
+      // TODO: Replace this URL with your actual Buy Me a Coffee link
+      window.externalLinkHandler.setCoffeeLink('https://buymeacoffee.com/yourname');
+    }
+
     this.isInitialized = true;
     console.log('Chat manager initialized');
+  }
+
+  /**
+   * Apply message opacity from settings
+   */
+  applyMessageOpacity() {
+    const opacity = localStorage.getItem('message-opacity') || 100;
+    const style = document.createElement('style');
+    style.id = 'message-opacity-style';
+    style.textContent = `.chat-msg { opacity: ${opacity / 100} !important; }`;
+    document.head.appendChild(style);
+
+    // Listen for opacity changes
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'message-opacity') {
+        const style = document.getElementById('message-opacity-style');
+        if (style) {
+          style.textContent = `.chat-msg { opacity: ${e.newValue / 100} !important; }`;
+        }
+      }
+    });
   }
 
   /**
@@ -142,19 +174,28 @@ class ChatManager {
 
     // Server detected
     const { placeId, jobId } = serverInfo;
+    const isServerChange = this.currentJobId && this.currentJobId !== jobId;
+
     this.currentJobId = jobId;
     this.currentPlaceId = placeId;
 
     // Update UI
     this.updateJobIdDisplay(jobId);
     this.clearMessages();
-    this.addSystemMessage(`Connected to server!`, 'server');
+
+    // Show server spinoff warning if switching servers
+    if (isServerChange) {
+      this.addSystemMessage(`⚠️ Server changed. Loading messages may take a moment...`, 'server');
+    } else {
+      this.addSystemMessage(`Connected to server!`, 'server');
+    }
+
     this.addSystemMessage(`Connected to game!`, 'global');
 
     // Load chat history for both tabs
     this.loadHistory();
 
-    console.log('Server changed:', { placeId, jobId });
+    console.log('Server changed:', { placeId, jobId, isServerChange });
   }
 
   /**
@@ -181,6 +222,15 @@ class ChatManager {
     const message = this.messageInput.value.trim();
 
     if (!message) return;
+
+    // Validate message
+    if (window.messageValidator) {
+      const validation = window.messageValidator.validate(message);
+      if (!validation.valid) {
+        this.showValidationError(validation.error, validation.highlightWord);
+        return;
+      }
+    }
 
     // Check if connected
     if (this.activeTab === 'server' && !this.currentJobId) {
@@ -210,14 +260,47 @@ class ChatManager {
     // Send to backend via IPC
     try {
       if (window.electron && window.electron.sendMessage) {
+        const startTime = Date.now();
+        let warningTimeout = null;
+
+        // Show server wakeup warning if request takes too long
+        if (!this.serverWakeupWarningShown) {
+          warningTimeout = setTimeout(() => {
+            this.showServerWakeupWarning();
+          }, this.SLOW_REQUEST_THRESHOLD);
+        }
+
         const result = await window.electron.sendMessage({
-          jobId: this.currentJobId,
+          jobId: this.activeTab === 'server' ? this.currentJobId : undefined,
           placeId: this.currentPlaceId,
           chatType: this.activeTab,
           message: message
         });
 
+        // Clear warning timeout
+        if (warningTimeout) {
+          clearTimeout(warningTimeout);
+        }
+
+        const elapsed = Date.now() - startTime;
+
+        // If request was slow (server cold start), mark warning as shown
+        if (elapsed > this.SLOW_REQUEST_THRESHOLD) {
+          this.serverWakeupWarningShown = true;
+          this.hideServerWakeupWarning();
+        }
+
         if (!result.success) {
+          // Server rejected the message (rate limit, profanity, etc.)
+          // Remove the optimistically added message
+          const messages = this.messages[this.activeTab];
+          const lastMessage = messages[messages.length - 1];
+          if (lastMessage && lastMessage.isLocal && lastMessage.message === message) {
+            messages.pop();
+            this.renderAllMessages();
+          }
+
+          // Show server error
           this.showMessageError(message, result.error);
         }
       } else {
@@ -225,6 +308,15 @@ class ChatManager {
       }
     } catch (error) {
       console.error('Failed to send message:', error);
+
+      // Remove optimistically added message on error
+      const messages = this.messages[this.activeTab];
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage && lastMessage.isLocal && lastMessage.message === message) {
+        messages.pop();
+        this.renderAllMessages();
+      }
+
       this.showMessageError(message, error.message);
     }
   }
@@ -466,6 +558,95 @@ class ChatManager {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  /**
+   * Show validation error
+   */
+  showValidationError(error, highlightWord) {
+    // Show error message
+    const errorEl = document.createElement('div');
+    errorEl.className = 'validation-error';
+    errorEl.textContent = error;
+    errorEl.style.cssText = `
+      position: absolute;
+      bottom: 70px;
+      left: 20px;
+      right: 20px;
+      background: rgba(254, 107, 139, 0.2);
+      border: 2px solid rgba(254, 107, 139, 0.4);
+      border-radius: 8px;
+      padding: 12px;
+      color: #fe6b8b;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 1000;
+      animation: slideUp 0.3s ease;
+    `;
+
+    // Add to chat area
+    const chatArea = document.querySelector('.chat-area');
+    if (chatArea) {
+      chatArea.appendChild(errorEl);
+
+      // Highlight problematic word in input if applicable
+      if (highlightWord) {
+        this.messageInput.style.borderColor = '#fe6b8b';
+        this.messageInput.style.boxShadow = '0 0 0 2px rgba(254, 107, 139, 0.2)';
+      }
+
+      // Remove error after 4 seconds
+      setTimeout(() => {
+        errorEl.remove();
+        this.messageInput.style.borderColor = '';
+        this.messageInput.style.boxShadow = '';
+      }, 4000);
+    }
+  }
+
+  /**
+   * Show server wakeup warning (Render free tier cold start)
+   */
+  showServerWakeupWarning() {
+    // Remove any existing warning
+    const existing = document.getElementById('server-wakeup-warning');
+    if (existing) return;
+
+    const warningEl = document.createElement('div');
+    warningEl.id = 'server-wakeup-warning';
+    warningEl.className = 'server-wakeup-warning';
+    warningEl.innerHTML = `
+      <div class="spinner"></div>
+      <div>
+        <div style="font-weight: 700; margin-bottom: 4px;">Server is waking up...</div>
+        <div style="font-size: 12px; opacity: 0.8;">This may take 30-60 seconds (free tier cold start)</div>
+      </div>
+    `;
+
+    const chatArea = document.querySelector('.chat-area');
+    if (chatArea) {
+      chatArea.appendChild(warningEl);
+    }
+  }
+
+  /**
+   * Hide server wakeup warning
+   */
+  hideServerWakeupWarning() {
+    const warningEl = document.getElementById('server-wakeup-warning');
+    if (warningEl) {
+      // Add success message briefly before removing
+      warningEl.innerHTML = `
+        <div style="color: #4ade80;">✓</div>
+        <div style="font-weight: 700;">Server is ready!</div>
+      `;
+      warningEl.style.background = 'rgba(74, 222, 128, 0.2)';
+      warningEl.style.borderColor = 'rgba(74, 222, 128, 0.4)';
+
+      setTimeout(() => {
+        warningEl.remove();
+      }, 2000);
+    }
   }
 
   /**

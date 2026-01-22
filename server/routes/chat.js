@@ -3,11 +3,14 @@ const router = express.Router();
 const logger = require('../logging/logger');
 const Message = require('../models/Message');
 const axios = require('axios');
+const { rateLimiter } = require('../middleware/rateLimiter');
+const { validateMessage, sanitizeMessage } = require('../utils/messageValidator');
 
 /**
  * Send a chat message
+ * Rate limiting applied via middleware
  */
-router.post('/send', async (req, res) => {
+router.post('/send', rateLimiter, async (req, res) => {
   try {
     const { jobId, placeId, chatType, message } = req.body;
     const { userId, username } = req.user;
@@ -40,21 +43,30 @@ router.post('/send', async (req, res) => {
       });
     }
 
-    if (message.length > 200) {
+    // Server-side validation (cannot be bypassed)
+    const validation = validateMessage(message);
+    if (!validation.valid) {
+      logger.warn('Message validation failed', {
+        userId,
+        error: validation.error
+      });
       return res.status(400).json({
         success: false,
-        error: 'Message too long (max 200 characters)'
+        error: validation.error
       });
     }
 
-    // Save message to database
+    // Sanitize message
+    const sanitizedMessage = sanitizeMessage(message);
+
+    // Save message to database (use sanitized message)
     const newMessage = new Message({
       jobId: chatType === 'server' ? jobId : undefined,
       placeId: chatType === 'global' ? placeId : undefined,
       chatType,
       userId,
       username,
-      message
+      message: sanitizedMessage
     });
     await newMessage.save();
 
@@ -72,7 +84,7 @@ router.post('/send', async (req, res) => {
       chatType,
       userId,
       username,
-      message,
+      message: sanitizedMessage,
       timestamp: newMessage.createdAt
     });
 
@@ -92,7 +104,7 @@ router.post('/send', async (req, res) => {
         chatType,
         userId,
         username,
-        message,
+        message: sanitizedMessage,
         timestamp: newMessage.createdAt
       }
     });

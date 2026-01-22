@@ -13,7 +13,7 @@ const CLIENT_ID = process.env.ROBLOX_CLIENT_ID;
 const REDIRECT_URI = process.env.OAUTH_REDIRECT_URI || 'http://localhost:3333/callback';
 const CALLBACK_PORT = parseInt(process.env.OAUTH_CALLBACK_PORT || '3333');
 const SCOPES = 'openid profile';
-const SERVER_URL = process.env.SERVER_URL || 'http://localhost:3000';
+const SERVER_URL = (process.env.SERVER_URL || 'http://localhost:3000').replace(/\/$/, '');
 
 // Store PKCE verifier temporarily during auth flow
 let currentCodeVerifier = null;

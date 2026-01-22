@@ -8,6 +8,7 @@ class SettingsManager {
       draggableHeader: true,
       alwaysOnTop: true,
       opacity: 100,
+      messageOpacity: 100,
       chatKeybind: null
     };
     this.isInitialized = false;
@@ -74,6 +75,8 @@ class SettingsManager {
     const alwaysOnTop = document.getElementById('always-on-top');
     const opacitySlider = document.getElementById('opacity-slider');
     const opacityValue = document.getElementById('opacity-value');
+    const messageOpacitySlider = document.getElementById('message-opacity-slider');
+    const messageOpacityValue = document.getElementById('message-opacity-value');
     const keybindBtn = document.getElementById('keybind-btn');
 
     if (themeSelect) themeSelect.value = this.settings.theme;
@@ -83,6 +86,10 @@ class SettingsManager {
     if (opacitySlider) {
       opacitySlider.value = this.settings.opacity;
       if (opacityValue) opacityValue.textContent = this.settings.opacity + '%';
+    }
+    if (messageOpacitySlider) {
+      messageOpacitySlider.value = this.settings.messageOpacity;
+      if (messageOpacityValue) messageOpacityValue.textContent = this.settings.messageOpacity + '%';
     }
     if (keybindBtn && this.settings.chatKeybind) {
       keybindBtn.textContent = this.settings.chatKeybind;
@@ -207,6 +214,27 @@ class SettingsManager {
       });
 
       opacitySlider.addEventListener('change', (e) => {
+        this.saveSettings();
+      });
+    }
+
+    // Message opacity slider
+    const messageOpacitySlider = document.getElementById('message-opacity-slider');
+    const messageOpacityValue = document.getElementById('message-opacity-value');
+    if (messageOpacitySlider) {
+      messageOpacitySlider.addEventListener('input', (e) => {
+        const value = parseInt(e.target.value);
+        this.settings.messageOpacity = value;
+        if (messageOpacityValue) messageOpacityValue.textContent = value + '%';
+
+        // Apply message opacity to main window
+        localStorage.setItem('message-opacity', value);
+        if (window.electronAPI?.settings?.setMessageOpacity) {
+          window.electronAPI.settings.setMessageOpacity(value);
+        }
+      });
+
+      messageOpacitySlider.addEventListener('change', (e) => {
         this.saveSettings();
       });
     }

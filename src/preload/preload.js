@@ -71,7 +71,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   settings: {
     applyTheme: (theme) => ipcRenderer.invoke('settings:applyTheme', theme),
     resetPosition: () => ipcRenderer.invoke('settings:resetPosition'),
-    registerKeybind: (keybind) => ipcRenderer.invoke('settings:registerKeybind', keybind)
+    registerKeybind: (keybind) => ipcRenderer.invoke('settings:registerKeybind', keybind),
+    setMessageOpacity: (opacity) => ipcRenderer.send('settings:setMessageOpacity', opacity)
+  },
+
+  // Shell methods
+  shell: {
+    openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url)
   }
 });
 
@@ -89,10 +95,13 @@ contextBridge.exposeInMainWorld('electron', {
   onServerChanged: (callback) => {
     const listener = (event, serverInfo) => callback(serverInfo);
     ipcRenderer.on('detection:serverChanged', listener);
-    
+
     // Return unsubscribe function
     return () => {
       ipcRenderer.removeListener('detection:serverChanged', listener);
     };
-  }
+  },
+
+  // Shell methods
+  openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url)
 });

@@ -8,7 +8,7 @@ class RoChatApp {
   }
 
   /**
-   * Initialize the application
+   * Initialize application
    */
   async init() {
     if (this.isInitialized) return;
@@ -17,6 +17,9 @@ class RoChatApp {
       // Load and apply saved theme
       const savedTheme = this.loadSavedTheme();
       this.applyTheme(savedTheme);
+
+      // Register saved keybind
+      this.registerSavedKeybind();
 
       // Check authentication status
       const status = await window.electronAPI.auth.getStatus();
@@ -37,6 +40,24 @@ class RoChatApp {
     } catch (error) {
       console.error('Failed to initialize:', error);
       this.showView('login');
+    }
+  }
+
+  /**
+   * Register saved keybind from settings
+   */
+  async registerSavedKeybind() {
+    try {
+      const saved = localStorage.getItem('rochat-settings');
+      if (saved) {
+        const settings = JSON.parse(saved);
+        if (settings.chatKeybind && window.electronAPI?.settings?.registerKeybind) {
+          await window.electronAPI.settings.registerKeybind(settings.chatKeybind);
+          console.log('Registered saved keybind:', settings.chatKeybind);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to register saved keybind:', error);
     }
   }
 

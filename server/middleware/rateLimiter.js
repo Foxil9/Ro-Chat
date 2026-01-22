@@ -8,12 +8,12 @@ const logger = require('../logging/logger');
 const userMessageTimes = new Map();
 
 // Rate limit configuration
-// Only rapid-fire burst detection - removed medium/sustained limits
+// 10 messages in less than 5 seconds
 const RATE_LIMIT = {
-  // Rapid-fire detection
+  // Burst detection
   BURST: {
-    MAX_MESSAGES: 3,
-    WINDOW_MS: 3000,    // 3 seconds
+    MAX_MESSAGES: 10,
+    WINDOW_MS: 5000,    // 5 seconds
     COOLDOWN_MS: 10000  // 10 second cooldown
   },
   CLEANUP_INTERVAL: 300000 // Clean up old data every 5 minutes

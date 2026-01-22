@@ -44,6 +44,9 @@ class ChatManager {
     // Apply message opacity from settings
     this.applyMessageOpacity();
 
+    // Register saved keybind
+    this.registerSavedKeybind();
+
     // Set Buy Me a Coffee link (replace with your actual link)
     if (window.externalLinkHandler) {
       // TODO: Replace this URL with your actual Buy Me a Coffee link
@@ -52,6 +55,24 @@ class ChatManager {
 
     this.isInitialized = true;
     console.log('Chat manager initialized');
+  }
+
+  /**
+   * Register saved keybind from settings
+   */
+  async registerSavedKeybind() {
+    try {
+      const saved = localStorage.getItem('rochat-settings');
+      if (saved) {
+        const settings = JSON.parse(saved);
+        if (settings.chatKeybind && window.electronAPI?.settings?.registerKeybind) {
+          await window.electronAPI.settings.registerKeybind(settings.chatKeybind);
+          console.log('Chat: Registered saved keybind:', settings.chatKeybind);
+        }
+      }
+    } catch (error) {
+      console.error('Chat: Failed to register saved keybind:', error);
+    }
   }
 
   /**
@@ -145,6 +166,31 @@ class ChatManager {
     const btnHistory = document.getElementById('btnHistory');
     if (btnHistory) {
       btnHistory.addEventListener('click', () => this.loadHistory());
+    }
+
+    // Connect button
+    const btnConnect = document.getElementById('connect-btn');
+    if (btnConnect) {
+      btnConnect.addEventListener('click', () => this.handleConnect());
+    }
+  }
+
+  /**
+   * Handle connect button click
+   */
+  async handleConnect() {
+    try {
+      if (window.electron && window.electron.startDetection) {
+        const result = await window.electron.startDetection();
+        if (result.success) {
+          this.addSystemMessage('Starting detection...', 'server');
+        } else {
+          this.addSystemMessage('Failed to start detection', 'server');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to start detection:', error);
+      this.addSystemMessage('Error starting detection', 'server');
     }
   }
 
@@ -250,6 +296,8 @@ class ChatManager {
     this.addMessage({
       userId: currentUser?.userId || 'local',
       username: currentUser?.username || 'You',
+      displayName: currentUser?.displayName,
+      picture: currentUser?.picture,
       message: message,
       timestamp: Date.now(),
       isLocal: true,
@@ -319,8 +367,7 @@ class ChatManager {
             this.startCooldown(waitSeconds);
           }
 
-          // Show server error
-          this.showMessageError(message, result.error);
+          // No error message shown - only cooldown banner
         }
       } else {
         console.log('Mock send:', message);
@@ -336,7 +383,8 @@ class ChatManager {
         this.renderAllMessages();
       }
 
-      this.showMessageError(message, error.message);
+      // For non-rate-limit errors, just log them but don't show error message
+      console.log('Message error:', error.message);
     }
   }
 
@@ -414,10 +462,31 @@ class ChatManager {
       minute: '2-digit'
     });
 
-    // Avatar container (circle)
+    // Use displayName if available, otherwise fallback to username
+    const displayName = message.displayName || message.username;
+    const username = message.username;
+    const picture = message.picture;
+
+    // Avatar container (circle) - use profile picture if available
     const avatarEl = document.createElement('div');
     avatarEl.className = 'msg-avatar';
-    avatarEl.textContent = this.escapeHtml(message.username.charAt(0).toUpperCase());
+
+    if (picture) {
+      // Use actual profile picture
+      const imgEl = document.createElement('img');
+      imgEl.src = picture;
+      imgEl.alt = displayName;
+      imgEl.style.cssText = 'width: 100%; height: 100%; border-radius: 50%; object-fit: cover;';
+      imgEl.onerror = () => {
+        // Fallback to initial letter if image fails to load
+        avatarEl.innerHTML = '';
+        avatarEl.textContent = this.escapeHtml(displayName.charAt(0).toUpperCase());
+      };
+      avatarEl.appendChild(imgEl);
+    } else {
+      // Fallback to first letter
+      avatarEl.textContent = this.escapeHtml(displayName.charAt(0).toUpperCase());
+    }
 
     // Name info section (display name + username in parentheses)
     const nameInfoEl = document.createElement('div');
@@ -425,11 +494,11 @@ class ChatManager {
     
     const displayNameEl = document.createElement('span');
     displayNameEl.className = 'msg-display-name';
-    displayNameEl.textContent = this.escapeHtml(message.username);
+    displayNameEl.textContent = this.escapeHtml(displayName);
     
     const usernameEl = document.createElement('span');
     usernameEl.className = 'msg-username';
-    usernameEl.textContent = `(${this.escapeHtml(message.username)})`;
+    usernameEl.textContent = `(${this.escapeHtml(username)})`;
     
     nameInfoEl.appendChild(displayNameEl);
     nameInfoEl.appendChild(usernameEl);
@@ -467,30 +536,6 @@ class ChatManager {
     this.scrollToBottom();
   }
 
-  /**
-   * Show message error
-   */
-  showMessageError(originalMessage, errorText) {
-    const messageEl = document.createElement('div');
-    messageEl.className = 'chat-msg error';
-
-    const authorEl = document.createElement('div');
-    authorEl.className = 'msg-author';
-    authorEl.textContent = 'Error';
-
-    const contentEl = document.createElement('div');
-    contentEl.className = 'msg-content';
-    contentEl.textContent = `Failed to send: ${this.escapeHtml(originalMessage)}`;
-    if (errorText) {
-      contentEl.textContent += ` (${errorText})`;
-    }
-
-    messageEl.appendChild(authorEl);
-    messageEl.appendChild(contentEl);
-
-    this.messagesContainer.appendChild(messageEl);
-    this.scrollToBottom();
-  }
 
   /**
    * Clear all messages

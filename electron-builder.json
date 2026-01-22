@@ -30,8 +30,8 @@
   },
   "publish": {
     "provider": "github",
-    "owner": "YourGithubUsername",
-    "repo": "RoChat"
+    "owner": "Foxil9",
+    "repo": "Ro-Chat"
   },
   "mac": {
     "target": "dmg",

@@ -238,23 +238,42 @@ async function handleSendMessage(event, { jobId, placeId, chatType, message }) {
     logger.info('Message sent successfully', { chatType, jobId, placeId });
     return { success: true };
   } catch (error) {
-    logger.error('Failed to send message', {
+    // Extract error message from response
+    let errorMessage = 'Failed to send message';
+    let errorReason = 'Unknown error';
+
+    if (error.response?.data?.error) {
+      errorMessage = error.response.data.error;
+      errorReason = `Server rejected: ${errorMessage}`;
+    } else if (error.response?.status === 429) {
+      errorMessage = 'Slow down! Please wait before sending another message.';
+      errorReason = `Rate limited (HTTP ${error.response?.status}): ${errorMessage}`;
+    } else if (error.response?.status) {
+      errorReason = `HTTP ${error.response?.status}: ${error.response?.statusText || 'Server error'}`;
+    } else if (error.code === 'ECONNREFUSED') {
+      errorReason = 'Connection refused - server may be down';
+    } else if (error.code === 'ETIMEDOUT') {
+      errorReason = 'Connection timed out - check your network';
+    } else {
+      errorReason = error.message || 'Unknown error';
+    }
+
+    logger.error('Message NOT sent - Details:', {
       error: error.message,
       status: error.response?.status,
       responseData: error.response?.data,
       chatType,
       jobId,
       placeId,
-      backendUrl: BACKEND_URL
+      backendUrl: BACKEND_URL,
+      reason: errorReason,
+      messagePreview: message?.substring(0, 50) + (message?.length > 50 ? '...' : '')
     });
 
-    // Extract error message from response
-    let errorMessage = 'Failed to send message';
-    if (error.response?.data?.error) {
-      errorMessage = error.response.data.error;
-    } else if (error.response?.status === 429) {
-      errorMessage = 'Slow down! Please wait before sending another message.';
-    }
+    console.log(`\x1b[31m❌ Message NOT sent:\x1b[0m ${errorReason}`);
+    console.log(`\x1b[33m   Chat Type:\x1b[0m ${chatType}`);
+    console.log(`\x1b[33m   Job ID:\x1b[0m ${jobId || 'N/A'}`);
+    console.log(`\x1b[33m   Place ID:\x1b[0m ${placeId || 'N/A'}`);
 
     return {
       success: false,

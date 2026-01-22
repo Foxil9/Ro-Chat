@@ -402,9 +402,11 @@ class ChatManager {
 
   /**
    * Render a single message
+   * Remote messages appear on the right, local messages on the left
    */
   renderMessage(message) {
     const messageEl = document.createElement('div');
+    // Note: 'local' means sent by user (left), 'remote' means from others (right)
     messageEl.className = `chat-msg ${message.isLocal ? 'local' : 'remote'}`;
 
     const timestamp = new Date(message.timestamp).toLocaleTimeString([], {
@@ -412,21 +414,41 @@ class ChatManager {
       minute: '2-digit'
     });
 
-    const authorEl = document.createElement('div');
-    authorEl.className = 'msg-author';
-    authorEl.textContent = this.escapeHtml(message.username);
+    // Avatar container (circle)
+    const avatarEl = document.createElement('div');
+    avatarEl.className = 'msg-avatar';
+    avatarEl.textContent = this.escapeHtml(message.username.charAt(0).toUpperCase());
 
-    const contentEl = document.createElement('div');
-    contentEl.className = 'msg-content';
-    contentEl.textContent = this.escapeHtml(message.message);
+    // Name info section (display name + username in parentheses)
+    const nameInfoEl = document.createElement('div');
+    nameInfoEl.className = 'msg-name-info';
+    
+    const displayNameEl = document.createElement('span');
+    displayNameEl.className = 'msg-display-name';
+    displayNameEl.textContent = this.escapeHtml(message.username);
+    
+    const usernameEl = document.createElement('span');
+    usernameEl.className = 'msg-username';
+    usernameEl.textContent = `(${this.escapeHtml(message.username)})`;
+    
+    nameInfoEl.appendChild(displayNameEl);
+    nameInfoEl.appendChild(usernameEl);
 
+    // Time in smaller text
     const timeEl = document.createElement('div');
     timeEl.className = 'msg-time';
     timeEl.textContent = timestamp;
 
-    messageEl.appendChild(authorEl);
-    messageEl.appendChild(contentEl);
+    // Message content in gray box
+    const contentEl = document.createElement('div');
+    contentEl.className = 'msg-content';
+    contentEl.textContent = this.escapeHtml(message.message);
+
+    // Assemble message
+    messageEl.appendChild(avatarEl);
+    messageEl.appendChild(nameInfoEl);
     messageEl.appendChild(timeEl);
+    messageEl.appendChild(contentEl);
 
     this.messagesContainer.appendChild(messageEl);
   }

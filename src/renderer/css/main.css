@@ -674,134 +674,143 @@ body::after {
     }
 }
 
-/* Chat messages */
+/* Chat messages - New design */
 .chat-msg {
-    max-width: 85%;
-    padding: 14px 18px;
-    border-radius: var(--radius-xl);
-    margin-bottom: 4px;
-    animation: messageSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    position: relative;
+    width: 100%;
+    max-width: 600px;
+    padding: 12px;
+    border-radius: var(--radius-lg);
+    margin-bottom: 8px;
+    animation: messageSlideIn 0.3s ease-out;
     transition: var(--transition-base);
-    align-self: flex-start;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
 }
 
 @keyframes messageSlideIn {
     from {
         opacity: 0;
-        transform: translateY(20px) scale(0.95);
+        transform: translateY(10px);
     }
     to {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translateY(0);
     }
 }
 
-.chat-msg.remote {
-    background: rgba(255, 255, 255, 0.06);
-    backdrop-filter: blur(15px) saturate(150%);
-    -webkit-backdrop-filter: blur(15px) saturate(150%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.chat-msg.remote:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.12);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-}
-
+/* Local messages (sent by user) - left side */
 .chat-msg.local {
+    align-self: flex-start;
+}
+
+/* Remote messages (from others) - right side */
+.chat-msg.remote {
     align-self: flex-end;
-    background: linear-gradient(135deg,
-        rgba(102, 126, 234, 0.2) 0%,
-        rgba(118, 75, 162, 0.15) 50%,
-        rgba(79, 172, 254, 0.2) 100%);
-    backdrop-filter: blur(15px) saturate(180%);
-    -webkit-backdrop-filter: blur(15px) saturate(180%);
-    border: 1px solid rgba(102, 126, 234, 0.3);
-    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.15);
 }
 
-.chat-msg.local:hover {
-    border-color: rgba(102, 126, 234, 0.5);
-    transform: translateY(-2px);
-    box-shadow:
-        0 8px 24px rgba(102, 126, 234, 0.25),
-        0 0 32px rgba(102, 126, 234, 0.1);
+.chat-msg.remote .msg-avatar,
+.chat-msg.remote .msg-name-info,
+.chat-msg.remote .msg-time {
+    text-align: right;
+    order: 1;
 }
 
-.chat-msg.error {
-    background: rgba(254, 107, 139, 0.2);
-    border: 1px solid rgba(254, 107, 139, 0.4);
-    box-shadow: 0 4px 16px rgba(254, 107, 139, 0.2);
+.chat-msg.remote .msg-content {
+    order: 2;
 }
 
-/* Avatar system */
+/* Avatar - circular profile picture */
 .msg-avatar {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
     border-radius: 50%;
     background: var(--gradient-primary);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 700;
     color: white;
-    margin-right: 12px;
     border: 2px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-.msg-header {
+/* Name info section */
+.msg-name-info {
     display: flex;
     align-items: center;
-    margin-bottom: 6px;
+    gap: 6px;
+    flex-wrap: wrap;
 }
 
-.msg-author {
+.msg-display-name {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.msg-username {
     font-weight: 700;
     font-size: 13px;
-    background: var(--gradient-primary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin-right: 8px;
+    color: var(--text-secondary);
 }
 
-.chat-msg.local .msg-author {
-    background: var(--gradient-secondary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+/* Time - smaller text, not bold */
+.msg-time {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+/* Message content - gray box */
+.msg-content {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.5;
+    word-wrap: break-word;
+    max-width: 100%;
+    display: inline-block;
+}
+
+.chat-msg.remote .msg-content {
+    background: rgba(102, 126, 234, 0.15);
+    border-color: rgba(102, 126, 234, 0.25);
+}
+
+.chat-msg.local .msg-content {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Error messages */
+.chat-msg.error {
+    background: rgba(254, 107, 139, 0.15);
+    border: 1px solid rgba(254, 107, 139, 0.3);
+    border-radius: var(--radius-lg);
+    padding: 12px 16px;
+    align-self: flex-start;
+}
+
+.chat-msg.error .msg-content {
+    background: transparent;
+    border: none;
+    padding: 0;
 }
 
 .chat-msg.error .msg-author {
-    background: none;
-    -webkit-text-fill-color: var(--danger);
+    font-weight: 700;
+    font-size: 13px;
     color: var(--danger);
-}
-
-.msg-content {
-    color: var(--text-primary);
-    font-size: 14.5px;
-    line-height: 1.6;
-    letter-spacing: 0.01em;
-    word-wrap: break-word;
-}
-
-.msg-time {
-    font-size: 11px;
-    color: var(--text-muted);
-    margin-top: 6px;
-    opacity: 0.7;
-    font-weight: 500;
-}
-
-.chat-msg:hover .msg-time {
-    opacity: 1;
+    margin-bottom: 4px;
 }
 
 /* Modern Input Bar */

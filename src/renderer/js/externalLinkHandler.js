@@ -97,7 +97,7 @@ class ExternalLinkHandler {
   }
 
   /**
-   * Handle coffee link click
+   * Handle coffee link click - no warning, just open directly
    */
   handleCoffeeLinkClick(e) {
     e.preventDefault();
@@ -107,9 +107,8 @@ class ExternalLinkHandler {
       return;
     }
 
-    this.showWarning(this.coffeeLink, (url) => {
-      this.openExternal(url);
-    });
+    // Open coffee link directly without warning
+    this.openExternal(this.coffeeLink);
   }
 
   /**

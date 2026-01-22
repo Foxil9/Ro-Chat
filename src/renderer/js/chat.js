@@ -47,7 +47,7 @@ class ChatManager {
     // Set Buy Me a Coffee link (replace with your actual link)
     if (window.externalLinkHandler) {
       // TODO: Replace this URL with your actual Buy Me a Coffee link
-      window.externalLinkHandler.setCoffeeLink('https://buymeacoffee.com/yourname');
+      window.externalLinkHandler.setCoffeeLink('https://ko-fi.com/foxil9');
     }
 
     this.isInitialized = true;
@@ -697,33 +697,39 @@ class ChatManager {
     // Set cooldown end time
     this.cooldownEndTime = Date.now() + (seconds * 1000);
 
+    // Get cooldown warning elements
+    const cooldownWarning = document.getElementById('cooldown-warning');
+    const cooldownText = document.getElementById('cooldown-text');
+
+    // Show cooldown warning
+    if (cooldownWarning) {
+      cooldownWarning.classList.remove('hidden');
+      cooldownWarning.classList.add('visible');
+    }
+
     // Disable input and send button
     if (this.messageInput) {
       this.messageInput.disabled = true;
-      this.messageInput.placeholder = `Cooldown: ${seconds}s`;
+      this.messageInput.placeholder = `Cooldown active...`;
     }
     if (this.sendButton) {
       this.sendButton.disabled = true;
-      this.sendButton.textContent = `Wait ${seconds}s`;
       this.sendButton.style.opacity = '0.5';
       this.sendButton.style.cursor = 'not-allowed';
     }
 
-    // Update countdown every second
+    // Update countdown every 100ms for smooth animation
     this.cooldownTimer = setInterval(() => {
       const remaining = Math.ceil((this.cooldownEndTime - Date.now()) / 1000);
 
       if (remaining <= 0) {
         this.endCooldown();
       } else {
-        if (this.messageInput) {
-          this.messageInput.placeholder = `Cooldown: ${remaining}s`;
-        }
-        if (this.sendButton) {
-          this.sendButton.textContent = `Wait ${remaining}s`;
+        if (cooldownText) {
+          cooldownText.textContent = `Cooldown: ${remaining}s - Slow down!`;
         }
       }
-    }, 100); // Update every 100ms for smooth countdown
+    }, 100);
   }
 
   /**
@@ -737,6 +743,13 @@ class ChatManager {
     }
 
     this.cooldownEndTime = null;
+
+    // Hide cooldown warning
+    const cooldownWarning = document.getElementById('cooldown-warning');
+    if (cooldownWarning) {
+      cooldownWarning.classList.remove('visible');
+      cooldownWarning.classList.add('hidden');
+    }
 
     // Re-enable input and send button
     if (this.messageInput) {

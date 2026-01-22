@@ -7,10 +7,27 @@ const logger = require('../logging/logger');
 // Key: userId, Value: array of timestamps
 const userMessageTimes = new Map();
 
-// Rate limit configuration
+// Multi-tier rate limit configuration
+// Focus on burst detection (fast sending) rather than volume
 const RATE_LIMIT = {
-  MAX_MESSAGES: 10,
-  WINDOW_MS: 60000, // 1 minute
+  // Tier 1: Rapid-fire detection (most aggressive)
+  BURST_FAST: {
+    MAX_MESSAGES: 3,
+    WINDOW_MS: 3000,    // 3 seconds
+    COOLDOWN_MS: 10000  // 10 second cooldown
+  },
+  // Tier 2: Medium burst detection
+  BURST_MEDIUM: {
+    MAX_MESSAGES: 5,
+    WINDOW_MS: 5000,    // 5 seconds
+    COOLDOWN_MS: 15000  // 15 second cooldown
+  },
+  // Tier 3: Sustained spam protection
+  SUSTAINED: {
+    MAX_MESSAGES: 10,
+    WINDOW_MS: 60000,   // 60 seconds
+    COOLDOWN_MS: 30000  // 30 second cooldown
+  },
   CLEANUP_INTERVAL: 300000 // Clean up old data every 5 minutes
 };
 
@@ -19,10 +36,10 @@ const RATE_LIMIT = {
  */
 function cleanupOldTimestamps() {
   const now = Date.now();
-  const cutoff = now - RATE_LIMIT.WINDOW_MS;
+  const cutoff = now - RATE_LIMIT.SUSTAINED.WINDOW_MS;
 
   for (const [userId, timestamps] of userMessageTimes.entries()) {
-    // Filter out old timestamps
+    // Filter out old timestamps (older than 60 seconds)
     const recentTimestamps = timestamps.filter(time => time > cutoff);
 
     if (recentTimestamps.length === 0) {
@@ -43,7 +60,7 @@ function cleanupOldTimestamps() {
 setInterval(cleanupOldTimestamps, RATE_LIMIT.CLEANUP_INTERVAL);
 
 /**
- * Rate limiting middleware
+ * Rate limiting middleware with multi-tier burst detection
  */
 function rateLimiter(req, res, next) {
   try {
@@ -57,29 +74,66 @@ function rateLimiter(req, res, next) {
     }
 
     const now = Date.now();
-    const windowStart = now - RATE_LIMIT.WINDOW_MS;
 
     // Get user's recent message timestamps
     let timestamps = userMessageTimes.get(userId) || [];
 
-    // Filter to only recent messages within the time window
-    timestamps = timestamps.filter(time => time > windowStart);
+    // Filter to only recent messages (keep last 60 seconds)
+    timestamps = timestamps.filter(time => time > now - RATE_LIMIT.SUSTAINED.WINDOW_MS);
 
-    // Check if user exceeded rate limit
-    if (timestamps.length >= RATE_LIMIT.MAX_MESSAGES) {
-      const oldestTimestamp = timestamps[0];
-      const waitTimeMs = RATE_LIMIT.WINDOW_MS - (now - oldestTimestamp);
-      const waitTimeSec = Math.ceil(waitTimeMs / 1000);
+    // Check Tier 1: Rapid-fire burst (3 messages in 3 seconds)
+    const recentFast = timestamps.filter(time => time > now - RATE_LIMIT.BURST_FAST.WINDOW_MS);
+    if (recentFast.length >= RATE_LIMIT.BURST_FAST.MAX_MESSAGES) {
+      const waitTimeSec = Math.ceil(RATE_LIMIT.BURST_FAST.COOLDOWN_MS / 1000);
 
-      logger.warn('Rate limit exceeded', {
+      logger.warn('Rapid-fire burst detected', {
         userId,
-        messageCount: timestamps.length,
-        waitTimeSec
+        messageCount: recentFast.length,
+        windowMs: RATE_LIMIT.BURST_FAST.WINDOW_MS,
+        cooldownSec: waitTimeSec
       });
 
       return res.status(429).json({
         success: false,
-        error: `Slow down! Please wait ${waitTimeSec} seconds before sending another message.`,
+        error: `CHILL OUT! You're sending too fast. Wait ${waitTimeSec} seconds.`,
+        retryAfter: waitTimeSec
+      });
+    }
+
+    // Check Tier 2: Medium burst (5 messages in 5 seconds)
+    const recentMedium = timestamps.filter(time => time > now - RATE_LIMIT.BURST_MEDIUM.WINDOW_MS);
+    if (recentMedium.length >= RATE_LIMIT.BURST_MEDIUM.MAX_MESSAGES) {
+      const waitTimeSec = Math.ceil(RATE_LIMIT.BURST_MEDIUM.COOLDOWN_MS / 1000);
+
+      logger.warn('Medium burst detected', {
+        userId,
+        messageCount: recentMedium.length,
+        windowMs: RATE_LIMIT.BURST_MEDIUM.WINDOW_MS,
+        cooldownSec: waitTimeSec
+      });
+
+      return res.status(429).json({
+        success: false,
+        error: `Slow down! You're sending too many messages. Wait ${waitTimeSec} seconds.`,
+        retryAfter: waitTimeSec
+      });
+    }
+
+    // Check Tier 3: Sustained spam (10 messages in 60 seconds)
+    const recentSustained = timestamps.filter(time => time > now - RATE_LIMIT.SUSTAINED.WINDOW_MS);
+    if (recentSustained.length >= RATE_LIMIT.SUSTAINED.MAX_MESSAGES) {
+      const waitTimeSec = Math.ceil(RATE_LIMIT.SUSTAINED.COOLDOWN_MS / 1000);
+
+      logger.warn('Sustained spam detected', {
+        userId,
+        messageCount: recentSustained.length,
+        windowMs: RATE_LIMIT.SUSTAINED.WINDOW_MS,
+        cooldownSec: waitTimeSec
+      });
+
+      return res.status(429).json({
+        success: false,
+        error: `You're spamming! Take a break for ${waitTimeSec} seconds.`,
         retryAfter: waitTimeSec
       });
     }
@@ -98,22 +152,37 @@ function rateLimiter(req, res, next) {
 }
 
 /**
- * Get rate limit status for a user
+ * Get rate limit status for a user (all tiers)
  */
 function getRateLimitStatus(userId) {
   const now = Date.now();
-  const windowStart = now - RATE_LIMIT.WINDOW_MS;
 
   let timestamps = userMessageTimes.get(userId) || [];
-  timestamps = timestamps.filter(time => time > windowStart);
+  timestamps = timestamps.filter(time => time > now - RATE_LIMIT.SUSTAINED.WINDOW_MS);
+
+  const recentFast = timestamps.filter(time => time > now - RATE_LIMIT.BURST_FAST.WINDOW_MS);
+  const recentMedium = timestamps.filter(time => time > now - RATE_LIMIT.BURST_MEDIUM.WINDOW_MS);
+  const recentSustained = timestamps;
 
   return {
-    messageCount: timestamps.length,
-    maxMessages: RATE_LIMIT.MAX_MESSAGES,
-    remaining: Math.max(0, RATE_LIMIT.MAX_MESSAGES - timestamps.length),
-    resetIn: timestamps.length > 0
-      ? Math.ceil((timestamps[0] + RATE_LIMIT.WINDOW_MS - now) / 1000)
-      : 0
+    burstFast: {
+      count: recentFast.length,
+      max: RATE_LIMIT.BURST_FAST.MAX_MESSAGES,
+      remaining: Math.max(0, RATE_LIMIT.BURST_FAST.MAX_MESSAGES - recentFast.length),
+      windowSec: RATE_LIMIT.BURST_FAST.WINDOW_MS / 1000
+    },
+    burstMedium: {
+      count: recentMedium.length,
+      max: RATE_LIMIT.BURST_MEDIUM.MAX_MESSAGES,
+      remaining: Math.max(0, RATE_LIMIT.BURST_MEDIUM.MAX_MESSAGES - recentMedium.length),
+      windowSec: RATE_LIMIT.BURST_MEDIUM.WINDOW_MS / 1000
+    },
+    sustained: {
+      count: recentSustained.length,
+      max: RATE_LIMIT.SUSTAINED.MAX_MESSAGES,
+      remaining: Math.max(0, RATE_LIMIT.SUSTAINED.MAX_MESSAGES - recentSustained.length),
+      windowSec: RATE_LIMIT.SUSTAINED.WINDOW_MS / 1000
+    }
   };
 }
 

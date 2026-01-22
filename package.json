@@ -1,7 +1,7 @@
 {
   "name": "rochat",
   "version": "1.0.0",
-  "description": "Roblox Chat Relay Application",
+  "description": "RoChat - A New Way of Communication",
   "main": "src/main/index.js",
   "scripts": {
     "start": "electron .",

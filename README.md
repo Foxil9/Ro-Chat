@@ -1,6 +1,6 @@
 # RoChat
 
-Roblox Chat Relay Application - An Electron-based desktop application for monitoring and relaying Roblox chat messages.
+RoChat - A New Way of Communication
 
 ## Features
 

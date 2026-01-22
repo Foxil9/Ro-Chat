@@ -36,6 +36,8 @@ We provide RoChat "as is." We can't promise:
 - Your data won't be lost
 - The service will always be available
 - It won't have bugs
+- It will not expose any information
+- It will secure any data
 
 ### Your Roblox Account
 RoChat uses Roblox authentication. We don't store your Roblox password. But you're responsible for your own account security.

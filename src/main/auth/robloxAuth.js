@@ -10,10 +10,10 @@ const secureStore = require('../storage/secureStore');
 // OAuth2 Configuration
 const OAUTH_BASE_URL = 'https://apis.roblox.com/oauth';
 const CLIENT_ID = process.env.ROBLOX_CLIENT_ID;
-const CLIENT_SECRET = process.env.ROBLOX_CLIENT_SECRET;
 const REDIRECT_URI = process.env.OAUTH_REDIRECT_URI || 'http://localhost:3333/callback';
 const CALLBACK_PORT = parseInt(process.env.OAUTH_CALLBACK_PORT || '3333');
 const SCOPES = 'openid profile';
+const SERVER_URL = process.env.SERVER_URL || 'http://localhost:3000';
 
 // Store PKCE verifier temporarily during auth flow
 let currentCodeVerifier = null;
@@ -124,37 +124,32 @@ function createCallbackServer() {
 
 /**
  * Exchange authorization code for access token
+ * Now uses the server to keep client secret secure
  */
 async function exchangeCodeForToken(authCode, codeVerifier) {
   try {
-    logger.info('Exchanging authorization code for token');
+    logger.info('Exchanging authorization code for token via server');
 
     const response = await axios.post(
-      `${OAUTH_BASE_URL}/v1/token`,
-      new URLSearchParams({
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-        grant_type: 'authorization_code',
+      `${SERVER_URL}/api/oauth/exchange`,
+      {
         code: authCode,
-        redirect_uri: REDIRECT_URI,
-        code_verifier: codeVerifier
-      }),
+        codeVerifier: codeVerifier
+      },
       {
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
+          'Content-Type': 'application/json'
         },
         timeout: 10000
       }
     );
 
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Token exchange failed');
+    }
+
     logger.info('Token exchange successful');
-    return {
-      accessToken: response.data.access_token,
-      refreshToken: response.data.refresh_token,
-      idToken: response.data.id_token,
-      expiresIn: response.data.expires_in,
-      tokenType: response.data.token_type
-    };
+    return response.data.tokens;
   } catch (error) {
     logger.error('Token exchange failed', {
       error: error.message,
@@ -211,33 +206,31 @@ async function getUserInfo(accessToken) {
 
 /**
  * Refresh access token using refresh token
+ * Now uses the server to keep client secret secure
  */
 async function refreshAccessToken(refreshToken) {
   try {
-    logger.info('Refreshing access token');
+    logger.info('Refreshing access token via server');
 
     const response = await axios.post(
-      `${OAUTH_BASE_URL}/v1/token`,
-      new URLSearchParams({
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-        grant_type: 'refresh_token',
-        refresh_token: refreshToken
-      }),
+      `${SERVER_URL}/api/oauth/refresh`,
+      {
+        refreshToken: refreshToken
+      },
       {
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
+          'Content-Type': 'application/json'
         },
         timeout: 10000
       }
     );
 
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Token refresh failed');
+    }
+
     logger.info('Token refresh successful');
-    return {
-      accessToken: response.data.access_token,
-      refreshToken: response.data.refresh_token || refreshToken,
-      expiresIn: response.data.expires_in
-    };
+    return response.data.tokens;
   } catch (error) {
     logger.error('Token refresh failed', {
       error: error.message,
@@ -256,8 +249,8 @@ async function refreshAccessToken(refreshToken) {
 async function initiateLogin() {
   try {
     // Validate environment variables
-    if (!CLIENT_ID || !CLIENT_SECRET) {
-      throw new Error('OAuth2 credentials not configured. Please set ROBLOX_CLIENT_ID and ROBLOX_CLIENT_SECRET in .env file');
+    if (!CLIENT_ID) {
+      throw new Error('OAuth2 client ID not configured. Please set ROBLOX_CLIENT_ID in .env file');
     }
 
     logger.info('Initiating OAuth2 login with PKCE');

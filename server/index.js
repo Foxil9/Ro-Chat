@@ -8,6 +8,7 @@ const logger = require('./logging/logger');
 const connectDatabase = require('./config/database');
 const authRoutes = require('./routes/auth');
 const chatRoutes = require('./routes/chat');
+const oauthRoutes = require('./routes/oauth');
 const authMiddleware = require('./middleware/authMiddleware');
 const sessionManager = require('./utils/sessionManager');
 
@@ -31,6 +32,7 @@ app.set('io', io);
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/oauth', oauthRoutes);
 app.use('/api/chat', authMiddleware, chatRoutes);
 
 // Health check endpoint

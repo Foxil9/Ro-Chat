@@ -85,13 +85,20 @@ Before running the app, you need to create an OAuth2 application with Roblox:
    ```
 
 2. Edit `.env` with your configuration:
-   - `DB_URL` - MongoDB connection string
-   - `PORT` - Server port (default: 3000)
-   - `JWT_SECRET` - Secret key for JWT tokens
+
+   **Client-side (Electron app):**
+   - `SERVER_URL` - Your backend server URL (http://localhost:3000 for local, https://your-render-url.onrender.com for production)
    - `ROBLOX_CLIENT_ID` - Your OAuth2 Client ID from step 1
-   - `ROBLOX_CLIENT_SECRET` - Your OAuth2 Client Secret from step 1
    - `OAUTH_REDIRECT_URI` - OAuth2 callback URL (default: http://localhost:3333/callback)
    - `OAUTH_CALLBACK_PORT` - Local server port for OAuth2 callback (default: 3333)
+
+   **Server-side (Backend on Render):**
+   - `DB_URL` - MongoDB connection string
+   - `JWT_SECRET` - Secret key for JWT tokens (generate with: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`)
+   - `ROBLOX_CLIENT_ID` - Your OAuth2 Client ID from step 1
+   - `ROBLOX_CLIENT_SECRET` - Your OAuth2 Client Secret from step 1 (ONLY on server, never on client)
+   - `OAUTH_REDIRECT_URI` - OAuth2 callback URL (http://localhost:3333/callback)
+   - `NODE_ENV` - Set to `production` for deployment
 
 ## Running the Application
 
@@ -135,6 +142,7 @@ Before running the app, you need to create an OAuth2 application with Roblox:
 - All sensitive data is stored using `electron-store` with encryption
 - Roblox tokens are never exposed to the renderer process
 - IPC communication uses context isolation for security
+- **OAuth2 Client Secret Protection**: The client secret is NEVER stored on the client side. All token exchanges happen through the backend server, keeping the client secret secure on the server. This prevents extraction of credentials from the Electron app.
 
 ## Dependencies
 

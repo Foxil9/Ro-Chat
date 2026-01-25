@@ -5,6 +5,9 @@ class RoChatApp {
     this.currentUser = null;
     this.currentView = null;
     this.isInitialized = false;
+    this.autoHideHeaderEnabled = false;  // FEATURE 1: Track auto-hide header state
+    this.headerHideTimer = null;          // FEATURE 1: Timer for delayed hide
+    this.windowBlurred = false;           // FEATURE 1: Track window focus state
   }
 
   /**
@@ -17,6 +20,12 @@ class RoChatApp {
       // Load and apply saved theme
       const savedTheme = this.loadSavedTheme();
       this.applyTheme(savedTheme);
+
+      // FEATURE 1: Load and apply auto-hide settings
+      const savedSettings = this.loadSavedSettings();
+      if (savedSettings) {
+        this.autoHideHeaderEnabled = savedSettings.autoHideHeader || false;
+      }
 
       // Register saved keybind
       this.registerSavedKeybind();
@@ -75,6 +84,21 @@ class RoChatApp {
       console.error('Failed to load theme:', error);
     }
     return 'dark';
+  }
+
+  /**
+   * FEATURE 1 & 2: Load saved settings from localStorage
+   */
+  loadSavedSettings() {
+    try {
+      const saved = localStorage.getItem('rochat-settings');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+    }
+    return null;
   }
 
   /**
@@ -153,6 +177,94 @@ class RoChatApp {
           statusEl.className = 'status';
         }
       });
+    }
+
+    // FEATURE 1: Setup auto-hide header functionality
+    this.setupAutoHideHeader();
+  }
+
+  /**
+   * FEATURE 1: Setup auto-hide header event listeners
+   */
+  setupAutoHideHeader() {
+    const chatView = document.getElementById('chat-view');
+    const chatHeader = document.getElementById('chat-header');
+
+    if (!chatView || !chatHeader) return;
+
+    // FEATURE 1: Window blur - app loses focus (CRITICAL for overlay)
+    window.addEventListener('blur', () => {
+      this.windowBlurred = true;
+      if (this.autoHideHeaderEnabled) {
+        this.hideHeader();
+      }
+    });
+
+    // FEATURE 1: Window focus - app gains focus
+    window.addEventListener('focus', () => {
+      this.windowBlurred = false;
+      if (this.autoHideHeaderEnabled) {
+        this.showHeader();
+      }
+    });
+
+    // FEATURE 1: Mouse leaves window
+    chatView.addEventListener('mouseleave', () => {
+      if (this.autoHideHeaderEnabled && !this.windowBlurred) {
+        this.headerHideTimer = setTimeout(() => {
+          this.hideHeader();
+        }, 150);
+      }
+    });
+
+    // FEATURE 1: Mouse enters window
+    chatView.addEventListener('mouseenter', () => {
+      if (this.headerHideTimer) {
+        clearTimeout(this.headerHideTimer);
+        this.headerHideTimer = null;
+      }
+      if (this.autoHideHeaderEnabled) {
+        this.showHeader();
+      }
+    });
+  }
+
+  /**
+   * FEATURE 1: Hide the chat header
+   */
+  hideHeader() {
+    const chatHeader = document.getElementById('chat-header');
+    const chatContainer = document.querySelector('.chat-container');
+
+    if (chatHeader && chatContainer) {
+      // Don't hide if minimized
+      if (chatContainer.classList.contains('minimized')) return;
+
+      chatHeader.classList.add('auto-hidden');
+    }
+  }
+
+  /**
+   * FEATURE 1: Show the chat header
+   */
+  showHeader() {
+    const chatHeader = document.getElementById('chat-header');
+
+    if (chatHeader) {
+      chatHeader.classList.remove('auto-hidden');
+    }
+  }
+
+  /**
+   * FEATURE 1: Enable or disable auto-hide header
+   */
+  setAutoHideHeader(enabled) {
+    this.autoHideHeaderEnabled = enabled;
+
+    if (enabled && this.windowBlurred) {
+      this.hideHeader();
+    } else if (!enabled) {
+      this.showHeader();
     }
   }
 

@@ -9,7 +9,9 @@ class SettingsManager {
       alwaysOnTop: true,
       opacity: 100,
       messageOpacity: 100,
-      chatKeybind: null
+      chatKeybind: null,
+      autoHideHeader: false,    // FEATURE 1: Auto-hide header on blur/mouse leave
+      autoHideFooter: false      // FEATURE 2: Permanently hide footer
     };
     this.isInitialized = false;
     this.capturingKeybind = false;
@@ -95,6 +97,12 @@ class SettingsManager {
       keybindBtn.textContent = this.settings.chatKeybind;
     }
 
+    // FEATURE 1 & 2: Sync auto-hide checkbox states
+    const autoHideHeader = document.getElementById('auto-hide-header');
+    const autoHideFooter = document.getElementById('auto-hide-footer');
+    if (autoHideHeader) autoHideHeader.checked = this.settings.autoHideHeader;
+    if (autoHideFooter) autoHideFooter.checked = this.settings.autoHideFooter;
+
     // Apply draggable setting
     localStorage.setItem('draggable', this.settings.draggableHeader ? 'true' : 'false');
     if (window.app) {
@@ -109,6 +117,35 @@ class SettingsManager {
     // Apply opacity setting
     if (window.electronAPI?.window?.setOpacity) {
       window.electronAPI.window.setOpacity(this.settings.opacity / 100);
+    }
+
+    // FEATURE 1: Apply auto-hide header setting
+    this.applyAutoHideHeader(this.settings.autoHideHeader);
+
+    // FEATURE 2: Apply auto-hide footer setting
+    this.applyAutoHideFooter(this.settings.autoHideFooter);
+  }
+
+  /**
+   * FEATURE 1: Apply auto-hide header setting
+   */
+  applyAutoHideHeader(enabled) {
+    if (window.app) {
+      window.app.setAutoHideHeader(enabled);
+    }
+  }
+
+  /**
+   * FEATURE 2: Apply auto-hide footer setting
+   */
+  applyAutoHideFooter(enabled) {
+    const chatFooter = document.querySelector('.chat-footer');
+    if (chatFooter) {
+      if (enabled) {
+        chatFooter.classList.add('auto-hidden');
+      } else {
+        chatFooter.classList.remove('auto-hidden');
+      }
     }
   }
 
@@ -236,6 +273,26 @@ class SettingsManager {
 
       messageOpacitySlider.addEventListener('change', (e) => {
         this.saveSettings();
+      });
+    }
+
+    // FEATURE 1: Auto-hide header checkbox
+    const autoHideHeader = document.getElementById('auto-hide-header');
+    if (autoHideHeader) {
+      autoHideHeader.addEventListener('change', (e) => {
+        this.settings.autoHideHeader = e.target.checked;
+        this.saveSettings();
+        this.applyAutoHideHeader(e.target.checked);
+      });
+    }
+
+    // FEATURE 2: Auto-hide footer checkbox
+    const autoHideFooter = document.getElementById('auto-hide-footer');
+    if (autoHideFooter) {
+      autoHideFooter.addEventListener('change', (e) => {
+        this.settings.autoHideFooter = e.target.checked;
+        this.saveSettings();
+        this.applyAutoHideFooter(e.target.checked);
       });
     }
 

@@ -210,7 +210,7 @@ class RoChatApp {
 
     // FEATURE 1: Mouse leaves window
     chatView.addEventListener('mouseleave', () => {
-      if (this.autoHideHeaderEnabled && !this.windowBlurred) {
+      if (this.autoHideHeaderEnabled) {  // BUGFIX 1: Allow hiding when blurred
         this.headerHideTimer = setTimeout(() => {
           this.hideHeader();
         }, 150);

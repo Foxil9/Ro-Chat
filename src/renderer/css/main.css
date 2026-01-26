@@ -1744,6 +1744,7 @@ input[type="checkbox"] {
 
 /* FEATURE 2: Auto-hide footer state */
 .chat-footer.auto-hidden {
+    display: none !important;  /* BUGFIX 2: Override display:flex */
     opacity: 0;
     height: 0;
     padding: 0;

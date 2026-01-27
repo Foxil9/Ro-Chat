@@ -65,6 +65,7 @@ function registerHandlers() {
   ipcMain.handle('settings:resetPosition', handleResetPosition);
   ipcMain.handle('settings:registerKeybind', handleRegisterKeybind);
   ipcMain.on('settings:setMessageOpacity', handleSetMessageOpacity);
+  ipcMain.handle('settings:setAutoHideFooter', handleSetAutoHideFooter);
 
   // Shell handlers
   ipcMain.handle('shell:openExternal', handleOpenExternal);
@@ -577,6 +578,19 @@ function handleSetMessageOpacity(event, opacity) {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('settings:messageOpacityChanged', opacity);
   }
+}
+
+/**
+ * Handle auto-hide footer setting
+ * CSS FIX: Forward setting to main window via IPC per Electron IPC documentation
+ */
+function handleSetAutoHideFooter(event, enabled) {
+  // Forward to main window using IPC event system
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('settings:autoHideFooterChanged', enabled);
+    logger.info('Auto-hide footer setting applied', { enabled });
+  }
+  return { success: true };
 }
 
 // ==================== SHELL HANDLERS ====================

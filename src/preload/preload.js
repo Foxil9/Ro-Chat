@@ -45,6 +45,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('theme:changed', listener);
   },
 
+  onAutoHideFooterChanged: (callback) => {
+    const listener = (event, enabled) => callback(enabled);
+    ipcRenderer.on('settings:autoHideFooterChanged', listener);
+    return () => ipcRenderer.removeListener('settings:autoHideFooterChanged', listener);
+  },
+
   onFocusChat: (callback) => {
     const listener = () => callback();
     ipcRenderer.on('keybind:focus-chat', listener);
@@ -72,7 +78,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     applyTheme: (theme) => ipcRenderer.invoke('settings:applyTheme', theme),
     resetPosition: () => ipcRenderer.invoke('settings:resetPosition'),
     registerKeybind: (keybind) => ipcRenderer.invoke('settings:registerKeybind', keybind),
-    setMessageOpacity: (opacity) => ipcRenderer.send('settings:setMessageOpacity', opacity)
+    setMessageOpacity: (opacity) => ipcRenderer.send('settings:setMessageOpacity', opacity),
+    setAutoHideFooter: (enabled) => ipcRenderer.invoke('settings:setAutoHideFooter', enabled)  // CSS FIX: IPC for footer visibility
   },
 
   // Shell methods

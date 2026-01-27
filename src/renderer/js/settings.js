@@ -139,13 +139,9 @@ class SettingsManager {
    * FEATURE 2: Apply auto-hide footer setting
    */
   applyAutoHideFooter(enabled) {
-    const chatFooter = document.querySelector('.chat-footer');
-    if (chatFooter) {
-      if (enabled) {
-        chatFooter.classList.add('auto-hidden');
-      } else {
-        chatFooter.classList.remove('auto-hidden');
-      }
+    // CSS FIX: Use IPC to communicate with main window (satisfies Electron contextIsolation requirement)
+    if (window.electronAPI?.settings?.setAutoHideFooter) {
+      window.electronAPI.settings.setAutoHideFooter(enabled);
     }
   }
 
@@ -405,7 +401,7 @@ class SettingsManager {
 // Initialize settings manager when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   window.settingsManager = new SettingsManager();
-  
+
   // Wait for app to initialize
   setTimeout(() => {
     window.settingsManager.init();

@@ -8,6 +8,8 @@ class RoChatApp {
     this.autoHideHeaderEnabled = false;  // FEATURE 1: Track auto-hide header state
     this.headerHideTimer = null;          // FEATURE 1: Timer for delayed hide
     this.windowBlurred = false;           // FEATURE 1: Track window focus state
+    this.autoHideListeners = null;        // FEATURE 1: Store listener references for cleanup
+    this.autoHideFooterEnabled = false;   // FEATURE 2: Track auto-hide footer state
   }
 
   /**
@@ -21,10 +23,11 @@ class RoChatApp {
       const savedTheme = this.loadSavedTheme();
       this.applyTheme(savedTheme);
 
-      // FEATURE 1: Load and apply auto-hide settings
+      // FEATURE 1 & 2: Load and apply auto-hide settings
       const savedSettings = this.loadSavedSettings();
       if (savedSettings) {
         this.autoHideHeaderEnabled = savedSettings.autoHideHeader || false;
+        this.autoHideFooterEnabled = savedSettings.autoHideFooter || false;
       }
 
       // Register saved keybind
@@ -158,6 +161,13 @@ class RoChatApp {
       });
     }
 
+    // Listen for auto-hide footer changes from settings window
+    if (window.electronAPI?.onAutoHideFooterChanged) {
+      window.electronAPI.onAutoHideFooterChanged((enabled) => {
+        this.setAutoHideFooter(enabled);
+      });
+    }
+
     // Listen for logout event
     if (window.electronAPI?.onLogout) {
       window.electronAPI.onLogout(() => {
@@ -179,54 +189,92 @@ class RoChatApp {
       });
     }
 
-    // FEATURE 1: Setup auto-hide header functionality
-    this.setupAutoHideHeader();
+    // FEATURE 1: Setup auto-hide header functionality if enabled
+    if (this.autoHideHeaderEnabled) {
+      this.setupAutoHideHeader();
+    }
+
+    // FEATURE 2: Apply saved footer visibility setting
+    if (this.autoHideFooterEnabled) {
+      this.setAutoHideFooter(true);
+    }
   }
 
   /**
    * FEATURE 1: Setup auto-hide header event listeners
    */
   setupAutoHideHeader() {
+    // Prevent duplicate listener attachment
+    if (this.autoHideListeners) return;
+
     const chatView = document.getElementById('chat-view');
     const chatHeader = document.getElementById('chat-header');
 
     if (!chatView || !chatHeader) return;
 
-    // FEATURE 1: Window blur - app loses focus (CRITICAL for overlay)
-    window.addEventListener('blur', () => {
-      this.windowBlurred = true;
-      if (this.autoHideHeaderEnabled) {
-        this.hideHeader();
-      }
-    });
-
-    // FEATURE 1: Window focus - app gains focus
-    window.addEventListener('focus', () => {
-      this.windowBlurred = false;
-      if (this.autoHideHeaderEnabled) {
-        this.showHeader();
-      }
-    });
-
-    // FEATURE 1: Mouse leaves window
-    chatView.addEventListener('mouseleave', () => {
-      if (this.autoHideHeaderEnabled) {  // BUGFIX 1: Allow hiding when blurred
-        this.headerHideTimer = setTimeout(() => {
+    // Create and store listener references for cleanup
+    this.autoHideListeners = {
+      blur: () => {
+        this.windowBlurred = true;
+        if (this.autoHideHeaderEnabled) {
           this.hideHeader();
-        }, 150);
+        }
+      },
+      focus: () => {
+        this.windowBlurred = false;
+        if (this.autoHideHeaderEnabled) {
+          this.showHeader();
+        }
+      },
+      mouseleave: () => {
+        if (this.autoHideHeaderEnabled) {
+          this.headerHideTimer = setTimeout(() => {
+            this.hideHeader();
+          }, 150);
+        }
+      },
+      mouseenter: () => {
+        if (this.headerHideTimer) {
+          clearTimeout(this.headerHideTimer);
+          this.headerHideTimer = null;
+        }
+        if (this.autoHideHeaderEnabled) {
+          this.showHeader();
+        }
       }
-    });
+    };
 
-    // FEATURE 1: Mouse enters window
-    chatView.addEventListener('mouseenter', () => {
-      if (this.headerHideTimer) {
-        clearTimeout(this.headerHideTimer);
-        this.headerHideTimer = null;
-      }
-      if (this.autoHideHeaderEnabled) {
-        this.showHeader();
-      }
-    });
+    // Attach listeners
+    window.addEventListener('blur', this.autoHideListeners.blur);
+    window.addEventListener('focus', this.autoHideListeners.focus);
+    chatView.addEventListener('mouseleave', this.autoHideListeners.mouseleave);
+    chatView.addEventListener('mouseenter', this.autoHideListeners.mouseenter);
+  }
+
+  /**
+   * FEATURE 1: Remove auto-hide header event listeners
+   */
+  teardownAutoHideHeader() {
+    if (!this.autoHideListeners) return;
+
+    const chatView = document.getElementById('chat-view');
+
+    // Remove all listeners
+    window.removeEventListener('blur', this.autoHideListeners.blur);
+    window.removeEventListener('focus', this.autoHideListeners.focus);
+    if (chatView) {
+      chatView.removeEventListener('mouseleave', this.autoHideListeners.mouseleave);
+      chatView.removeEventListener('mouseenter', this.autoHideListeners.mouseenter);
+    }
+
+    // Clear timer if active
+    if (this.headerHideTimer) {
+      clearTimeout(this.headerHideTimer);
+      this.headerHideTimer = null;
+    }
+
+    // Clear references
+    this.autoHideListeners = null;
   }
 
   /**
@@ -261,10 +309,36 @@ class RoChatApp {
   setAutoHideHeader(enabled) {
     this.autoHideHeaderEnabled = enabled;
 
-    if (enabled && this.windowBlurred) {
-      this.hideHeader();
-    } else if (!enabled) {
+    if (enabled) {
+      // Attach listeners when enabling
+      this.setupAutoHideHeader();
+
+      // Apply current state
+      if (this.windowBlurred) {
+        this.hideHeader();
+      }
+    } else {
+      // Remove listeners when disabling
+      this.teardownAutoHideHeader();
+
+      // Always show header when disabled
       this.showHeader();
+    }
+  }
+
+  /**
+   * FEATURE 2: Enable or disable auto-hide footer
+   */
+  setAutoHideFooter(enabled) {
+    this.autoHideFooterEnabled = enabled;
+
+    const chatFooter = document.querySelector('.chat-footer');
+    if (chatFooter) {
+      if (enabled) {
+        chatFooter.classList.add('auto-hidden');
+      } else {
+        chatFooter.classList.remove('auto-hidden');
+      }
     }
   }
 
@@ -391,7 +465,7 @@ class RoChatApp {
         console.log('Login successful:', this.currentUser);
         statusEl.textContent = 'Login successful!';
         statusEl.className = 'status success';
-        
+
         setTimeout(() => {
           this.showView('chat');
           this.startDetection();
@@ -420,7 +494,7 @@ class RoChatApp {
 
     try {
       const result = await window.electronAPI.auth.logout();
-      
+
       if (result.success) {
         this.currentUser = null;
         this.showView('login');

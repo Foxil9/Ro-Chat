@@ -17,6 +17,9 @@ class ChatManager {
     this.SLOW_REQUEST_THRESHOLD = 3000; // 3 seconds
     this.cooldownTimer = null;
     this.cooldownEndTime = null;
+    this.typingTimeout = null;
+    this.currentlyTyping = false;
+    this.typingUsers = new Set();
   }
 
   /**
@@ -40,6 +43,9 @@ class ChatManager {
 
     // Listen for server detection changes
     this.setupServerListener();
+
+    // Setup typing indicator listeners
+    this.setupTypingListener();
 
     // Apply message opacity from settings
     this.applyMessageOpacity();
@@ -125,6 +131,10 @@ class ChatManager {
     document.getElementById('tab-server').className = tab === 'server' ? 'chat-tab active' : 'chat-tab';
     document.getElementById('tab-global').className = tab === 'global' ? 'chat-tab active' : 'chat-tab';
 
+    // Clear typing indicators when switching tabs
+    this.typingUsers.clear();
+    this.updateTypingIndicator();
+
     // Render messages for active tab
     this.renderAllMessages();
 
@@ -147,6 +157,11 @@ class ChatManager {
           e.preventDefault();
           this.sendMessage();
         }
+      });
+
+      // Typing indicator with 2-second debounce
+      this.messageInput.addEventListener('input', () => {
+        this.handleTyping();
       });
     }
 
@@ -172,6 +187,28 @@ class ChatManager {
     const btnConnect = document.getElementById('connect-btn');
     if (btnConnect) {
       btnConnect.addEventListener('click', () => this.handleConnect());
+    }
+
+    // Browse button
+    const btnBrowse = document.getElementById('browse-btn');
+    if (btnBrowse) {
+      btnBrowse.addEventListener('click', () => this.showGameBrowser());
+    }
+
+    // Close browser modal
+    const btnCloseBrowser = document.getElementById('close-browser-btn');
+    if (btnCloseBrowser) {
+      btnCloseBrowser.addEventListener('click', () => this.closeGameBrowser());
+    }
+
+    // Close modal on background click
+    const modal = document.getElementById('game-browser-modal');
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          this.closeGameBrowser();
+        }
+      });
     }
   }
 
@@ -206,6 +243,124 @@ class ChatManager {
   }
 
   /**
+   * Setup typing indicator listener
+   */
+  setupTypingListener() {
+    if (window.electron && window.electron.onTypingIndicator) {
+      window.electron.onTypingIndicator((data) => {
+        this.handleTypingIndicator(data);
+      });
+    }
+  }
+
+  /**
+   * Handle typing indicator from server
+   */
+  handleTypingIndicator(data) {
+    const { username, isTyping, roomId } = data;
+
+    if (!username) return;
+
+    const currentRoomId = this.activeTab === 'server'
+      ? `server:${this.currentJobId}`
+      : `global:${this.currentPlaceId}`;
+
+    if (roomId !== currentRoomId) return;
+
+    if (isTyping) {
+      this.typingUsers.add(username);
+    } else {
+      this.typingUsers.delete(username);
+    }
+
+    this.updateTypingIndicator();
+  }
+
+  /**
+   * Handle user typing in input field
+   */
+  handleTyping() {
+    if (!this.currentJobId && !this.currentPlaceId) return;
+
+    if (!this.currentlyTyping) {
+      this.currentlyTyping = true;
+      this.emitTypingStatus(true);
+    }
+
+    if (this.typingTimeout) {
+      clearTimeout(this.typingTimeout);
+    }
+
+    this.typingTimeout = setTimeout(() => {
+      this.currentlyTyping = false;
+      this.emitTypingStatus(false);
+    }, 2000);
+  }
+
+  /**
+   * Emit typing status to server
+   */
+  async emitTypingStatus(isTyping) {
+    try {
+      const currentUser = await this.getCurrentUser();
+      if (!currentUser) return;
+
+      const roomId = this.activeTab === 'server'
+        ? `server:${this.currentJobId}`
+        : `global:${this.currentPlaceId}`;
+
+      if (window.electron && window.electron.emitTyping) {
+        await window.electron.emitTyping({
+          roomId,
+          username: currentUser.username,
+          isTyping
+        });
+      }
+    } catch (error) {
+      console.error('Failed to emit typing status:', error);
+    }
+  }
+
+  /**
+   * Update typing indicator display
+   */
+  updateTypingIndicator() {
+    let typingIndicator = document.getElementById('typing-indicator');
+
+    if (this.typingUsers.size === 0) {
+      if (typingIndicator) {
+        typingIndicator.remove();
+      }
+      return;
+    }
+
+    if (!typingIndicator) {
+      typingIndicator = document.createElement('div');
+      typingIndicator.id = 'typing-indicator';
+      typingIndicator.className = 'typing-indicator';
+
+      const chatContainer = document.querySelector('.chat-container');
+      const messagesContainer = document.getElementById('chat-messages');
+      if (chatContainer && messagesContainer) {
+        chatContainer.insertBefore(typingIndicator, messagesContainer.nextSibling);
+      }
+    }
+
+    const userArray = Array.from(this.typingUsers);
+    let text = '';
+
+    if (userArray.length === 1) {
+      text = `${userArray[0]} is typing...`;
+    } else if (userArray.length === 2) {
+      text = `${userArray[0]} and ${userArray[1]} are typing...`;
+    } else {
+      text = `${userArray[0]} and ${userArray.length - 1} others are typing...`;
+    }
+
+    typingIndicator.textContent = text;
+  }
+
+  /**
    * Handle server change event
    */
   handleServerChanged(serverInfo) {
@@ -226,6 +381,10 @@ class ChatManager {
 
     this.currentJobId = jobId;
     this.currentPlaceId = placeId;
+
+    // Clear typing indicators on server change
+    this.typingUsers.clear();
+    this.updateTypingIndicator();
 
     // Update UI
     this.updateJobIdDisplay(jobId);
@@ -305,6 +464,15 @@ class ChatManager {
 
     // Clear input
     this.messageInput.value = '';
+
+    // Stop typing indicator
+    if (this.typingTimeout) {
+      clearTimeout(this.typingTimeout);
+    }
+    if (this.currentlyTyping) {
+      this.currentlyTyping = false;
+      this.emitTypingStatus(false);
+    }
 
     // Send to backend via IPC
     try {
@@ -886,6 +1054,122 @@ class ChatManager {
     }
 
     console.log('Cooldown ended - you can send messages again');
+  }
+
+  /**
+   * Show game browser modal
+   */
+  async showGameBrowser() {
+    const modal = document.getElementById('game-browser-modal');
+    const gameList = document.getElementById('game-list');
+
+    if (!modal || !gameList) return;
+
+    modal.classList.remove('hidden');
+    gameList.innerHTML = '<div class="game-list-loading">Loading games...</div>';
+
+    try {
+      if (window.electronAPI && window.electronAPI.chat && window.electronAPI.chat.getGames) {
+        const result = await window.electronAPI.chat.getGames();
+
+        if (result.success && result.games && result.games.length > 0) {
+          gameList.innerHTML = '';
+
+          result.games.forEach(game => {
+            const gameEl = this.createGameElement(game);
+            gameList.appendChild(gameEl);
+          });
+        } else {
+          gameList.innerHTML = '<div class="game-list-empty">No active games found. Join a Roblox game to see it here.</div>';
+        }
+      } else {
+        gameList.innerHTML = '<div class="game-list-empty">Game browser not available.</div>';
+      }
+    } catch (error) {
+      console.error('Failed to load games:', error);
+      gameList.innerHTML = '<div class="game-list-empty">Failed to load games.</div>';
+    }
+  }
+
+  /**
+   * Close game browser modal
+   */
+  closeGameBrowser() {
+    const modal = document.getElementById('game-browser-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+    }
+  }
+
+  /**
+   * Create game element
+   */
+  createGameElement(game) {
+    const gameEl = document.createElement('div');
+    gameEl.className = 'game-item';
+
+    const headerEl = document.createElement('div');
+    headerEl.className = 'game-header';
+
+    if (game.imageUrl) {
+      const iconEl = document.createElement('img');
+      iconEl.className = 'game-icon';
+      iconEl.src = game.imageUrl;
+      iconEl.alt = game.name;
+      iconEl.onerror = () => {
+        iconEl.style.display = 'none';
+      };
+      headerEl.appendChild(iconEl);
+    }
+
+    const infoEl = document.createElement('div');
+    infoEl.className = 'game-info';
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'game-name';
+    nameEl.textContent = game.name;
+
+    const statsEl = document.createElement('div');
+    statsEl.className = 'game-stats';
+    const totalPlayers = game.servers.reduce((sum, s) => sum + s.playerCount, 0);
+    statsEl.textContent = `${game.servers.length} server${game.servers.length > 1 ? 's' : ''} • ${totalPlayers} player${totalPlayers > 1 ? 's' : ''}`;
+
+    infoEl.appendChild(nameEl);
+    infoEl.appendChild(statsEl);
+    headerEl.appendChild(infoEl);
+    gameEl.appendChild(headerEl);
+
+    const serverListEl = document.createElement('div');
+    serverListEl.className = 'server-list';
+
+    game.servers.forEach(server => {
+      const serverEl = document.createElement('div');
+      serverEl.className = 'server-item';
+      serverEl.textContent = `Server • ${server.playerCount} player${server.playerCount > 1 ? 's' : ''}`;
+      serverEl.onclick = () => this.joinServer(server.jobId, game.placeId);
+      serverListEl.appendChild(serverEl);
+    });
+
+    gameEl.appendChild(serverListEl);
+    return gameEl;
+  }
+
+  /**
+   * Join a server from browser
+   */
+  async joinServer(jobId, placeId) {
+    this.closeGameBrowser();
+
+    this.currentJobId = jobId;
+    this.currentPlaceId = placeId;
+
+    this.updateJobIdDisplay(jobId);
+    this.clearMessages();
+
+    this.addSystemMessage('Joined server from browser!', 'server');
+    this.addSystemMessage('Connected to game!', 'global');
+
+    console.log('Manually joined server:', { placeId, jobId });
   }
 }
 

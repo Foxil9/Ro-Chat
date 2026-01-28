@@ -50,9 +50,11 @@ class SocketClient {
     });
 
     this.socket.on('message', (data) => {
-      // Forward message to renderer process via main window
       logger.info('Message received from server', { data });
-      // This will be handled by the main process to forward to renderer
+    });
+
+    this.socket.on('typing-indicator', (data) => {
+      logger.info('Typing indicator received', { data });
     });
   }
 
@@ -132,6 +134,42 @@ class SocketClient {
    */
   isConnected() {
     return this.connected;
+  }
+
+  /**
+   * Emit typing indicator
+   */
+  emitTyping(roomId, username, isTyping) {
+    if (!this.socket || !this.connected) {
+      return;
+    }
+
+    this.socket.emit('typing-indicator', {
+      roomId,
+      username,
+      isTyping
+    });
+  }
+
+  /**
+   * Get list of active games/servers
+   */
+  async getGames() {
+    try {
+      const axios = require('axios');
+      const response = await axios.get(`${this.BACKEND_URL}/api/games`, {
+        timeout: 10000
+      });
+
+      if (response.data.success) {
+        return response.data.games;
+      }
+
+      return [];
+    } catch (error) {
+      logger.error('Failed to get games', sanitizeError({ error: error.message }));
+      return [];
+    }
   }
 }
 

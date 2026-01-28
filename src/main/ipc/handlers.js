@@ -6,6 +6,7 @@ const detector = require('../detection/detector');
 const secureStore = require('../storage/secureStore');
 const logger = require('../logging/logger');
 const { sanitizeError } = require('../utils/sanitizer');
+const socketClient = require('../socket/socketClient');
 
 // Backend server configuration
 const BACKEND_URL = 'https://ro-chat-zqks.onrender.com';
@@ -34,6 +35,25 @@ function setupDetectorEvents() {
 }
 
 /**
+ * Setup socket client event forwarding to renderer
+ */
+function setupSocketEvents() {
+  if (socketClient.socket) {
+    socketClient.socket.on('typing-indicator', (data) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('socket:typingIndicator', data);
+      }
+    });
+
+    socketClient.socket.on('message', (data) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('socket:message', data);
+      }
+    });
+  }
+}
+
+/**
  * Register all IPC handlers
  */
 function registerHandlers() {
@@ -52,6 +72,8 @@ function registerHandlers() {
   // Chat handlers
   ipcMain.handle('chat:send', handleSendMessage);
   ipcMain.handle('chat:history', handleLoadHistory);
+  ipcMain.handle('chat:emitTyping', handleEmitTyping);
+  ipcMain.handle('chat:getGames', handleGetGames);
 
   // Window control handlers
   ipcMain.handle('window:minimize', handleMinimize);
@@ -323,6 +345,20 @@ async function handleLoadHistory(event, { jobId, placeId, chatType }) {
       error: error.response?.data?.error || 'Failed to load history',
       messages: []
     };
+  }
+}
+
+/**
+ * Handle get games request
+ */
+async function handleGetGames(event) {
+  try {
+    logger.info('Get games requested');
+    const games = await socketClient.getGames();
+    return { success: true, games };
+  } catch (error) {
+    logger.error('Failed to get games', sanitizeError({ error: error.message }));
+    return { success: false, error: error.message, games: [] };
   }
 }
 
@@ -598,6 +634,19 @@ function handleSetAutoHideFooter(event, enabled) {
   return { success: true };
 }
 
+/**
+ * Handle emit typing indicator request
+ */
+async function handleEmitTyping(event, { roomId, username, isTyping }) {
+  try {
+    socketClient.emitTyping(roomId, username, isTyping);
+    return { success: true };
+  } catch (error) {
+    logger.error('Failed to emit typing', sanitizeError({ error: error.message }));
+    return { success: false, error: error.message };
+  }
+}
+
 // ==================== SHELL HANDLERS ====================
 
 /**
@@ -617,5 +666,6 @@ async function handleOpenExternal(event, url) {
 module.exports = {
   setMainWindow,
   registerHandlers,
-  setupDetectorEvents
+  setupDetectorEvents,
+  setupSocketEvents
 };

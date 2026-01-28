@@ -25,7 +25,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Chat methods
   chat: {
     sendMessage: (data) => ipcRenderer.invoke('chat:send', data),
-    loadHistory: (data) => ipcRenderer.invoke('chat:history', data)
+    loadHistory: (data) => ipcRenderer.invoke('chat:history', data),
+    emitTyping: (data) => ipcRenderer.invoke('chat:emitTyping', data),
+    getGames: () => ipcRenderer.invoke('chat:getGames')
   },
 
   // Event listeners
@@ -69,6 +71,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('auth:logout', listener);
   },
 
+  onTypingIndicator: (callback) => {
+    const listener = (event, data) => callback(data);
+    ipcRenderer.on('socket:typingIndicator', listener);
+    return () => ipcRenderer.removeListener('socket:typingIndicator', listener);
+  },
+
+  onMessage: (callback) => {
+    const listener = (event, data) => callback(data);
+    ipcRenderer.on('socket:message', listener);
+    return () => ipcRenderer.removeListener('socket:message', listener);
+  },
+
   // Window controls
   window: {
     minimize: () => ipcRenderer.invoke('window:minimize'),
@@ -104,16 +118,28 @@ contextBridge.exposeInMainWorld('electron', {
   // Chat methods
   sendMessage: (data) => ipcRenderer.invoke('chat:send', data),
   loadHistory: (data) => ipcRenderer.invoke('chat:history', data),
+  emitTyping: (data) => ipcRenderer.invoke('chat:emitTyping', data),
 
   // Event listeners
   onServerChanged: (callback) => {
     const listener = (event, serverInfo) => callback(serverInfo);
     ipcRenderer.on('detection:serverChanged', listener);
 
-    // Return unsubscribe function
     return () => {
       ipcRenderer.removeListener('detection:serverChanged', listener);
     };
+  },
+
+  onTypingIndicator: (callback) => {
+    const listener = (event, data) => callback(data);
+    ipcRenderer.on('socket:typingIndicator', listener);
+    return () => ipcRenderer.removeListener('socket:typingIndicator', listener);
+  },
+
+  onMessage: (callback) => {
+    const listener = (event, data) => callback(data);
+    ipcRenderer.on('socket:message', listener);
+    return () => ipcRenderer.removeListener('socket:message', listener);
   },
 
   // Shell methods

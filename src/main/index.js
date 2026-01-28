@@ -3,7 +3,7 @@ require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
 const { app, BrowserWindow } = require('electron');
 const logger = require('./logging/logger');
-const { registerHandlers, setMainWindow, setupDetectorEvents } = require('./ipc/handlers');
+const { registerHandlers, setMainWindow, setupDetectorEvents, setupSocketEvents } = require('./ipc/handlers');
 const detector = require('./detection/detector');
 const secureStore = require('./storage/secureStore');
 const { setupAutoUpdater } = require('./updater');
@@ -113,6 +113,9 @@ app.whenReady().then(() => {
 
   // Setup detector events forwarding
   setupDetectorEvents();
+
+  // Setup socket events forwarding
+  setupSocketEvents();
 
   // Create main window
   createWindow();

@@ -1,7 +1,7 @@
 const { EventEmitter } = require('events');
 const processWatcher = require('./processWatcher');
 const logMonitor = require('./logMonitor');
-const memoryReader = require('./memoryReader');
+// REMOVED UNSAFE MEMORY READER
 const logger = require('../logging/logger');
 const socketClient = require('../socket/socketClient');
 const { sanitizeError } = require('../utils/sanitizer');
@@ -11,9 +11,8 @@ class Detector extends EventEmitter {
     super();
     this.currentServer = null; // { placeId, jobId, timestamp }
     this.lastLogUpdate = null;
-    this.memoryFallbackTimeout = null;
+    // REMOVED UNSAFE MEMORY READER
     this.isRunning = false;
-    // FIX OPUS ISSUE #5: Add debouncing to prevent rapid state changes
     this.lastStateChangeTime = 0;
   }
 
@@ -73,7 +72,6 @@ class Detector extends EventEmitter {
     // Disconnect from Socket.io server
     socketClient.disconnect();
 
-    // FIX OPUS ISSUE #3: Remove all event listeners to prevent accumulation
     processWatcher.removeAllListeners('processStarted');
     processWatcher.removeAllListeners('processStopped');
     logMonitor.removeAllListeners('serverDetected');
@@ -83,11 +81,7 @@ class Detector extends EventEmitter {
     processWatcher.stopWatching();
     logMonitor.stopMonitoring();
 
-    // Clear any pending timeouts
-    if (this.memoryFallbackTimeout) {
-      clearTimeout(this.memoryFallbackTimeout);
-      this.memoryFallbackTimeout = null;
-    }
+    // REMOVED UNSAFE MEMORY READER
   }
 
   /**
@@ -101,11 +95,7 @@ class Detector extends EventEmitter {
     // Start log monitoring
     logMonitor.startMonitoring();
 
-    // Set up memory fallback timeout (10 seconds)
-    // If no log update within 10 seconds, try memory reading
-    this.memoryFallbackTimeout = setTimeout(() => {
-      this.tryMemoryFallback();
-    }, 10000);
+    // REMOVED UNSAFE MEMORY READER - Rely 100% on logs
 
     // Emit server changed with null
     this.emit('serverChanged', null);
@@ -118,11 +108,7 @@ class Detector extends EventEmitter {
     // Stop log monitoring
     logMonitor.stopMonitoring();
 
-    // Clear memory fallback timeout
-    if (this.memoryFallbackTimeout) {
-      clearTimeout(this.memoryFallbackTimeout);
-      this.memoryFallbackTimeout = null;
-    }
+    // REMOVED UNSAFE MEMORY READER
 
     // Clear current server if set
     const previousServer = this.currentServer;
@@ -161,11 +147,7 @@ class Detector extends EventEmitter {
    * Handle server detected from logs
    */
   handleServerDetected(serverInfo, source) {
-    // Clear memory fallback timeout
-    if (this.memoryFallbackTimeout) {
-      clearTimeout(this.memoryFallbackTimeout);
-      this.memoryFallbackTimeout = null;
-    }
+    // REMOVED UNSAFE MEMORY READER
 
     // Update last log update time
     if (source === 'log') {
@@ -177,7 +159,6 @@ class Detector extends EventEmitter {
         this.currentServer.placeId !== serverInfo.placeId ||
         this.currentServer.jobId !== serverInfo.jobId) {
 
-      // FIX OPUS ISSUE #5: Debounce state changes with 2 second cooldown
       const now = Date.now();
       const timeSinceLastChange = now - this.lastStateChangeTime;
       if (timeSinceLastChange < 2000) {
@@ -201,41 +182,7 @@ class Detector extends EventEmitter {
     }
   }
 
-  /**
-   * Try memory reading as fallback
-   */
-  async tryMemoryFallback() {
-    logger.info('Log timeout reached, trying memory fallback');
-
-    try {
-      const serverInfo = await memoryReader.readServerFromMemory();
-
-      if (serverInfo && serverInfo.placeId && serverInfo.jobId) {
-        // Compare with log monitor results if available
-        const logServer = logMonitor.getCurrentServer();
-
-        if (logServer) {
-          if (logServer.placeId === serverInfo.placeId && logServer.jobId === serverInfo.jobId) {
-            // Results match, use log result
-            logger.info('Memory and log results match, using log result');
-            this.handleServerDetected(logServer, 'log');
-          } else {
-            // Results differ, prefer log, log warning
-            logger.warn('Memory and log results differ');
-            this.handleServerDetected(logServer, 'log');
-          }
-        } else {
-          // No log data, use memory result
-          logger.info('No log data, using memory result');
-          this.handleServerDetected(serverInfo, 'memory');
-        }
-      } else {
-        logger.warn('Memory reading failed to find server');
-      }
-    } catch (error) {
-      logger.error('Memory fallback failed', sanitizeError({ error: error.message }));
-    }
-  }
+  // REMOVED UNSAFE MEMORY READER - tryMemoryFallback() deleted
 
   /**
    * Get current server information

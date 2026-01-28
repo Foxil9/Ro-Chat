@@ -1,6 +1,7 @@
 const Store = require('electron-store');
 const { app } = require('electron');
 const logger = require('../logging/logger');
+const { sanitizeError } = require('../utils/sanitizer');
 
 // Initialize Store with encryption
 const secureStore = new Store({
@@ -14,6 +15,11 @@ const secureStore = new Store({
 // Save authentication data
 function saveAuth(authData) {
   try {
+    if (!authData || !authData.accessToken) {
+      logger.error('Invalid auth data provided to saveAuth');
+      return false;
+    }
+
     logger.info('Saving authentication data', { username: authData.username });
     secureStore.set('auth', {
       // OAuth2 tokens
@@ -31,7 +37,7 @@ function saveAuth(authData) {
     });
     return true;
   } catch (error) {
-    logger.error('Failed to save authentication data', { error: error.message });
+    logger.error('Failed to save authentication data', sanitizeError({ error: error.message }));
     return false;
   }
 }
@@ -45,10 +51,17 @@ function getAuth() {
       return null;
     }
 
+    // Validate auth structure
+    if (!auth.accessToken || !auth.userId) {
+      logger.warn('Auth data is corrupted, clearing');
+      clearAuth();
+      return null;
+    }
+
     // Return auth data (expiry checking is handled by robloxAuth.js with refresh logic)
     return auth;
   } catch (error) {
-    logger.error('Failed to get authentication data', { error: error.message });
+    logger.error('Failed to get authentication data', sanitizeError({ error: error.message }));
     return null;
   }
 }
@@ -60,7 +73,7 @@ function clearAuth() {
     secureStore.delete('auth');
     return true;
   } catch (error) {
-    logger.error('Failed to clear authentication data', { error: error.message });
+    logger.error('Failed to clear authentication data', sanitizeError({ error: error.message }));
     return false;
   }
 }

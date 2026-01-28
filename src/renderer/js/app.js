@@ -70,6 +70,7 @@ class RoChatApp {
       }
     } catch (error) {
       console.error('Failed to register saved keybind:', error);
+      // Non-critical error, continue initialization
     }
   }
 
@@ -460,6 +461,11 @@ class RoChatApp {
     const loginBtn = document.getElementById('login-btn');
     const statusEl = document.getElementById('login-status');
 
+    if (!loginBtn || !statusEl) {
+      console.error('Login elements not found');
+      return;
+    }
+
     loginBtn.disabled = true;
     loginBtn.textContent = 'Logging in...';
     statusEl.textContent = '';
@@ -469,7 +475,7 @@ class RoChatApp {
 
       if (result.success) {
         this.currentUser = result.user;
-        console.log('Login successful:', this.currentUser);
+        console.log('Login successful');
         statusEl.textContent = 'Login successful!';
         statusEl.className = 'status success';
 
@@ -518,9 +524,10 @@ class RoChatApp {
   async startDetection() {
     try {
       const result = await window.electronAPI.detection.start();
-      console.log('Detection started:', result);
+      console.log('Detection started');
     } catch (error) {
       console.error('Failed to start detection:', error);
+      // Non-critical, user can still use chat
     }
   }
 
@@ -533,29 +540,50 @@ class RoChatApp {
 
     if (!statusDot || !serverText) return;
 
-    if (serverInfo && serverInfo.placeId && serverInfo.jobId) {
-      // Check if actually connected to chat
-      // For now, assume connected if we have placeId and jobId
-      // TODO: Add actual chat connection check
-      statusDot.className = 'status-dot connected';
-      serverText.textContent = 'Connected!';
-      console.log('Connected to server:', serverInfo);
-    } else if (serverInfo && serverInfo.placeId) {
-      // In-game but not connected to chat yet
-      statusDot.className = 'status-dot ingame';
-      serverText.textContent = 'In-game';
-      console.log('In-game:', serverInfo);
-    } else {
-      // Not connected
-      statusDot.className = 'status-dot';
-      serverText.textContent = 'Not connected';
-      console.log('Disconnected from server');
+    try {
+      if (serverInfo && serverInfo.placeId && serverInfo.jobId) {
+        // Check if actually connected to chat
+        // For now, assume connected if we have placeId and jobId
+        // TODO: Add actual chat connection check
+        statusDot.className = 'status-dot connected';
+        serverText.textContent = 'Connected!';
+        console.log('Connected to server');
+      } else if (serverInfo && serverInfo.placeId) {
+        // In-game but not connected to chat yet
+        statusDot.className = 'status-dot ingame';
+        serverText.textContent = 'In-game';
+        console.log('In-game');
+      } else {
+        // Not connected
+        statusDot.className = 'status-dot';
+        serverText.textContent = 'Not connected';
+        console.log('Disconnected from server');
+      }
+    } catch (error) {
+      console.error('Error updating server status:', error);
     }
   }
 }
 
+// Global error handler to prevent crashes
+window.addEventListener('error', (event) => {
+  console.error('Uncaught error:', event.error);
+  event.preventDefault(); // Prevent default handling
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('Unhandled promise rejection:', event.reason);
+  event.preventDefault(); // Prevent default handling
+});
+
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-  window.app = new RoChatApp();
-  window.app.init();
+  try {
+    window.app = new RoChatApp();
+    window.app.init();
+  } catch (error) {
+    console.error('Failed to initialize app:', error);
+    // Show error state in UI
+    document.body.innerHTML = '<div style="color: red; padding: 20px;">Failed to initialize RoChat. Please restart the application.</div>';
+  }
 });

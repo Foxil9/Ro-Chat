@@ -81,11 +81,19 @@ class LogMonitor extends EventEmitter {
       // Get all .log files
       const files = fs.readdirSync(LOG_DIR)
         .filter(file => file.endsWith('.log'))
-        .map(file => ({
-          name: file,
-          path: path.join(LOG_DIR, file),
-          mtime: fs.statSync(path.join(LOG_DIR, file)).mtime
-        }))
+        .map(file => {
+          try {
+            return {
+              name: file,
+              path: path.join(LOG_DIR, file),
+              mtime: fs.statSync(path.join(LOG_DIR, file)).mtime
+            };
+          } catch (statError) {
+            logger.debug('Failed to stat log file', { file, error: statError.message });
+            return null;
+          }
+        })
+        .filter(file => file !== null)
         .sort((a, b) => b.mtime - a.mtime);
 
       if (files.length === 0) {
@@ -143,15 +151,23 @@ class LogMonitor extends EventEmitter {
       });
 
       stream.on('end', () => {
-        this.parseLogs(newData);
-        this.lastPosition = fileSize;
+        try {
+          this.parseLogs(newData);
+          this.lastPosition = fileSize;
+        } catch (parseError) {
+          logger.error('Error parsing logs', { error: parseError.message });
+        }
       });
 
       stream.on('error', (error) => {
         logger.error('Error reading log file', { error: error.message });
+        // Reset to recheck file on next iteration
+        this.currentLogFile = null;
       });
     } catch (error) {
       logger.error('Error reading new logs', { error: error.message });
+      // Reset to recheck file on next iteration
+      this.currentLogFile = null;
     }
   }
 
@@ -173,7 +189,7 @@ class LogMonitor extends EventEmitter {
     // Check for disconnect patterns first
     const disconnectMatch = line.match(DISCONNECT_PATTERN);
     if (disconnectMatch) {
-      logger.info('Disconnect detected in logs', { pattern: disconnectMatch[0] });
+      logger.info('Disconnect detected in logs');
       this.lastServerInfo = null;
       this.emit('disconnected');
       return;
@@ -196,7 +212,7 @@ class LogMonitor extends EventEmitter {
           this.lastServerInfo.placeId !== serverInfo.placeId ||
           this.lastServerInfo.jobId !== serverInfo.jobId) {
 
-        logger.info('Server detected', { placeId, jobId });
+        logger.info('Server detected');
         this.lastServerInfo = serverInfo;
         this.emit('serverDetected', serverInfo);
       }

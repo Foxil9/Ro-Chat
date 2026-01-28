@@ -5,6 +5,7 @@ const http = require('http');
 const url = require('url');
 const logger = require('../logging/logger');
 const secureStore = require('../storage/secureStore');
+const { sanitizeError } = require('../utils/sanitizer');
 
 
 // OAuth2 Configuration
@@ -151,11 +152,11 @@ async function exchangeCodeForToken(authCode, codeVerifier) {
     logger.info('Token exchange successful');
     return response.data.tokens;
   } catch (error) {
-    logger.error('Token exchange failed', {
+    logger.error('Token exchange failed', sanitizeError({
       error: error.message,
       status: error.response?.status,
       data: error.response?.data
-    });
+    }));
 
     if (error.response?.status === 400) {
       throw new Error('Invalid authorization code or PKCE verifier');
@@ -191,10 +192,10 @@ async function getUserInfo(accessToken) {
       createdAt: response.data.created_at
     };
   } catch (error) {
-    logger.error('Failed to get user info', {
+    logger.error('Failed to get user info', sanitizeError({
       error: error.message,
       status: error.response?.status
-    });
+    }));
 
     if (error.response?.status === 401) {
       throw new Error('Invalid or expired access token');
@@ -232,10 +233,10 @@ async function refreshAccessToken(refreshToken) {
     logger.info('Token refresh successful');
     return response.data.tokens;
   } catch (error) {
-    logger.error('Token refresh failed', {
+    logger.error('Token refresh failed', sanitizeError({
       error: error.message,
       status: error.response?.status
-    });
+    }));
 
     // If refresh fails, user needs to log in again
     secureStore.clearAuth();
@@ -313,11 +314,15 @@ async function initiateLogin() {
     // Cleanup
     currentCodeVerifier = null;
     if (callbackServer) {
-      callbackServer.close();
+      try {
+        callbackServer.close();
+      } catch (closeError) {
+        logger.error('Failed to close callback server', sanitizeError({ error: closeError.message }));
+      }
       callbackServer = null;
     }
 
-    logger.error('OAuth2 login failed', { error: error.message });
+    logger.error('OAuth2 login failed', sanitizeError({ error: error.message }));
     throw error;
   }
 }
@@ -372,36 +377,41 @@ function getCurrentUser() {
  * Get valid access token (auto-refresh if needed)
  */
 async function getAccessToken() {
-  const auth = secureStore.getAuth();
+  try {
+    const auth = secureStore.getAuth();
 
-  if (!auth || !auth.accessToken) {
-    throw new Error('Not authenticated');
-  }
-
-  // Check if token is expired or about to expire (within 1 minute)
-  if (Date.now() >= (auth.expiresAt - 60000)) {
-    logger.info('Access token expired, refreshing');
-
-    if (!auth.refreshToken) {
-      throw new Error('No refresh token available');
+    if (!auth || !auth.accessToken) {
+      throw new Error('Not authenticated');
     }
 
-    // Refresh the token
-    const newTokens = await refreshAccessToken(auth.refreshToken);
+    // Check if token is expired or about to expire (within 1 minute)
+    if (Date.now() >= (auth.expiresAt - 60000)) {
+      logger.info('Access token expired, refreshing');
 
-    // Update stored auth data
-    const updatedAuth = {
-      ...auth,
-      accessToken: newTokens.accessToken,
-      refreshToken: newTokens.refreshToken,
-      expiresAt: Date.now() + (newTokens.expiresIn * 1000)
-    };
+      if (!auth.refreshToken) {
+        throw new Error('No refresh token available');
+      }
 
-    secureStore.saveAuth(updatedAuth);
-    return newTokens.accessToken;
+      // Refresh the token
+      const newTokens = await refreshAccessToken(auth.refreshToken);
+
+      // Update stored auth data
+      const updatedAuth = {
+        ...auth,
+        accessToken: newTokens.accessToken,
+        refreshToken: newTokens.refreshToken,
+        expiresAt: Date.now() + (newTokens.expiresIn * 1000)
+      };
+
+      secureStore.saveAuth(updatedAuth);
+      return newTokens.accessToken;
+    }
+
+    return auth.accessToken;
+  } catch (error) {
+    logger.error('Failed to get access token', sanitizeError({ error: error.message }));
+    throw error;
   }
-
-  return auth.accessToken;
 }
 
 module.exports = {

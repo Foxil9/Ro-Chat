@@ -4,6 +4,7 @@ const logMonitor = require('./logMonitor');
 const memoryReader = require('./memoryReader');
 const logger = require('../logging/logger');
 const socketClient = require('../socket/socketClient');
+const { sanitizeError } = require('../utils/sanitizer');
 
 class Detector extends EventEmitter {
   constructor() {
@@ -168,16 +169,16 @@ class Detector extends EventEmitter {
         this.currentServer.placeId !== serverInfo.placeId ||
         this.currentServer.jobId !== serverInfo.jobId) {
 
-      logger.info('Server changed', {
-        placeId: serverInfo.placeId,
-        jobId: serverInfo.jobId,
-        source
-      });
+      logger.info('Server changed', { source });
 
       this.currentServer = serverInfo;
 
       // Join Socket.io rooms for this server
-      socketClient.joinRoom(serverInfo.jobId, serverInfo.placeId);
+      try {
+        socketClient.joinRoom(serverInfo.jobId, serverInfo.placeId);
+      } catch (error) {
+        logger.error('Failed to join socket room', sanitizeError({ error: error.message }));
+      }
 
       this.emit('serverChanged', serverInfo);
     }
@@ -195,7 +196,7 @@ class Detector extends EventEmitter {
       if (serverInfo && serverInfo.placeId && serverInfo.jobId) {
         // Compare with log monitor results if available
         const logServer = logMonitor.getCurrentServer();
-        
+
         if (logServer) {
           if (logServer.placeId === serverInfo.placeId && logServer.jobId === serverInfo.jobId) {
             // Results match, use log result
@@ -203,10 +204,7 @@ class Detector extends EventEmitter {
             this.handleServerDetected(logServer, 'log');
           } else {
             // Results differ, prefer log, log warning
-            logger.warn('Memory and log results differ', {
-              log: logServer,
-              memory: serverInfo
-            });
+            logger.warn('Memory and log results differ');
             this.handleServerDetected(logServer, 'log');
           }
         } else {
@@ -218,7 +216,7 @@ class Detector extends EventEmitter {
         logger.warn('Memory reading failed to find server');
       }
     } catch (error) {
-      logger.error('Memory fallback failed', { error: error.message });
+      logger.error('Memory fallback failed', sanitizeError({ error: error.message }));
     }
   }
 

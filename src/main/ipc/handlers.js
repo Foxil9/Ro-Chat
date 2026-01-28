@@ -5,6 +5,7 @@ const tokenManager = require('../auth/tokenManager');
 const detector = require('../detection/detector');
 const secureStore = require('../storage/secureStore');
 const logger = require('../logging/logger');
+const { sanitizeError } = require('../utils/sanitizer');
 
 // Backend server configuration
 const BACKEND_URL = 'https://ro-chat-zqks.onrender.com';
@@ -85,14 +86,14 @@ async function handleLogin(event) {
     const userInfo = await robloxAuth.initiateLogin();
 
     // Enable always-on-top after successful login with screen-saver level
-    if (mainWindow) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.setAlwaysOnTop(true, 'screen-saver');
       logger.info('Always-on-top enabled after login');
     }
 
     return { success: true, user: userInfo };
   } catch (error) {
-    logger.error('Login failed', { error: error.message });
+    logger.error('Login failed', sanitizeError({ error: error.message }));
     return { success: false, error: error.message };
   }
 }
@@ -114,7 +115,7 @@ async function handleLogout(event) {
     const result = tokenManager.logout();
 
     // Reset window state for login screen
-    if (mainWindow) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
       // Disable always-on-top when logging out
       mainWindow.setAlwaysOnTop(false);
       logger.info('Always-on-top disabled after logout');
@@ -129,7 +130,7 @@ async function handleLogout(event) {
 
     return { success: result };
   } catch (error) {
-    logger.error('Logout failed', { error: error.message });
+    logger.error('Logout failed', sanitizeError({ error: error.message }));
     return { success: false, error: error.message };
   }
 }
@@ -141,14 +142,14 @@ async function handleGetStatus(event) {
   try {
     const isAuthenticated = robloxAuth.isAuthenticated();
     const user = robloxAuth.getCurrentUser();
-    
+
     return {
       success: true,
       authenticated: isAuthenticated,
       user
     };
   } catch (error) {
-    logger.error('Failed to get auth status', { error: error.message });
+    logger.error('Failed to get auth status', sanitizeError({ error: error.message }));
     return { success: false, error: error.message };
   }
 }
@@ -163,7 +164,7 @@ async function handleGetServer(event) {
     const server = detector.getCurrentServer();
     return { success: true, server };
   } catch (error) {
-    logger.error('Failed to get server', { error: error.message });
+    logger.error('Failed to get server', sanitizeError({ error: error.message }));
     return { success: false, error: error.message };
   }
 }
@@ -177,7 +178,7 @@ async function handleStartDetection(event) {
     detector.start();
     return { success: true };
   } catch (error) {
-    logger.error('Failed to start detection', { error: error.message });
+    logger.error('Failed to start detection', sanitizeError({ error: error.message }));
     return { success: false, error: error.message };
   }
 }
@@ -191,7 +192,7 @@ async function handleStopDetection(event) {
     detector.stop();
     return { success: true };
   } catch (error) {
-    logger.error('Failed to stop detection', { error: error.message });
+    logger.error('Failed to stop detection', sanitizeError({ error: error.message }));
     return { success: false, error: error.message };
   }
 }
@@ -204,7 +205,7 @@ async function handleStopDetection(event) {
  */
 async function handleSendMessage(event, { jobId, placeId, chatType, message }) {
   try {
-    logger.info('Send message requested', { chatType, jobId, placeId, messageLength: message?.length });
+    logger.info('Send message requested', { chatType, messageLength: message?.length });
 
     // Get current user info
     const user = robloxAuth.getCurrentUser();
@@ -220,7 +221,7 @@ async function handleSendMessage(event, { jobId, placeId, chatType, message }) {
       return { success: false, error: 'No valid auth token. Please log in again.' };
     }
 
-    logger.info('Sending message with auth', { userId: user.userId, hasToken: !!token });
+    logger.info('Sending message with auth', { hasToken: !!token });
 
     // Send to backend server
     const response = await axios.post(`${BACKEND_URL}/api/chat/send`, {
@@ -234,10 +235,11 @@ async function handleSendMessage(event, { jobId, placeId, chatType, message }) {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
-      }
+      },
+      timeout: 10000
     });
 
-    logger.info('Message sent successfully', { chatType, jobId, placeId });
+    logger.info('Message sent successfully', { chatType });
     return { success: true };
   } catch (error) {
     // Extract error message from response
@@ -260,22 +262,14 @@ async function handleSendMessage(event, { jobId, placeId, chatType, message }) {
       errorReason = error.message || 'Unknown error';
     }
 
-    logger.error('Message NOT sent - Details:', {
+    logger.error('Message NOT sent', sanitizeError({
       error: error.message,
       status: error.response?.status,
       responseData: error.response?.data,
       chatType,
-      jobId,
-      placeId,
       backendUrl: BACKEND_URL,
-      reason: errorReason,
-      messagePreview: message?.substring(0, 50) + (message?.length > 50 ? '...' : '')
-    });
-
-    console.log(`\x1b[31m❌ Message NOT sent:\x1b[0m ${errorReason}`);
-    console.log(`\x1b[33m   Chat Type:\x1b[0m ${chatType}`);
-    console.log(`\x1b[33m   Job ID:\x1b[0m ${jobId || 'N/A'}`);
-    console.log(`\x1b[33m   Place ID:\x1b[0m ${placeId || 'N/A'}`);
+      reason: errorReason
+    }));
 
     return {
       success: false,
@@ -291,7 +285,7 @@ async function handleSendMessage(event, { jobId, placeId, chatType, message }) {
  */
 async function handleLoadHistory(event, { jobId, placeId, chatType }) {
   try {
-    logger.info('Load history requested', { chatType, jobId, placeId });
+    logger.info('Load history requested', { chatType });
 
     // Get auth token
     const token = tokenManager.getValidToken();
@@ -305,13 +299,12 @@ async function handleLoadHistory(event, { jobId, placeId, chatType }) {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
-      }
+      },
+      timeout: 10000
     });
 
     logger.info('History loaded successfully', {
       chatType,
-      jobId,
-      placeId,
       messageCount: response.data.messages?.length || 0
     });
 
@@ -320,13 +313,11 @@ async function handleLoadHistory(event, { jobId, placeId, chatType }) {
       messages: response.data.messages || []
     };
   } catch (error) {
-    logger.error('Failed to load history', {
+    logger.error('Failed to load history', sanitizeError({
       error: error.message,
       chatType,
-      jobId,
-      placeId,
       backendUrl: BACKEND_URL
-    });
+    }));
     return {
       success: false,
       error: error.response?.data?.error || 'Failed to load history',
@@ -614,11 +605,11 @@ function handleSetAutoHideFooter(event, enabled) {
  */
 async function handleOpenExternal(event, url) {
   try {
-    logger.info('Opening external URL', { url });
+    logger.info('Opening external URL');
     await shell.openExternal(url);
     return { success: true };
   } catch (error) {
-    logger.error('Failed to open external URL', { error: error.message, url });
+    logger.error('Failed to open external URL', sanitizeError({ error: error.message }));
     return { success: false, error: error.message };
   }
 }

@@ -16,8 +16,21 @@ if (app && app.getPath) {
 }
 
 // Ensure log directory exists
-if (!fs.existsSync(logDir)) {
-  fs.mkdirSync(logDir, { recursive: true });
+try {
+  if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+  }
+} catch (error) {
+  console.error('Failed to create log directory:', error.message);
+  // Fallback to current directory
+  logDir = path.join(__dirname, '../../../logs');
+  try {
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+  } catch (fallbackError) {
+    console.error('Failed to create fallback log directory:', fallbackError.message);
+  }
 }
 
 // Define log format

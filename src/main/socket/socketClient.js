@@ -1,5 +1,6 @@
 const { io } = require('socket.io-client');
 const logger = require('../logging/logger');
+const { sanitizeError } = require('../utils/sanitizer');
 
 /**
  * Socket.io Client Manager
@@ -45,7 +46,7 @@ class SocketClient {
     });
 
     this.socket.on('connect_error', (error) => {
-      logger.error('Socket connection error', { error: error.message });
+      logger.error('Socket connection error', sanitizeError({ error: error.message }));
     });
 
     this.socket.on('message', (data) => {
@@ -90,12 +91,7 @@ class SocketClient {
     this.currentRooms.add(serverRoom);
     this.currentRooms.add(globalRoom);
 
-    logger.info('Joined rooms', {
-      serverRoom,
-      globalRoom,
-      jobId,
-      placeId
-    });
+    logger.info('Joined rooms');
   }
 
   /**
@@ -106,7 +102,10 @@ class SocketClient {
 
     for (const roomId of this.currentRooms) {
       this.socket.emit('leave-room', roomId);
-      logger.info('Left room', { roomId });
+    }
+
+    if (this.currentRooms.size > 0) {
+      logger.info('Left all rooms');
     }
 
     this.currentRooms.clear();
@@ -121,7 +120,7 @@ class SocketClient {
     const rooms = Array.from(this.currentRooms);
     if (rooms.length === 0) return;
 
-    logger.info('Rejoining rooms after reconnection', { rooms });
+    logger.info('Rejoining rooms after reconnection');
 
     for (const roomId of rooms) {
       this.socket.emit('join-room', roomId);

@@ -13,6 +13,8 @@ class Detector extends EventEmitter {
     this.lastLogUpdate = null;
     this.memoryFallbackTimeout = null;
     this.isRunning = false;
+    // FIX OPUS ISSUE #5: Add debouncing to prevent rapid state changes
+    this.lastStateChangeTime = 0;
   }
 
   /**
@@ -70,6 +72,12 @@ class Detector extends EventEmitter {
 
     // Disconnect from Socket.io server
     socketClient.disconnect();
+
+    // FIX OPUS ISSUE #3: Remove all event listeners to prevent accumulation
+    processWatcher.removeAllListeners('processStarted');
+    processWatcher.removeAllListeners('processStopped');
+    logMonitor.removeAllListeners('serverDetected');
+    logMonitor.removeAllListeners('disconnected');
 
     // Stop all watchers
     processWatcher.stopWatching();
@@ -168,6 +176,15 @@ class Detector extends EventEmitter {
     if (!this.currentServer ||
         this.currentServer.placeId !== serverInfo.placeId ||
         this.currentServer.jobId !== serverInfo.jobId) {
+
+      // FIX OPUS ISSUE #5: Debounce state changes with 2 second cooldown
+      const now = Date.now();
+      const timeSinceLastChange = now - this.lastStateChangeTime;
+      if (timeSinceLastChange < 2000) {
+        logger.debug('Server change debounced, too soon since last change');
+        return;
+      }
+      this.lastStateChangeTime = now;
 
       logger.info('Server changed', { source });
 

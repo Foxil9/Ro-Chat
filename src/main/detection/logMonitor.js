@@ -12,8 +12,9 @@ const LOG_DIR = process.env.LOCALAPPDATA
 // Format: [FLog::Output] ! Joining game 'jobId' place placeId at IP
 const JOIN_PATTERN = /\[FLog::Output\]\s*!\s*Joining\s*game\s*['"`]([0-9a-f-]+)['"`]\s*place\s*(\d+)/i;
 const SERVER_PATTERN = /gameplacejobid/i;
+// FIX OPUS ISSUE #4: Require [FLog::] prefix to prevent false positives
 // Disconnect patterns
-const DISCONNECT_PATTERN = /Disconnected|disconnect|leaving game|HttpRbxApiService stopped|Game has shut down|You have been kicked|Connection lost/i;
+const DISCONNECT_PATTERN = /\[FLog::[^\]]*\].*?(Disconnected|disconnect|leaving game|HttpRbxApiService stopped|Game has shut down|You have been kicked|Connection lost)/i;
 
 class LogMonitor extends EventEmitter {
   constructor() {
@@ -23,6 +24,8 @@ class LogMonitor extends EventEmitter {
     this.currentLogFile = null;
     this.lastPosition = 0;
     this.lastServerInfo = null;
+    // FIX OPUS ISSUE #2: Track stream reference to prevent memory leak
+    this.currentStream = null;
   }
 
   /**
@@ -40,10 +43,11 @@ class LogMonitor extends EventEmitter {
     // Initial check for log file
     this.checkLogFile();
 
-    // Set up interval to check for new log entries (every 500ms)
+    // FIX OPUS ISSUE #1: Reduce polling from 500ms to 5000ms to prevent CPU/IO overload
+    // Set up interval to check for new log entries (every 5000ms)
     this.watchInterval = setInterval(() => {
       this.readNewLogs();
-    }, 500);
+    }, 5000);
   }
 
   /**
@@ -57,10 +61,16 @@ class LogMonitor extends EventEmitter {
 
     logger.info('Stopping log monitor');
     this.isMonitoring = false;
-    
+
     if (this.watchInterval) {
       clearInterval(this.watchInterval);
       this.watchInterval = null;
+    }
+
+    // FIX OPUS ISSUE #2: Destroy active stream to prevent memory leak
+    if (this.currentStream) {
+      this.currentStream.destroy();
+      this.currentStream = null;
     }
 
     // Reset state
@@ -139,11 +149,13 @@ class LogMonitor extends EventEmitter {
         return;
       }
 
+      // FIX OPUS ISSUE #2: Store stream reference and destroy properly
       // Read new data from file
       const stream = fs.createReadStream(this.currentLogFile, {
         start: this.lastPosition,
         encoding: 'utf8'
       });
+      this.currentStream = stream;
 
       let newData = '';
       stream.on('data', (chunk) => {
@@ -154,13 +166,18 @@ class LogMonitor extends EventEmitter {
         try {
           this.parseLogs(newData);
           this.lastPosition = fileSize;
+          this.currentStream = null;
         } catch (parseError) {
           logger.error('Error parsing logs', { error: parseError.message });
+          this.currentStream = null;
         }
       });
 
       stream.on('error', (error) => {
         logger.error('Error reading log file', { error: error.message });
+        // FIX OPUS ISSUE #2: Destroy stream before resetting state
+        stream.destroy();
+        this.currentStream = null;
         // Reset to recheck file on next iteration
         this.currentLogFile = null;
       });

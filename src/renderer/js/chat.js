@@ -410,6 +410,9 @@ class ChatManager {
     const message = {
       userId: messageData.userId,
       username: messageData.username,
+      // DEBUG FIX: Include displayName and picture from messageData
+      displayName: messageData.displayName || messageData.username,
+      picture: messageData.picture || null,
       message: messageData.message,
       timestamp: messageData.timestamp || Date.now(),
       isLocal: messageData.isLocal || false,
@@ -461,62 +464,69 @@ class ChatManager {
       minute: '2-digit'
     });
 
-    // Use displayName if available, otherwise fallback to username
-    const displayName = message.displayName || message.username;
+    // DEBUG FIX: Ensure displayName is always set, fallback to username
+    const displayName = message.displayName && message.displayName.trim()
+      ? message.displayName
+      : message.username;
     const username = message.username;
     const picture = message.picture;
 
     // Avatar container (circle) - use profile picture if available
-    const avatarEl = document.createElement('div');
-    avatarEl.className = 'msg-avatar';
+    const profilePicEl = document.createElement('div');
+    profilePicEl.className = 'msg-profile-pic';
 
-    if (picture) {
+    if (picture && picture.trim()) {
       // Use actual profile picture
       const imgEl = document.createElement('img');
       imgEl.src = picture;
       imgEl.alt = displayName;
-      imgEl.style.cssText = 'width: 100%; height: 100%; border-radius: 50%; object-fit: cover;';
       imgEl.onerror = () => {
         // Fallback to initial letter if image fails to load
-        avatarEl.innerHTML = '';
-        avatarEl.textContent = this.escapeHtml(displayName.charAt(0).toUpperCase());
+        profilePicEl.innerHTML = '';
+        profilePicEl.textContent = this.escapeHtml(displayName.charAt(0).toUpperCase());
       };
-      avatarEl.appendChild(imgEl);
+      profilePicEl.appendChild(imgEl);
     } else {
-      // Fallback to first letter
-      avatarEl.textContent = this.escapeHtml(displayName.charAt(0).toUpperCase());
+      // DEBUG FIX: Fallback to first letter when picture is null/empty
+      profilePicEl.textContent = this.escapeHtml(displayName.charAt(0).toUpperCase());
     }
 
-    // Name info section (display name + username in parentheses)
-    const nameInfoEl = document.createElement('div');
-    nameInfoEl.className = 'msg-name-info';
-    
+    // Content column (header + body)
+    const contentColumnEl = document.createElement('div');
+    contentColumnEl.className = 'msg-content-column';
+
+    // Message header row (display name, username, timestamp)
+    const headerEl = document.createElement('div');
+    headerEl.className = 'msg-header';
+
     const displayNameEl = document.createElement('span');
     displayNameEl.className = 'msg-display-name';
     displayNameEl.textContent = this.escapeHtml(displayName);
-    
+
     const usernameEl = document.createElement('span');
     usernameEl.className = 'msg-username';
     usernameEl.textContent = `(${this.escapeHtml(username)})`;
-    
-    nameInfoEl.appendChild(displayNameEl);
-    nameInfoEl.appendChild(usernameEl);
 
-    // Time in smaller text
-    const timeEl = document.createElement('div');
+    const timeEl = document.createElement('span');
     timeEl.className = 'msg-time';
     timeEl.textContent = timestamp;
 
-    // Message content in gray box
-    const contentEl = document.createElement('div');
-    contentEl.className = 'msg-content';
-    contentEl.textContent = this.escapeHtml(message.message);
+    headerEl.appendChild(displayNameEl);
+    headerEl.appendChild(usernameEl);
+    headerEl.appendChild(timeEl);
 
-    // Assemble message
-    messageEl.appendChild(avatarEl);
-    messageEl.appendChild(nameInfoEl);
-    messageEl.appendChild(timeEl);
-    messageEl.appendChild(contentEl);
+    // Message content bubble
+    const bubbleEl = document.createElement('div');
+    bubbleEl.className = 'msg-bubble';
+    bubbleEl.textContent = this.escapeHtml(message.message);
+
+    // Assemble content column
+    contentColumnEl.appendChild(headerEl);
+    contentColumnEl.appendChild(bubbleEl);
+
+    // Assemble main message element
+    messageEl.appendChild(profilePicEl);
+    messageEl.appendChild(contentColumnEl);
 
     this.messagesContainer.appendChild(messageEl);
   }
@@ -601,6 +611,9 @@ class ChatManager {
             this.messages[chatType].push({
               userId: msg.userId,
               username: msg.username,
+              // DEBUG FIX: Include displayName and picture from history
+              displayName: msg.displayName || msg.username,
+              picture: msg.picture || null,
               message: msg.message,
               timestamp: new Date(msg.timestamp).getTime(),
               isLocal: false,

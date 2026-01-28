@@ -26,8 +26,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   chat: {
     sendMessage: (data) => ipcRenderer.invoke('chat:send', data),
     loadHistory: (data) => ipcRenderer.invoke('chat:history', data),
-    emitTyping: (data) => ipcRenderer.invoke('chat:emitTyping', data),
-    getGames: () => ipcRenderer.invoke('chat:getGames')
+    emitTyping: (data) => ipcRenderer.invoke('chat:emitTyping', data)
+    // REMOVED GAME BROWSER FEATURE - getGames() removed
   },
 
   // Event listeners

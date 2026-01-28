@@ -151,26 +151,8 @@ class SocketClient {
     });
   }
 
-  /**
-   * Get list of active games/servers
-   */
-  async getGames() {
-    try {
-      const axios = require('axios');
-      const response = await axios.get(`${this.BACKEND_URL}/api/games`, {
-        timeout: 10000
-      });
-
-      if (response.data.success) {
-        return response.data.games;
-      }
-
-      return [];
-    } catch (error) {
-      logger.error('Failed to get games', sanitizeError({ error: error.message }));
-      return [];
-    }
-  }
+  // REMOVED GAME BROWSER FEATURE
+  // getGames() method removed - violates RoChat's overlay-only design principle
 }
 
 // Export singleton instance

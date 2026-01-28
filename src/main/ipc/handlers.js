@@ -73,7 +73,7 @@ function registerHandlers() {
   ipcMain.handle('chat:send', handleSendMessage);
   ipcMain.handle('chat:history', handleLoadHistory);
   ipcMain.handle('chat:emitTyping', handleEmitTyping);
-  ipcMain.handle('chat:getGames', handleGetGames);
+  // REMOVED GAME BROWSER FEATURE - chat:getGames handler removed
 
   // Window control handlers
   ipcMain.handle('window:minimize', handleMinimize);
@@ -348,19 +348,8 @@ async function handleLoadHistory(event, { jobId, placeId, chatType }) {
   }
 }
 
-/**
- * Handle get games request
- */
-async function handleGetGames(event) {
-  try {
-    logger.info('Get games requested');
-    const games = await socketClient.getGames();
-    return { success: true, games };
-  } catch (error) {
-    logger.error('Failed to get games', sanitizeError({ error: error.message }));
-    return { success: false, error: error.message, games: [] };
-  }
-}
+// REMOVED GAME BROWSER FEATURE
+// handleGetGames() function removed - violates RoChat's overlay-only design
 
 // ==================== WINDOW CONTROL HANDLERS ====================
 

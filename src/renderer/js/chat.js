@@ -189,27 +189,8 @@ class ChatManager {
       btnConnect.addEventListener('click', () => this.handleConnect());
     }
 
-    // Browse button
-    const btnBrowse = document.getElementById('browse-btn');
-    if (btnBrowse) {
-      btnBrowse.addEventListener('click', () => this.showGameBrowser());
-    }
-
-    // Close browser modal
-    const btnCloseBrowser = document.getElementById('close-browser-btn');
-    if (btnCloseBrowser) {
-      btnCloseBrowser.addEventListener('click', () => this.closeGameBrowser());
-    }
-
-    // Close modal on background click
-    const modal = document.getElementById('game-browser-modal');
-    if (modal) {
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-          this.closeGameBrowser();
-        }
-      });
-    }
+    // REMOVED GAME BROWSER FEATURE
+    // Browse button event listener removed - violates RoChat's overlay-only design
   }
 
   /**
@@ -1056,121 +1037,9 @@ class ChatManager {
     console.log('Cooldown ended - you can send messages again');
   }
 
-  /**
-   * Show game browser modal
-   */
-  async showGameBrowser() {
-    const modal = document.getElementById('game-browser-modal');
-    const gameList = document.getElementById('game-list');
-
-    if (!modal || !gameList) return;
-
-    modal.classList.remove('hidden');
-    gameList.innerHTML = '<div class="game-list-loading">Loading games...</div>';
-
-    try {
-      if (window.electronAPI && window.electronAPI.chat && window.electronAPI.chat.getGames) {
-        const result = await window.electronAPI.chat.getGames();
-
-        if (result.success && result.games && result.games.length > 0) {
-          gameList.innerHTML = '';
-
-          result.games.forEach(game => {
-            const gameEl = this.createGameElement(game);
-            gameList.appendChild(gameEl);
-          });
-        } else {
-          gameList.innerHTML = '<div class="game-list-empty">No active games found. Join a Roblox game to see it here.</div>';
-        }
-      } else {
-        gameList.innerHTML = '<div class="game-list-empty">Game browser not available.</div>';
-      }
-    } catch (error) {
-      console.error('Failed to load games:', error);
-      gameList.innerHTML = '<div class="game-list-empty">Failed to load games.</div>';
-    }
-  }
-
-  /**
-   * Close game browser modal
-   */
-  closeGameBrowser() {
-    const modal = document.getElementById('game-browser-modal');
-    if (modal) {
-      modal.classList.add('hidden');
-    }
-  }
-
-  /**
-   * Create game element
-   */
-  createGameElement(game) {
-    const gameEl = document.createElement('div');
-    gameEl.className = 'game-item';
-
-    const headerEl = document.createElement('div');
-    headerEl.className = 'game-header';
-
-    if (game.imageUrl) {
-      const iconEl = document.createElement('img');
-      iconEl.className = 'game-icon';
-      iconEl.src = game.imageUrl;
-      iconEl.alt = game.name;
-      iconEl.onerror = () => {
-        iconEl.style.display = 'none';
-      };
-      headerEl.appendChild(iconEl);
-    }
-
-    const infoEl = document.createElement('div');
-    infoEl.className = 'game-info';
-
-    const nameEl = document.createElement('div');
-    nameEl.className = 'game-name';
-    nameEl.textContent = game.name;
-
-    const statsEl = document.createElement('div');
-    statsEl.className = 'game-stats';
-    const totalPlayers = game.servers.reduce((sum, s) => sum + s.playerCount, 0);
-    statsEl.textContent = `${game.servers.length} server${game.servers.length > 1 ? 's' : ''} • ${totalPlayers} player${totalPlayers > 1 ? 's' : ''}`;
-
-    infoEl.appendChild(nameEl);
-    infoEl.appendChild(statsEl);
-    headerEl.appendChild(infoEl);
-    gameEl.appendChild(headerEl);
-
-    const serverListEl = document.createElement('div');
-    serverListEl.className = 'server-list';
-
-    game.servers.forEach(server => {
-      const serverEl = document.createElement('div');
-      serverEl.className = 'server-item';
-      serverEl.textContent = `Server • ${server.playerCount} player${server.playerCount > 1 ? 's' : ''}`;
-      serverEl.onclick = () => this.joinServer(server.jobId, game.placeId);
-      serverListEl.appendChild(serverEl);
-    });
-
-    gameEl.appendChild(serverListEl);
-    return gameEl;
-  }
-
-  /**
-   * Join a server from browser
-   */
-  async joinServer(jobId, placeId) {
-    this.closeGameBrowser();
-
-    this.currentJobId = jobId;
-    this.currentPlaceId = placeId;
-
-    this.updateJobIdDisplay(jobId);
-    this.clearMessages();
-
-    this.addSystemMessage('Joined server from browser!', 'server');
-    this.addSystemMessage('Connected to game!', 'global');
-
-    console.log('Manually joined server:', { placeId, jobId });
-  }
+  // REMOVED GAME BROWSER FEATURE
+  // showGameBrowser(), closeGameBrowser(), createGameElement(), joinServer() methods removed
+  // These violated RoChat's core principle of being a lightweight overlay that syncs to the current game
 }
 
 // Initialize chat manager when DOM is ready

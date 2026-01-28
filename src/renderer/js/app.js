@@ -161,6 +161,13 @@ class RoChatApp {
       });
     }
 
+    // Listen for auto-hide header changes from settings window
+    if (window.electronAPI?.onAutoHideHeaderChanged) {
+      window.electronAPI.onAutoHideHeaderChanged((enabled) => {
+        this.setAutoHideHeader(enabled);
+      });
+    }
+
     // Listen for auto-hide footer changes from settings window
     if (window.electronAPI?.onAutoHideFooterChanged) {
       window.electronAPI.onAutoHideFooterChanged((enabled) => {

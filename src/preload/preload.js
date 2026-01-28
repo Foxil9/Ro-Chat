@@ -45,6 +45,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('theme:changed', listener);
   },
 
+  onAutoHideHeaderChanged: (callback) => {
+    const listener = (event, enabled) => callback(enabled);
+    ipcRenderer.on('settings:autoHideHeaderChanged', listener);
+    return () => ipcRenderer.removeListener('settings:autoHideHeaderChanged', listener);
+  },
+
   onAutoHideFooterChanged: (callback) => {
     const listener = (event, enabled) => callback(enabled);
     ipcRenderer.on('settings:autoHideFooterChanged', listener);
@@ -79,6 +85,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     resetPosition: () => ipcRenderer.invoke('settings:resetPosition'),
     registerKeybind: (keybind) => ipcRenderer.invoke('settings:registerKeybind', keybind),
     setMessageOpacity: (opacity) => ipcRenderer.send('settings:setMessageOpacity', opacity),
+    setAutoHideHeader: (enabled) => ipcRenderer.invoke('settings:setAutoHideHeader', enabled),
     setAutoHideFooter: (enabled) => ipcRenderer.invoke('settings:setAutoHideFooter', enabled)  // CSS FIX: IPC for footer visibility
   },
 

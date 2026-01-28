@@ -65,6 +65,7 @@ function registerHandlers() {
   ipcMain.handle('settings:resetPosition', handleResetPosition);
   ipcMain.handle('settings:registerKeybind', handleRegisterKeybind);
   ipcMain.on('settings:setMessageOpacity', handleSetMessageOpacity);
+  ipcMain.handle('settings:setAutoHideHeader', handleSetAutoHideHeader);
   ipcMain.handle('settings:setAutoHideFooter', handleSetAutoHideFooter);
 
   // Shell handlers
@@ -578,6 +579,19 @@ function handleSetMessageOpacity(event, opacity) {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('settings:messageOpacityChanged', opacity);
   }
+}
+
+/**
+ * Handle auto-hide header setting
+ * Forward setting to main window via IPC
+ */
+function handleSetAutoHideHeader(event, enabled) {
+  // Forward to main window using IPC event system
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('settings:autoHideHeaderChanged', enabled);
+    logger.info('Auto-hide header setting applied', { enabled });
+  }
+  return { success: true };
 }
 
 /**

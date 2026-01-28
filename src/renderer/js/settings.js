@@ -130,8 +130,9 @@ class SettingsManager {
    * FEATURE 1: Apply auto-hide header setting
    */
   applyAutoHideHeader(enabled) {
-    if (window.app) {
-      window.app.setAutoHideHeader(enabled);
+    // Use IPC to communicate with main window
+    if (window.electronAPI?.settings?.setAutoHideHeader) {
+      window.electronAPI.settings.setAutoHideHeader(enabled);
     }
   }
 

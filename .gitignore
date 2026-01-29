@@ -27,6 +27,7 @@ Thumbs.db
 .claude/
 *.swo
 .clineignore
+Implemntation Prompts.md
 .clinerules
 *.xml
 CLAUDE.md

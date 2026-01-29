@@ -5,11 +5,11 @@ class RoChatApp {
     this.currentUser = null;
     this.currentView = null;
     this.isInitialized = false;
-    this.autoHideHeaderEnabled = false;  // FEATURE 1: Track auto-hide header state
-    this.headerHideTimer = null;          // FEATURE 1: Timer for delayed hide
-    this.windowBlurred = false;           // FEATURE 1: Track window focus state
-    this.autoHideListeners = null;        // FEATURE 1: Store listener references for cleanup
-    this.autoHideFooterEnabled = false;   // FEATURE 2: Track auto-hide footer state
+    this.autoHideHeaderEnabled = false;
+    this.headerHideTimer = null;
+    this.windowBlurred = false;
+    this.autoHideListeners = null;
+    this.autoHideFooterEnabled = false;
   }
 
   /**
@@ -23,7 +23,7 @@ class RoChatApp {
       const savedTheme = this.loadSavedTheme();
       this.applyTheme(savedTheme);
 
-      // FEATURE 1 & 2: Load and apply auto-hide settings
+      // Load and apply auto-hide settings
       const savedSettings = this.loadSavedSettings();
       if (savedSettings) {
         this.autoHideHeaderEnabled = savedSettings.autoHideHeader || false;
@@ -91,7 +91,7 @@ class RoChatApp {
   }
 
   /**
-   * FEATURE 1 & 2: Load saved settings from localStorage
+   * Load saved settings from localStorage
    */
   loadSavedSettings() {
     try {
@@ -197,19 +197,19 @@ class RoChatApp {
       });
     }
 
-    // FEATURE 1: Setup auto-hide header functionality if enabled
+    // Setup auto-hide header if enabled
     if (this.autoHideHeaderEnabled) {
       this.setupAutoHideHeader();
     }
 
-    // FEATURE 2: Apply saved footer visibility setting
+    // Apply saved footer visibility
     if (this.autoHideFooterEnabled) {
       this.setAutoHideFooter(true);
     }
   }
 
   /**
-   * FEATURE 1: Setup auto-hide header event listeners
+   * Setup auto-hide header event listeners
    */
   setupAutoHideHeader() {
     // Prevent duplicate listener attachment
@@ -260,7 +260,7 @@ class RoChatApp {
   }
 
   /**
-   * FEATURE 1: Remove auto-hide header event listeners
+   * Remove auto-hide header event listeners
    */
   teardownAutoHideHeader() {
     if (!this.autoHideListeners) return;
@@ -286,7 +286,7 @@ class RoChatApp {
   }
 
   /**
-   * FEATURE 1: Hide the chat header
+   * Hide the chat header
    */
   hideHeader() {
     const chatHeader = document.getElementById('chat-header');
@@ -301,7 +301,7 @@ class RoChatApp {
   }
 
   /**
-   * FEATURE 1: Show the chat header
+   * Show the chat header
    */
   showHeader() {
     const chatHeader = document.getElementById('chat-header');
@@ -312,7 +312,7 @@ class RoChatApp {
   }
 
   /**
-   * FEATURE 1: Enable or disable auto-hide header
+   * Enable or disable auto-hide header
    */
   setAutoHideHeader(enabled) {
     this.autoHideHeaderEnabled = enabled;
@@ -335,7 +335,7 @@ class RoChatApp {
   }
 
   /**
-   * FEATURE 2: Enable or disable auto-hide footer
+   * Enable or disable auto-hide footer
    */
   setAutoHideFooter(enabled) {
     this.autoHideFooterEnabled = enabled;

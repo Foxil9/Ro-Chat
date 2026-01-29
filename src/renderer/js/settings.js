@@ -10,8 +10,8 @@ class SettingsManager {
       opacity: 100,
       messageOpacity: 100,
       chatKeybind: null,
-      autoHideHeader: false,    // FEATURE 1: Auto-hide header on blur/mouse leave
-      autoHideFooter: false      // FEATURE 2: Permanently hide footer
+      autoHideHeader: false,
+      autoHideFooter: false
     };
     this.isInitialized = false;
     this.capturingKeybind = false;
@@ -97,7 +97,7 @@ class SettingsManager {
       keybindBtn.textContent = this.settings.chatKeybind;
     }
 
-    // FEATURE 1 & 2: Sync auto-hide checkbox states
+    // Sync auto-hide checkbox states
     const autoHideHeader = document.getElementById('auto-hide-header');
     const autoHideFooter = document.getElementById('auto-hide-footer');
     if (autoHideHeader) autoHideHeader.checked = this.settings.autoHideHeader;
@@ -119,15 +119,15 @@ class SettingsManager {
       window.electronAPI.window.setOpacity(this.settings.opacity / 100);
     }
 
-    // FEATURE 1: Apply auto-hide header setting
+    // Apply auto-hide header setting
     this.applyAutoHideHeader(this.settings.autoHideHeader);
 
-    // FEATURE 2: Apply auto-hide footer setting
+    // Apply auto-hide footer setting
     this.applyAutoHideFooter(this.settings.autoHideFooter);
   }
 
   /**
-   * FEATURE 1: Apply auto-hide header setting
+   * Apply auto-hide header setting
    */
   applyAutoHideHeader(enabled) {
     // Use IPC to communicate with main window
@@ -137,10 +137,10 @@ class SettingsManager {
   }
 
   /**
-   * FEATURE 2: Apply auto-hide footer setting
+   * Apply auto-hide footer setting
    */
   applyAutoHideFooter(enabled) {
-    // CSS FIX: Use IPC to communicate with main window (satisfies Electron contextIsolation requirement)
+    // Use IPC to communicate with main window
     if (window.electronAPI?.settings?.setAutoHideFooter) {
       window.electronAPI.settings.setAutoHideFooter(enabled);
     }
@@ -273,7 +273,7 @@ class SettingsManager {
       });
     }
 
-    // FEATURE 1: Auto-hide header checkbox
+    // Auto-hide header checkbox
     const autoHideHeader = document.getElementById('auto-hide-header');
     if (autoHideHeader) {
       autoHideHeader.addEventListener('change', (e) => {
@@ -283,7 +283,7 @@ class SettingsManager {
       });
     }
 
-    // FEATURE 2: Auto-hide footer checkbox
+    // Auto-hide footer checkbox
     const autoHideFooter = document.getElementById('auto-hide-footer');
     if (autoHideFooter) {
       autoHideFooter.addEventListener('change', (e) => {

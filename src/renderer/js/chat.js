@@ -345,21 +345,20 @@ class ChatManager {
    * Handle typing indicator from server
    */
   handleTypingIndicator(data) {
-    const { username, isTyping, roomId } = data;
+    const { typingUsers } = data;
 
-    if (!username) return;
+    if (!Array.isArray(typingUsers)) return;
 
-    const currentRoomId = this.activeTab === 'server'
-      ? `server:${this.currentJobId}`
-      : `global:${this.currentPlaceId}`;
+    // Update typing users set with server's list
+    this.typingUsers.clear();
 
-    if (roomId !== currentRoomId) return;
-
-    if (isTyping) {
-      this.typingUsers.add(username);
-    } else {
-      this.typingUsers.delete(username);
-    }
+    // Filter out current user from typing list
+    const currentUser = this.userId;
+    typingUsers.forEach(username => {
+      if (username !== currentUser) {
+        this.typingUsers.add(username);
+      }
+    });
 
     this.updateTypingIndicator();
   }
@@ -393,13 +392,12 @@ class ChatManager {
       const currentUser = await this.getCurrentUser();
       if (!currentUser) return;
 
-      const roomId = this.activeTab === 'server'
-        ? `server:${this.currentJobId}`
-        : `global:${this.currentPlaceId}`;
+      // Only emit typing for server tab (global tab not supported by server)
+      if (this.activeTab !== 'server' || !this.currentJobId) return;
 
       if (window.electron && window.electron.emitTyping) {
         await window.electron.emitTyping({
-          roomId,
+          jobId: this.currentJobId,
           username: currentUser.username,
           isTyping
         });

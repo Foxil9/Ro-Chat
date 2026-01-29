@@ -36,39 +36,45 @@ function setupDetectorEvents() {
 
 /**
  * Setup socket client event forwarding to renderer
+ * This must be called AFTER the socket is connected
  */
 function setupSocketEvents() {
-  if (socketClient.socket) {
-    socketClient.socket.on('typing-indicator', (data) => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('socket:typingIndicator', data);
-      }
-    });
-
-    socketClient.socket.on('message', (data) => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('socket:message', data);
-      }
-    });
-
-    socketClient.socket.on('messageUpdated', (data) => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('socket:messageUpdated', data);
-      }
-    });
-
-    socketClient.socket.on('messageEditError', (data) => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('socket:messageEditError', data);
-      }
-    });
-
-    socketClient.socket.on('messageDeleteError', (data) => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('socket:messageDeleteError', data);
-      }
-    });
+  if (!socketClient.socket) {
+    logger.warn('setupSocketEvents called but socket not initialized yet');
+    return;
   }
+
+  logger.info('Setting up socket event listeners');
+
+  socketClient.socket.on('typingIndicator', (data) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('socket:typingIndicator', data);
+    }
+  });
+
+  socketClient.socket.on('message', (data) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('socket:message', data);
+    }
+  });
+
+  socketClient.socket.on('messageUpdated', (data) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('socket:messageUpdated', data);
+    }
+  });
+
+  socketClient.socket.on('messageEditError', (data) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('socket:messageEditError', data);
+    }
+  });
+
+  socketClient.socket.on('messageDeleteError', (data) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('socket:messageDeleteError', data);
+    }
+  });
 }
 
 /**
@@ -646,9 +652,9 @@ function handleSetAutoHideFooter(event, enabled) {
 /**
  * Handle emit typing indicator request
  */
-async function handleEmitTyping(event, { roomId, username, isTyping }) {
+async function handleEmitTyping(event, { jobId, username, isTyping }) {
   try {
-    socketClient.emitTyping(roomId, username, isTyping);
+    socketClient.emitTyping(jobId, username, isTyping);
     return { success: true };
   } catch (error) {
     logger.error('Failed to emit typing', sanitizeError({ error: error.message }));

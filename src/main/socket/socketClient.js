@@ -12,6 +12,7 @@ class SocketClient {
     this.connected = false;
     this.currentRooms = new Set(); // Track joined rooms
     this.BACKEND_URL = 'https://ro-chat-zqks.onrender.com';
+    this.onConnectedCallback = null; // Callback to execute after socket connects
   }
 
   /**
@@ -36,6 +37,11 @@ class SocketClient {
       this.connected = true;
       logger.info('Socket connected', { socketId: this.socket.id });
 
+      // Call the onConnected callback to set up event listeners
+      if (this.onConnectedCallback) {
+        this.onConnectedCallback();
+      }
+
       // Rejoin all previously joined rooms
       this.rejoinRooms();
     });
@@ -53,7 +59,7 @@ class SocketClient {
       logger.info('Message received from server', { data });
     });
 
-    this.socket.on('typing-indicator', (data) => {
+    this.socket.on('typingIndicator', (data) => {
       logger.info('Typing indicator received', { data });
     });
   }
@@ -139,13 +145,13 @@ class SocketClient {
   /**
    * Emit typing indicator
    */
-  emitTyping(roomId, username, isTyping) {
+  emitTyping(jobId, username, isTyping) {
     if (!this.socket || !this.connected) {
       return;
     }
 
-    this.socket.emit('typing-indicator', {
-      roomId,
+    this.socket.emit('notifyTyping', {
+      jobId,
       username,
       isTyping
     });
@@ -180,6 +186,14 @@ class SocketClient {
       messageId,
       userId
     });
+  }
+
+  /**
+   * Set callback to be called when socket connects
+   * This is used to set up event listeners after socket is initialized
+   */
+  setOnConnectedCallback(callback) {
+    this.onConnectedCallback = callback;
   }
 
   // REMOVED GAME BROWSER FEATURE

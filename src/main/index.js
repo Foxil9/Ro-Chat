@@ -7,6 +7,7 @@ const { registerHandlers, setMainWindow, setupDetectorEvents, setupSocketEvents 
 const detector = require('./detection/detector');
 const secureStore = require('./storage/secureStore');
 const { setupAutoUpdater } = require('./updater');
+const socketClient = require('./socket/socketClient');
 
 let mainWindow;
 
@@ -114,8 +115,8 @@ app.whenReady().then(() => {
   // Setup detector events forwarding
   setupDetectorEvents();
 
-  // Setup socket events forwarding
-  setupSocketEvents();
+  // Setup socket events forwarding callback (will be called when socket connects)
+  socketClient.setOnConnectedCallback(setupSocketEvents);
 
   // Create main window
   createWindow();

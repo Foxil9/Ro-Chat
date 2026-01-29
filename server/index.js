@@ -23,7 +23,7 @@ const io = new Server(server, {
   }
 });
 
-// Track typing users per room
+// Track typing users per room: Map<roomId, Set<username>>
 const typingUsers = new Map();
 
 // Middleware
@@ -63,10 +63,12 @@ io.on('connection', (socket) => {
     logger.info('Client left room', { socketId: socket.id, roomId });
   });
 
-  socket.on('typing-indicator', (data) => {
-    const { roomId, username, isTyping } = data;
+  socket.on('notifyTyping', (data) => {
+    const { jobId, username, isTyping } = data;
 
-    if (!roomId || !username) return;
+    if (!jobId || !username) return;
+
+    const roomId = `server:${jobId}`;
 
     if (!typingUsers.has(roomId)) {
       typingUsers.set(roomId, new Set());
@@ -80,11 +82,13 @@ io.on('connection', (socket) => {
       roomTypers.delete(username);
     }
 
-    // Broadcast to all clients in room except sender
-    socket.to(roomId).emit('typing-indicator', {
-      roomId,
-      username,
-      isTyping
+    // Store username on socket for cleanup on disconnect
+    socket.currentUsername = username;
+    socket.currentRoomId = roomId;
+
+    // Broadcast current list of typing users to all clients in room
+    io.to(roomId).emit('typingIndicator', {
+      typingUsers: Array.from(roomTypers)
     });
   });
 
@@ -177,11 +181,18 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    // Remove user from all typing sets
-    typingUsers.forEach((userSet, roomId) => {
-      // We don't have username from socket, so clear after disconnect
-      // This is acceptable since disconnect already clears visual state
-    });
+    // Remove user from typing state if they were typing
+    if (socket.currentUsername && socket.currentRoomId) {
+      const roomTypers = typingUsers.get(socket.currentRoomId);
+      if (roomTypers) {
+        roomTypers.delete(socket.currentUsername);
+
+        // Broadcast updated typing list to room
+        io.to(socket.currentRoomId).emit('typingIndicator', {
+          typingUsers: Array.from(roomTypers)
+        });
+      }
+    }
 
     sessionManager.handleDisconnect(socket.id);
     logger.info('Client disconnected', { socketId: socket.id });

@@ -83,9 +83,9 @@ class LogMonitor extends EventEmitter {
         return;
       }
 
-      // Get all .log files
+      // Get all .log files (exclude Studio/crash logs)
       const files = fs.readdirSync(LOG_DIR)
-        .filter(file => file.endsWith('.log'))
+        .filter(file => file.endsWith('.log') && file.toLowerCase().includes('player'))
         .map(file => {
           try {
             return {

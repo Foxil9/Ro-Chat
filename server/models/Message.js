@@ -30,6 +30,14 @@ const messageSchema = new mongoose.Schema({
     type: String,
     required: true,
     maxlength: 200 // Limit message length
+  },
+  editedAt: {
+    type: Date,
+    default: null
+  },
+  deletedAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true

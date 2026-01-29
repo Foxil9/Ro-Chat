@@ -47,6 +47,9 @@ class ChatManager {
     // Setup typing indicator listeners
     this.setupTypingListener();
 
+    // Setup message update listeners
+    this.setupMessageUpdateListeners();
+
     // Apply message opacity from settings
     this.applyMessageOpacity();
 
@@ -231,6 +234,63 @@ class ChatManager {
       window.electron.onTypingIndicator((data) => {
         this.handleTypingIndicator(data);
       });
+    }
+  }
+
+  /**
+   * Setup message update listeners (edit/delete)
+   */
+  setupMessageUpdateListeners() {
+    if (window.electron && window.electron.onMessageUpdated) {
+      window.electron.onMessageUpdated((data) => {
+        this.handleMessageUpdated(data);
+      });
+    }
+
+    if (window.electron && window.electron.onMessage) {
+      window.electron.onMessage((data) => {
+        this.handleIncomingMessage(data);
+      });
+    }
+  }
+
+  /**
+   * Handle incoming message from socket
+   */
+  handleIncomingMessage(data) {
+    this.addMessage({
+      messageId: data.messageId,
+      userId: data.userId,
+      username: data.username,
+      displayName: data.displayName,
+      picture: data.picture,
+      message: data.message,
+      timestamp: new Date(data.timestamp).getTime(),
+      isLocal: false,
+      chatType: data.chatType,
+      editedAt: data.editedAt,
+      deletedAt: data.deletedAt
+    });
+  }
+
+  /**
+   * Handle message update from socket (edit/delete)
+   */
+  handleMessageUpdated(data) {
+    const { messageId, message, editedAt, deletedAt } = data;
+
+    for (const chatType of ['server', 'global']) {
+      const messageIndex = this.messages[chatType].findIndex(m => m.messageId === messageId);
+      if (messageIndex !== -1) {
+        this.messages[chatType][messageIndex].message = message;
+        this.messages[chatType][messageIndex].editedAt = editedAt;
+        this.messages[chatType][messageIndex].deletedAt = deletedAt;
+
+        if (chatType === this.activeTab) {
+          this.renderAllMessages();
+        }
+        break;
+      }
     }
   }
 
@@ -557,15 +617,17 @@ class ChatManager {
   addMessage(messageData) {
     const chatType = messageData.chatType || this.activeTab;
     const message = {
+      messageId: messageData.messageId || null,
       userId: messageData.userId,
       username: messageData.username,
-      // DEBUG FIX: Include displayName and picture from messageData
       displayName: messageData.displayName || messageData.username,
       picture: messageData.picture || null,
       message: messageData.message,
       timestamp: messageData.timestamp || Date.now(),
       isLocal: messageData.isLocal || false,
-      chatType
+      chatType,
+      editedAt: messageData.editedAt || null,
+      deletedAt: messageData.deletedAt || null
     };
 
     // Add to appropriate tab
@@ -607,13 +669,15 @@ class ChatManager {
     const messageEl = document.createElement('div');
     // Note: 'local' means sent by user (left), 'remote' means from others (right)
     messageEl.className = `chat-msg ${message.isLocal ? 'local' : 'remote'}`;
+    if (message.messageId) {
+      messageEl.setAttribute('data-message-id', message.messageId);
+    }
 
     const timestamp = new Date(message.timestamp).toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit'
     });
 
-    // DEBUG FIX: Ensure displayName is always set, fallback to username
     const displayName = message.displayName && message.displayName.trim()
       ? message.displayName
       : message.username;
@@ -667,7 +731,67 @@ class ChatManager {
     // Message content bubble
     const bubbleEl = document.createElement('div');
     bubbleEl.className = 'msg-bubble';
-    bubbleEl.textContent = this.escapeHtml(message.message);
+
+    // Show deleted or actual message
+    if (message.deletedAt) {
+      bubbleEl.textContent = '[deleted]';
+      bubbleEl.style.fontStyle = 'italic';
+      bubbleEl.style.opacity = '0.5';
+    } else {
+      bubbleEl.textContent = this.escapeHtml(message.message);
+    }
+
+    // Add edited label if message was edited
+    if (message.editedAt && !message.deletedAt) {
+      const editedLabel = document.createElement('span');
+      editedLabel.className = 'msg-edited';
+      editedLabel.textContent = ' (edited)';
+      editedLabel.style.fontSize = '11px';
+      editedLabel.style.opacity = '0.6';
+      editedLabel.style.fontStyle = 'italic';
+      bubbleEl.appendChild(editedLabel);
+    }
+
+    // Add edit/delete menu for own messages (not deleted)
+    if (message.isLocal && message.messageId && !message.deletedAt) {
+      const menuEl = document.createElement('div');
+      menuEl.className = 'msg-menu';
+      menuEl.style.cssText = `
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        display: none;
+        gap: 4px;
+      `;
+
+      const editBtn = document.createElement('button');
+      editBtn.innerHTML = '✏️';
+      editBtn.className = 'msg-menu-btn';
+      editBtn.style.cssText = `
+        background: rgba(255, 255, 255, 0.1);
+        border: none;
+        border-radius: 4px;
+        padding: 4px 8px;
+        cursor: pointer;
+        font-size: 14px;
+      `;
+      editBtn.onclick = () => this.startEditMessage(message.messageId, message.message);
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.innerHTML = '🗑️';
+      deleteBtn.className = 'msg-menu-btn';
+      deleteBtn.style.cssText = editBtn.style.cssText;
+      deleteBtn.onclick = () => this.deleteMessage(message.messageId);
+
+      menuEl.appendChild(editBtn);
+      menuEl.appendChild(deleteBtn);
+
+      messageEl.style.position = 'relative';
+      messageEl.onmouseenter = () => { menuEl.style.display = 'flex'; };
+      messageEl.onmouseleave = () => { menuEl.style.display = 'none'; };
+
+      messageEl.appendChild(menuEl);
+    }
 
     // Assemble content column
     contentColumnEl.appendChild(headerEl);
@@ -758,15 +882,17 @@ class ChatManager {
           // Add all messages
           result.messages.forEach(msg => {
             this.messages[chatType].push({
+              messageId: msg.messageId,
               userId: msg.userId,
               username: msg.username,
-              // DEBUG FIX: Include displayName and picture from history
               displayName: msg.displayName || msg.username,
               picture: msg.picture || null,
               message: msg.message,
               timestamp: new Date(msg.timestamp).getTime(),
               isLocal: false,
-              chatType
+              chatType,
+              editedAt: msg.editedAt,
+              deletedAt: msg.deletedAt
             });
           });
 
@@ -1035,6 +1161,107 @@ class ChatManager {
     }
 
     console.log('Cooldown ended - you can send messages again');
+  }
+
+  /**
+   * Start editing a message
+   */
+  startEditMessage(messageId, currentText) {
+    const messageEl = this.messagesContainer.querySelector(`[data-message-id="${messageId}"]`);
+    if (!messageEl) return;
+
+    const bubbleEl = messageEl.querySelector('.msg-bubble');
+    if (!bubbleEl) return;
+
+    const originalText = currentText;
+
+    const inputEl = document.createElement('input');
+    inputEl.type = 'text';
+    inputEl.value = originalText;
+    inputEl.style.cssText = `
+      width: 100%;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      color: white;
+      font-size: 14px;
+    `;
+
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Save';
+    saveBtn.style.cssText = `
+      margin-top: 4px;
+      padding: 4px 12px;
+      background: #4ade80;
+      border: none;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
+      font-size: 12px;
+    `;
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.cssText = saveBtn.style.cssText;
+    cancelBtn.style.background = '#6b7280';
+    cancelBtn.style.marginLeft = '4px';
+
+    const btnContainer = document.createElement('div');
+    btnContainer.appendChild(saveBtn);
+    btnContainer.appendChild(cancelBtn);
+
+    const restore = () => {
+      bubbleEl.textContent = this.escapeHtml(originalText);
+      this.renderAllMessages();
+    };
+
+    saveBtn.onclick = async () => {
+      const newText = inputEl.value.trim();
+      if (!newText || newText === originalText) {
+        restore();
+        return;
+      }
+
+      try {
+        if (window.electron && window.electron.editMessage) {
+          await window.electron.editMessage({ messageId, newContent: newText });
+        }
+      } catch (error) {
+        console.error('Failed to edit message:', error);
+        restore();
+      }
+    };
+
+    cancelBtn.onclick = restore;
+
+    inputEl.onkeypress = (e) => {
+      if (e.key === 'Enter') {
+        saveBtn.click();
+      } else if (e.key === 'Escape') {
+        cancelBtn.click();
+      }
+    };
+
+    bubbleEl.innerHTML = '';
+    bubbleEl.appendChild(inputEl);
+    bubbleEl.appendChild(btnContainer);
+    inputEl.focus();
+  }
+
+  /**
+   * Delete a message
+   */
+  async deleteMessage(messageId) {
+    if (!confirm('Delete this message?')) return;
+
+    try {
+      if (window.electron && window.electron.deleteMessage) {
+        await window.electron.deleteMessage({ messageId });
+      }
+    } catch (error) {
+      console.error('Failed to delete message:', error);
+    }
   }
 
   // REMOVED GAME BROWSER FEATURE

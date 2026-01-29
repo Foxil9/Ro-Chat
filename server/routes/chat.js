@@ -121,6 +121,7 @@ router.post('/send', rateLimiter, async (req, res) => {
     // Broadcast message to all clients in the appropriate room
     const roomId = chatType === 'server' ? `server:${jobId}` : `global:${placeId}`;
     io.to(roomId).emit('message', {
+      messageId: newMessage._id.toString(),
       jobId,
       placeId,
       chatType,
@@ -237,9 +238,22 @@ router.get('/history', async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(parseInt(limit));
 
+    const formattedMessages = messages.reverse().map(msg => ({
+      messageId: msg._id.toString(),
+      jobId: msg.jobId,
+      placeId: msg.placeId,
+      chatType: msg.chatType,
+      userId: msg.userId,
+      username: msg.username,
+      message: msg.message,
+      timestamp: msg.createdAt,
+      editedAt: msg.editedAt,
+      deletedAt: msg.deletedAt
+    }));
+
     res.json({
       success: true,
-      messages: messages.reverse() // Return in chronological order
+      messages: formattedMessages
     });
   } catch (error) {
     logger.error('Failed to get chat history', { error: error.message });

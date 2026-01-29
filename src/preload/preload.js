@@ -26,7 +26,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   chat: {
     sendMessage: (data) => ipcRenderer.invoke('chat:send', data),
     loadHistory: (data) => ipcRenderer.invoke('chat:history', data),
-    emitTyping: (data) => ipcRenderer.invoke('chat:emitTyping', data)
+    emitTyping: (data) => ipcRenderer.invoke('chat:emitTyping', data),
+    editMessage: (data) => ipcRenderer.invoke('chat:editMessage', data),
+    deleteMessage: (data) => ipcRenderer.invoke('chat:deleteMessage', data)
     // REMOVED GAME BROWSER FEATURE - getGames() removed
   },
 
@@ -83,6 +85,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('socket:message', listener);
   },
 
+  onMessageUpdated: (callback) => {
+    const listener = (event, data) => callback(data);
+    ipcRenderer.on('socket:messageUpdated', listener);
+    return () => ipcRenderer.removeListener('socket:messageUpdated', listener);
+  },
+
+  onMessageEditError: (callback) => {
+    const listener = (event, data) => callback(data);
+    ipcRenderer.on('socket:messageEditError', listener);
+    return () => ipcRenderer.removeListener('socket:messageEditError', listener);
+  },
+
+  onMessageDeleteError: (callback) => {
+    const listener = (event, data) => callback(data);
+    ipcRenderer.on('socket:messageDeleteError', listener);
+    return () => ipcRenderer.removeListener('socket:messageDeleteError', listener);
+  },
+
   // Window controls
   window: {
     minimize: () => ipcRenderer.invoke('window:minimize'),
@@ -119,6 +139,8 @@ contextBridge.exposeInMainWorld('electron', {
   sendMessage: (data) => ipcRenderer.invoke('chat:send', data),
   loadHistory: (data) => ipcRenderer.invoke('chat:history', data),
   emitTyping: (data) => ipcRenderer.invoke('chat:emitTyping', data),
+  editMessage: (data) => ipcRenderer.invoke('chat:editMessage', data),
+  deleteMessage: (data) => ipcRenderer.invoke('chat:deleteMessage', data),
 
   // Event listeners
   onServerChanged: (callback) => {
@@ -141,6 +163,26 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.on('socket:message', listener);
     return () => ipcRenderer.removeListener('socket:message', listener);
   },
+
+  onMessageUpdated: (callback) => {
+    const listener = (event, data) => callback(data);
+    ipcRenderer.on('socket:messageUpdated', listener);
+    return () => ipcRenderer.removeListener('socket:messageUpdated', listener);
+  },
+
+  onMessageEditError: (callback) => {
+    const listener = (event, data) => callback(data);
+    ipcRenderer.on('socket:messageEditError', listener);
+    return () => ipcRenderer.removeListener('socket:messageEditError', listener);
+  },
+
+  onMessageDeleteError: (callback) => {
+    const listener = (event, data) => callback(data);
+    ipcRenderer.on('socket:messageDeleteError', listener);
+    return () => ipcRenderer.removeListener('socket:messageDeleteError', listener);
+  },
+
+  startDetection: () => ipcRenderer.invoke('detection:start'),
 
   // Shell methods
   openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url)

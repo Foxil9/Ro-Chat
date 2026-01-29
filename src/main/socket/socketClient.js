@@ -151,6 +151,37 @@ class SocketClient {
     });
   }
 
+  /**
+   * Emit edit message
+   */
+  emitEditMessage(messageId, userId, newContent) {
+    if (!this.socket || !this.connected) {
+      logger.warn('Cannot edit message - socket not connected');
+      return;
+    }
+
+    this.socket.emit('editMessage', {
+      messageId,
+      userId,
+      newContent
+    });
+  }
+
+  /**
+   * Emit delete message
+   */
+  emitDeleteMessage(messageId, userId) {
+    if (!this.socket || !this.connected) {
+      logger.warn('Cannot delete message - socket not connected');
+      return;
+    }
+
+    this.socket.emit('deleteMessage', {
+      messageId,
+      userId
+    });
+  }
+
   // REMOVED GAME BROWSER FEATURE
   // getGames() method removed - violates RoChat's overlay-only design principle
 }

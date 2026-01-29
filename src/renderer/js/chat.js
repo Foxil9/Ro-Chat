@@ -20,12 +20,13 @@ class ChatManager {
     this.typingTimeout = null;
     this.currentlyTyping = false;
     this.typingUsers = new Set();
+    this.userId = null;
   }
 
   /**
    * Initialize chat manager
    */
-  init() {
+  async init() {
     if (this.isInitialized) return;
 
     // Get DOM elements (using correct IDs from index.html)
@@ -34,6 +35,9 @@ class ChatManager {
     this.messagesContainer = document.getElementById('chat-messages');
     this.jobIdDisplay = document.getElementById('server-text');
     this.gameNameDisplay = document.getElementById('user-name');
+
+    // Get current user ID
+    await this.loadCurrentUserId();
 
     // Create tab UI if it doesn't exist
     this.createTabUI();
@@ -64,6 +68,20 @@ class ChatManager {
 
     this.isInitialized = true;
     console.log('Chat manager initialized');
+  }
+
+  /**
+   * Load current user ID
+   */
+  async loadCurrentUserId() {
+    try {
+      const user = await this.getCurrentUser();
+      if (user) {
+        this.userId = user.userId;
+      }
+    } catch (error) {
+      console.error('Failed to load user ID:', error);
+    }
   }
 
   /**
@@ -258,6 +276,35 @@ class ChatManager {
    * Handle incoming message from socket
    */
   handleIncomingMessage(data) {
+    const chatType = data.chatType || this.activeTab;
+
+    // Deduplicate: If this is OUR message (echo from server), update the optimistic one
+    if (data.userId === this.userId) {
+      const messages = this.messages[chatType];
+      const lastMessage = messages[messages.length - 1];
+
+      // Check if last message is our optimistic message (no messageId yet)
+      if (lastMessage && !lastMessage.messageId && lastMessage.userId === this.userId && lastMessage.message === data.message) {
+        // Update the message object with server data
+        lastMessage.messageId = data.messageId;
+        lastMessage.timestamp = new Date(data.timestamp).getTime();
+        lastMessage.editedAt = data.editedAt;
+        lastMessage.deletedAt = data.deletedAt;
+
+        // Update the DOM element if this is the active tab
+        if (chatType === this.activeTab) {
+          const messageElements = this.messagesContainer.querySelectorAll('.chat-msg');
+          const lastElement = messageElements[messageElements.length - 1];
+          if (lastElement) {
+            lastElement.setAttribute('data-message-id', data.messageId);
+          }
+        }
+
+        return; // Don't add duplicate
+      }
+    }
+
+    // Add as new message (from other users or failed deduplication)
     this.addMessage({
       messageId: data.messageId,
       userId: data.userId,
@@ -267,7 +314,7 @@ class ChatManager {
       message: data.message,
       timestamp: new Date(data.timestamp).getTime(),
       isLocal: false,
-      chatType: data.chatType,
+      chatType: chatType,
       editedAt: data.editedAt,
       deletedAt: data.deletedAt
     });
@@ -753,7 +800,7 @@ class ChatManager {
     }
 
     // Add edit/delete menu for own messages (not deleted)
-    if (message.isLocal && message.messageId && !message.deletedAt) {
+    if (message.userId === this.userId && message.messageId && !message.deletedAt) {
       const menuEl = document.createElement('div');
       menuEl.className = 'msg-menu';
       menuEl.style.cssText = `

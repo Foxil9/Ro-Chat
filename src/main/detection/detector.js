@@ -161,8 +161,10 @@ class Detector extends EventEmitter {
 
       const now = Date.now();
       const timeSinceLastChange = now - this.lastStateChangeTime;
-      if (timeSinceLastChange < 2000) {
-        logger.debug('Server change debounced, too soon since last change');
+      // Only debounce if both old and new states are "in-game" (prevent server hopping spam)
+      if (this.currentServer && this.currentServer.placeId && serverInfo.placeId &&
+          timeSinceLastChange < 2000) {
+        logger.debug('Server change debounced, too soon since last server switch');
         return;
       }
       this.lastStateChangeTime = now;

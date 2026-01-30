@@ -10,6 +10,8 @@ class RoChatApp {
     this.windowBlurred = false;
     this.autoHideListeners = null;
     this.autoHideFooterEnabled = false;
+    this.socketConnected = false;
+    this.connectionCheckInterval = null;
   }
 
   /**
@@ -40,6 +42,8 @@ class RoChatApp {
         this.currentUser = status.user;
         this.showView('chat');
         await this.startDetection();
+        // Start connection monitoring
+        this.startConnectionMonitoring();
       } else {
         this.showView('login');
       }
@@ -52,6 +56,46 @@ class RoChatApp {
     } catch (error) {
       console.error('Failed to initialize:', error);
       this.showView('login');
+    }
+  }
+
+  /**
+   * Start monitoring socket connection status
+   */
+  startConnectionMonitoring() {
+    // Check connection every 5 seconds
+    this.connectionCheckInterval = setInterval(() => {
+      this.checkSocketConnection();
+    }, 5000);
+
+    // Initial check
+    this.checkSocketConnection();
+  }
+
+  /**
+   * Stop connection monitoring
+   */
+  stopConnectionMonitoring() {
+    if (this.connectionCheckInterval) {
+      clearInterval(this.connectionCheckInterval);
+      this.connectionCheckInterval = null;
+    }
+  }
+
+  /**
+   * Check if socket is actually connected
+   */
+  checkSocketConnection() {
+    try {
+      // Get socket status from chat manager if available
+      if (window.chatManager && window.chatManager.socket) {
+        this.socketConnected = window.chatManager.socket.connected;
+      } else {
+        this.socketConnected = false;
+      }
+    } catch (error) {
+      console.error('Failed to check socket connection:', error);
+      this.socketConnected = false;
     }
   }
 
@@ -181,6 +225,7 @@ class RoChatApp {
       window.electronAPI.onLogout(() => {
         console.log('Logout event received');
         this.currentUser = null;
+        this.stopConnectionMonitoring();
         this.showView('login');
 
         // Reset login button state
@@ -281,31 +326,25 @@ class RoChatApp {
       this.headerHideTimer = null;
     }
 
-    // Clear references
+    // Clear listener references
     this.autoHideListeners = null;
   }
 
   /**
-   * Hide the chat header
+   * Hide header
    */
   hideHeader() {
     const chatHeader = document.getElementById('chat-header');
-    const chatContainer = document.querySelector('.chat-container');
-
-    if (chatHeader && chatContainer) {
-      // Don't hide if minimized
-      if (chatContainer.classList.contains('minimized')) return;
-
+    if (chatHeader) {
       chatHeader.classList.add('auto-hidden');
     }
   }
 
   /**
-   * Show the chat header
+   * Show header
    */
   showHeader() {
     const chatHeader = document.getElementById('chat-header');
-
     if (chatHeader) {
       chatHeader.classList.remove('auto-hidden');
     }
@@ -482,6 +521,7 @@ class RoChatApp {
         setTimeout(() => {
           this.showView('chat');
           this.startDetection();
+          this.startConnectionMonitoring();
         }, 500);
       } else {
         console.error('Login failed:', result.error);
@@ -510,6 +550,7 @@ class RoChatApp {
 
       if (result.success) {
         this.currentUser = null;
+        this.stopConnectionMonitoring();
         this.showView('login');
       }
     } catch (error) {
@@ -542,14 +583,22 @@ class RoChatApp {
 
     try {
       if (serverInfo && serverInfo.placeId && serverInfo.jobId) {
-        // Check if actually connected to chat
-        // For now, assume connected if we have placeId and jobId
-        // TODO: Add actual chat connection check
-        statusDot.className = 'status-dot connected';
-        serverText.textContent = 'Connected!';
-        console.log('Connected to server');
+        // Check if actually connected to chat via socket
+        this.checkSocketConnection();
+        
+        if (this.socketConnected) {
+          // Actually connected to chat socket
+          statusDot.className = 'status-dot connected';
+          serverText.textContent = 'Connected!';
+          console.log('Connected to server and chat');
+        } else {
+          // Have game info but not connected to chat socket yet
+          statusDot.className = 'status-dot ingame';
+          serverText.textContent = 'In-game (connecting...)';
+          console.log('In-game but not connected to chat yet');
+        }
       } else if (serverInfo && serverInfo.placeId) {
-        // In-game but not connected to chat yet
+        // In-game but no jobId yet
         statusDot.className = 'status-dot ingame';
         serverText.textContent = 'In-game';
         console.log('In-game');

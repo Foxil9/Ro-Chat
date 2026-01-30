@@ -691,6 +691,10 @@ body::after {
     }
 }
 
+/* ========================================
+   CHAT MESSAGES WITH EDIT/DELETE BUTTONS
+   ======================================== */
+
 /* Chat messages - New design with profile picture on left, content column on right */
 .chat-msg {
     width: 100%;
@@ -703,6 +707,7 @@ body::after {
     overflow-wrap: break-word;
     word-break: break-word;
     margin-bottom: 8px;
+    position: relative !important; /* CRITICAL: Allows absolute positioning of action buttons */
 }
 
 @keyframes messageSlideIn {
@@ -769,6 +774,8 @@ body::after {
     align-items: flex-start;
     gap: 6px;
     flex: 0 1 auto;
+    position: relative;
+    z-index: 1;
 }
 
 .chat-msg.remote .msg-content-column {
@@ -829,8 +836,164 @@ body::after {
     width: auto;
     max-width: 400px;
     display: block;
+    position: relative;
+    z-index: 1;
 }
 
+/* ========================================
+   EDIT/DELETE MESSAGE ACTION BUTTONS
+   ======================================== */
+
+/* Message actions container - hidden by default, shows on hover */
+.msg-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: none;
+    gap: 6px;
+    z-index: 100;
+    flex-direction: row;
+    align-items: center;
+    pointer-events: auto !important;
+    
+    padding: 2px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 8px;
+    
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+}
+
+/* Show actions when hovering over message */
+.message:hover .msg-actions,
+.msg-row:hover .msg-actions,
+.chat-message:hover .msg-actions,
+.chat-msg:hover .msg-actions,
+.own-message:hover .msg-actions {
+    display: flex !important;
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Keep buttons visible when hovering over them */
+.msg-actions:hover {
+    display: flex !important;
+}
+
+/* Individual edit/delete buttons */
+.msg-action-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    margin: 0;
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    background: rgba(0, 0, 0, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 16px;
+    line-height: 1;
+    
+    cursor: pointer;
+    pointer-events: auto !important;
+    outline: none;
+    user-select: none;
+    -webkit-user-select: none;
+    
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.msg-action-btn:hover {
+    transform: scale(1.15);
+    color: #fff;
+}
+
+/* Edit button - blue on hover */
+.msg-action-btn.edit-btn:hover,
+.msg-action-btn[data-action="edit"]:hover {
+    background: rgba(59, 130, 246, 0.95);
+    border-color: rgba(59, 130, 246, 0.8);
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.5);
+}
+
+/* Delete button - red on hover */
+.msg-action-btn.delete-btn:hover,
+.msg-action-btn[data-action="delete"]:hover {
+    background: rgba(239, 68, 68, 0.95);
+    border-color: rgba(239, 68, 68, 0.8);
+    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.5);
+}
+
+/* When button is clicked */
+.msg-action-btn:active {
+    transform: scale(0.95) !important;
+}
+
+/* Icons inside buttons */
+.msg-action-btn svg {
+    width: 14px;
+    height: 14px;
+    pointer-events: none;
+}
+
+/* For own messages that align right, put buttons on left */
+.own-message .msg-actions,
+.message.own .msg-actions {
+    right: auto;
+    left: 8px;
+}
+
+/* Smooth appear animation */
+@keyframes fadeInActions {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.chat-msg:hover .msg-actions {
+    animation: fadeInActions 0.15s ease;
+}
+
+/* Touch screen support (phones/tablets) */
+@media (hover: none) {
+    .msg-actions {
+        display: flex !important;
+        opacity: 0.3;
+    }
+    
+    .chat-msg:active .msg-actions,
+    .msg-actions:active {
+        opacity: 1 !important;
+    }
+}
+
+/* High contrast mode for accessibility */
+@media (prefers-contrast: high) {
+    .msg-action-btn {
+        border-width: 2px;
+        border-color: currentColor;
+    }
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .msg-action-btn,
+    .msg-actions {
+        transition: none !important;
+        animation: none !important;
+    }
+}
 
 /* Modern Input Bar */
 .input-container {
@@ -1490,26 +1653,6 @@ button#btnSend {
     letter-spacing: -0.02em;
 }
 
-.btn-icon {
-    width: 40px;
-    height: 40px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius-md);
-    font-size: 18px;
-    cursor: pointer;
-    transition: var(--transition-base);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.btn-icon:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: var(--accent-purple);
-    transform: scale(1.05);
-}
-
 .settings-content {
     display: flex;
     flex-direction: column;
@@ -2057,66 +2200,3 @@ input[type="checkbox"] {
         opacity: 1;
     }
 }
-
-@keyframes pulse {
-    0%, 100% {
-        box-shadow: 0 0 0 0 rgba(255, 99, 71, 0.4);
-    }
-    50% {
-        box-shadow: 0 0 0 8px rgba(255, 99, 71, 0);
-    }
-}
-
-/* Cooldown Warning Banner */
-.cooldown-warning {
-    padding: 8px 16px;
-    background: linear-gradient(135deg, rgba(255, 99, 71, 0.15) 0%, rgba(255, 140, 0, 0.15) 100%);
-    border: 2px solid rgba(255, 99, 71, 0.4);
-    border-radius: 8px;
-    margin: 8px 16px;
-    text-align: center;
-    font-size: 13px;
-    font-weight: 600;
-    color: #ff6347;
-    animation: pulse 2s ease-in-out infinite;
-    transition: all 0.3s ease;
-}
-
-.cooldown-warning.hidden {
-    display: none;
-    opacity: 0;
-}
-
-.cooldown-warning.visible {
-    display: block;
-    opacity: 1;
-    animation: slideDown 0.3s ease, pulse 2s ease-in-out infinite;
-}
-
-#cooldown-text {
-    font-weight: 700;
-}
-
-@keyframes slideDown {
-    from {
-        transform: translateY(-20px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-@keyframes pulse {
-    0%, 100% {
-        box-shadow: 0 0 0 0 rgba(255, 99, 71, 0.4);
-    }
-    50% {
-        box-shadow: 0 0 0 8px rgba(255, 99, 71, 0);
-    }
-}
-
-
-/* REMOVED GAME BROWSER FEATURE */
-/* Game browser modal CSS removed - violates RoChat's overlay-only design principle */

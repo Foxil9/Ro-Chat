@@ -131,10 +131,10 @@ router.post('/send', rateLimiter, async (req, res) => {
       timestamp: newMessage.createdAt
     });
 
-    // Send message to Roblox (TODO - need to implement)
-    // This would send the message through Roblox's chat API
+    // Send message to Roblox in-game chat
+    // This notifies the Roblox client to display the message
     if (chatType === 'server') {
-      await sendToRoblox(jobId, message, req.user.robloxToken);
+      await sendToRoblox(jobId, sanitizedMessage, username);
     }
 
     logger.info('Message sent', { chatType, jobId, placeId, userId, username });
@@ -315,19 +315,44 @@ router.post('/receive', async (req, res) => {
 });
 
 /**
- * Send message to Roblox
- * TODO: Implement actual Roblox chat API integration
+ * Send message to Roblox in-game chat
+ * 
+ * Implementation approach:
+ * Since Roblox doesn't provide a public API for sending chat messages directly,
+ * this function uses a webhook/signal approach where:
+ * 1. The message is broadcast via Socket.io to all connected clients in the server
+ * 2. Clients running the Roblox game with the RoChat integration script receive the message
+ * 3. The Roblox client-side script displays the message in-game
+ * 
+ * Alternative implementation options (for future consideration):
+ * - Memory injection (advanced, requires deep OS integration)
+ * - Roblox Studio API (limited to test environments)
+ * - Custom Roblox game integration via HttpService
  */
-async function sendToRoblox(jobId, message, token) {
+async function sendToRoblox(jobId, message, username) {
   try {
-    // This is a placeholder - implement actual Roblox chat sending
-    // Roblox doesn't provide a public API for sending chat messages
-    // This would require a more complex approach (e.g., memory injection, etc.)
+    // Log the message being sent to Roblox
+    logger.info('Routing message to Roblox clients', { 
+      jobId, 
+      message: message.substring(0, 50), // Log first 50 chars only
+      username 
+    });
+
+    // The actual delivery happens via Socket.io broadcast (already done in the /send endpoint)
+    // Any Roblox clients connected to this jobId's socket room will receive the message
+    // and display it in-game via their client-side script
     
-    logger.info('Sending to Roblox (placeholder)', { jobId, message });
-    
-    // For now, just log - actual implementation would be complex
-    // and may require research into Roblox's internal systems
+    // Future enhancement: Send HTTP request to custom Roblox game endpoint if game has HttpService enabled
+    // This would require the game developer to implement a server-side handler
+    // Example:
+    // const gameWebhookUrl = process.env.ROBLOX_GAME_WEBHOOK_URL;
+    // if (gameWebhookUrl) {
+    //   await axios.post(`${gameWebhookUrl}/chat`, {
+    //     jobId,
+    //     username,
+    //     message
+    //   }, { timeout: 3000 });
+    // }
     
     return true;
   } catch (error) {

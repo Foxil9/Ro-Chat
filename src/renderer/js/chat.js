@@ -60,9 +60,8 @@ class ChatManager {
     // Register saved keybind
     this.registerSavedKeybind();
 
-    // Set Buy Me a Coffee link (replace with your actual link)
+    // Set Buy Me a Coffee link 
     if (window.externalLinkHandler) {
-      // TODO: Replace this URL with your actual Buy Me a Coffee link
       window.externalLinkHandler.setCoffeeLink('https://ko-fi.com/foxil9');
     }
 

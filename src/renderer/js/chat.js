@@ -259,20 +259,40 @@ class ChatManager {
   /**
    * Setup message update listeners (edit/delete)
    */
-  setupMessageUpdateListeners() {
-    if (window.electron && window.electron.onMessageUpdated) {
-      window.electron.onMessageUpdated((data) => {
-        this.handleMessageUpdated(data);
-      });
-    }
-
-    if (window.electron && window.electron.onMessage) {
-      window.electron.onMessage((data) => {
-        this.handleIncomingMessage(data);
-      });
-    }
+ /**
+ * Setup message update listeners (edit/delete)
+ */
+setupMessageUpdateListeners() {
+  // Listen for message updates
+  if (window.electron && window.electron.onMessageUpdated) {
+    window.electron.onMessageUpdated((data) => {
+      this.handleMessageUpdated(data);
+    });
   }
 
+  // Listen for incoming messages
+  if (window.electron && window.electron.onMessage) {
+    window.electron.onMessage((data) => {
+      this.handleIncomingMessage(data);
+    });
+  }
+
+  // Listen for edit errors
+  if (window.electron && window.electron.onMessageEditError) {
+    window.electron.onMessageEditError((data) => {
+      console.error('❌ Edit failed:', data.error);
+      this.showErrorMessage(data.error || 'Failed to edit message');
+    });
+  }
+
+  // Listen for delete errors
+  if (window.electron && window.electron.onMessageDeleteError) {
+    window.electron.onMessageDeleteError((data) => {
+      console.error('❌ Delete failed:', data.error);
+      this.showErrorMessage(data.error || 'Failed to delete message');
+    });
+  }
+}
   /**
    * Handle incoming message from socket
    */
@@ -1042,6 +1062,36 @@ class ChatManager {
       }, 4000);
     }
   }
+  /**
+ * Show error message to user
+ */
+showErrorMessage(errorText) {
+  const errorEl = document.createElement('div');
+  errorEl.className = 'error-message';
+  errorEl.textContent = errorText;
+  errorEl.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: rgba(254, 107, 139, 0.95);
+    border: 2px solid rgba(254, 107, 139, 0.6);
+    border-radius: 12px;
+    padding: 16px 20px;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 10001;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    animation: slideIn 0.3s ease;
+  `;
+
+  document.body.appendChild(errorEl);
+
+  setTimeout(() => {
+    errorEl.style.animation = 'slideOut 0.3s ease';
+    setTimeout(() => errorEl.remove(), 300);
+  }, 3000);
+}
 
   /**
    * Show server wakeup warning (Render free tier cold start)
@@ -1232,168 +1282,214 @@ class ChatManager {
 /**
    * Show edit modal
    */
-  showEditModal(messageId, currentText) {
-    console.log('🔵 EDIT MODAL OPENING:', messageId);
+ /**
+ * Show edit modal
+ */
+showEditModal(messageId, currentText) {
+  console.log('🔵 EDIT MODAL OPENING:', messageId);
+  
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  `;
+
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    background: rgba(26, 29, 46, 0.95);
+    border: 2px solid rgba(102, 126, 234, 0.3);
+    border-radius: 12px;
+    padding: 16px;
+    max-width: 320px;
+    width: 90%;
+    box-shadow: 0 16px 64px rgba(0, 0, 0, 0.5);
+  `;
+
+  modal.innerHTML = `
+    <h2 style="margin: 0 0 12px 0; color: white; font-size: 16px;">✏️ Edit Message</h2>
+    <input type="text" id="edit-input" value="${this.escapeHtml(currentText)}" style="
+      width: 100%;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      color: white;
+      font-size: 14px;
+      margin-bottom: 12px;
+      box-sizing: border-box;
+    ">
+    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+      <button id="edit-cancel" style="padding: 8px 16px; background: rgba(255,255,255,0.1); border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 13px;">Cancel</button>
+      <button id="edit-save" style="padding: 8px 16px; background: #667eea; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 13px;">Save</button>
+    </div>
+  `;
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  const input = document.getElementById('edit-input');
+  const saveBtn = document.getElementById('edit-save');
+  const cancelBtn = document.getElementById('edit-cancel');
+
+  setTimeout(() => {
+    input.focus();
+    input.select();
+  }, 100);
+
+  const handleSave = async () => {
+    const newText = input.value.trim();
+    if (!newText) {
+      this.showErrorMessage('Message cannot be empty');
+      return;
+    }
     
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(10px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10000;
-    `;
+    if (newText === currentText) {
+      overlay.remove();
+      return;
+    }
 
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-      background: rgba(26, 29, 46, 0.95);
-      border: 2px solid rgba(102, 126, 234, 0.3);
-      border-radius: 12px;
-      padding: 16px;
-      max-width: 320px;
-      width: 90%;
-      box-shadow: 0 16px 64px rgba(0, 0, 0, 0.5);
-    `;
+    // Show loading state
+    saveBtn.textContent = 'Saving...';
+    saveBtn.disabled = true;
 
-    modal.innerHTML = `
-      <h2 style="margin: 0 0 12px 0; color: white; font-size: 16px;">✏️ Edit Message</h2>
-      <input type="text" id="edit-input" value="${this.escapeHtml(currentText)}" style="
-        width: 100%;
-        padding: 10px;
-        background: rgba(255, 255, 255, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 8px;
-        color: white;
-        font-size: 14px;
-        margin-bottom: 12px;
-        box-sizing: border-box;
-      ">
-      <div style="display: flex; gap: 8px; justify-content: flex-end;">
-        <button id="edit-cancel" style="padding: 8px 16px; background: rgba(255,255,255,0.1); border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 13px;">Cancel</button>
-        <button id="edit-save" style="padding: 8px 16px; background: #667eea; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 13px;">Save</button>
-      </div>
-    `;
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-
-    const input = document.getElementById('edit-input');
-    const saveBtn = document.getElementById('edit-save');
-    const cancelBtn = document.getElementById('edit-cancel');
-
-    setTimeout(() => {
-      input.focus();
-      input.select();
-    }, 100);
-
-    const handleSave = async () => {
-      const newText = input.value.trim();
-      if (!newText || newText === currentText) {
-        overlay.remove();
-        return;
+    try {
+      console.log('💾 Saving edit:', messageId, newText);
+      
+      if (!window.electron || !window.electron.editMessage) {
+        throw new Error('Edit function not available');
       }
 
-      try {
-        console.log('💾 Saving edit:', messageId, newText);
-        if (window.electron && window.electron.editMessage) {
-          await window.electron.editMessage({ messageId, newContent: newText });
-        }
-        overlay.remove();
-      } catch (error) {
-        console.error('Failed to edit:', error);
-        overlay.remove();
-      }
-    };
+      const result = await window.electron.editMessage({ 
+        messageId, 
+        newContent: newText 
+      });
 
-    saveBtn.onclick = handleSave;
-    cancelBtn.onclick = () => overlay.remove();
-    overlay.onclick = (e) => {
-      if (e.target === overlay) overlay.remove();
-    };
-    input.onkeypress = (e) => {
-      if (e.key === 'Enter') handleSave();
-      if (e.key === 'Escape') overlay.remove();
-    };
-  }
+      if (result && !result.success) {
+        throw new Error(result.error || 'Edit failed');
+      }
+
+      console.log('✅ Edit request sent successfully');
+      overlay.remove();
+    } catch (error) {
+      console.error('❌ Failed to edit:', error);
+      this.showErrorMessage(error.message || 'Failed to edit message');
+      saveBtn.textContent = 'Save';
+      saveBtn.disabled = false;
+    }
+  };
+
+  saveBtn.onclick = handleSave;
+  cancelBtn.onclick = () => overlay.remove();
+  overlay.onclick = (e) => {
+    if (e.target === overlay) overlay.remove();
+  };
+  input.onkeypress = (e) => {
+    if (e.key === 'Enter') handleSave();
+  };
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') overlay.remove();
+  }, { once: true });
+}
 
  /**
-   * Show delete modal
-   */
-  showDeleteModal(messageId, messageText) {
-    console.log('🔴 DELETE MODAL OPENING:', messageId);
-    
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(10px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 10000;
-    `;
-
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-      background: rgba(26, 29, 46, 0.95);
-      border: 2px solid rgba(239, 68, 68, 0.3);
-      border-radius: 12px;
-      padding: 16px;
-      max-width: 320px;
-      width: 90%;
-      box-shadow: 0 16px 64px rgba(0, 0, 0, 0.5);
-    `;
-
-    modal.innerHTML = `
-      <h2 style="margin: 0 0 12px 0; color: white; font-size: 16px;">🗑️ Delete Message</h2>
-      <p style="color: rgba(255,255,255,0.7); margin: 0 0 10px 0; font-size: 13px;">Are you sure you want to delete this message?</p>
-      <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; margin-bottom: 12px; color: rgba(255,255,255,0.7); font-size: 13px;">
-        ${this.escapeHtml(messageText)}
-      </div>
-      <div style="display: flex; gap: 8px; justify-content: flex-end;">
-        <button id="delete-cancel" style="padding: 8px 16px; background: rgba(255,255,255,0.1); border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 13px;">Cancel</button>
-        <button id="delete-confirm" style="padding: 8px 16px; background: #ef4444; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 13px;">Delete</button>
-      </div>
-    `;
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-
-    const confirmBtn = document.getElementById('delete-confirm');
-    const cancelBtn = document.getElementById('delete-cancel');
-
-    const handleDelete = async () => {
-      try {
-        console.log('🗑️ Deleting:', messageId);
-        if (window.electron && window.electron.deleteMessage) {
-          await window.electron.deleteMessage({ messageId });
-        }
-        overlay.remove();
-      } catch (error) {
-        console.error('Failed to delete:', error);
-        overlay.remove();
-      }
-    };
-
-    confirmBtn.onclick = handleDelete;
-    cancelBtn.onclick = () => overlay.remove();
-    overlay.onclick = (e) => {
-      if (e.target === overlay) overlay.remove();
-    };
-  }
+ * Show delete modal
+ */
+showDeleteModal(messageId, messageText) {
+  console.log('🔴 DELETE MODAL OPENING:', messageId);
   
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  `;
+
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    background: rgba(26, 29, 46, 0.95);
+    border: 2px solid rgba(239, 68, 68, 0.3);
+    border-radius: 12px;
+    padding: 16px;
+    max-width: 320px;
+    width: 90%;
+    box-shadow: 0 16px 64px rgba(0, 0, 0, 0.5);
+  `;
+
+  modal.innerHTML = `
+    <h2 style="margin: 0 0 12px 0; color: white; font-size: 16px;">🗑️ Delete Message</h2>
+    <p style="color: rgba(255,255,255,0.7); margin: 0 0 10px 0; font-size: 13px;">Are you sure you want to delete this message?</p>
+    <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; margin-bottom: 12px; color: rgba(255,255,255,0.7); font-size: 13px; max-height: 60px; overflow-y: auto;">
+      ${this.escapeHtml(messageText)}
+    </div>
+    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+      <button id="delete-cancel" style="padding: 8px 16px; background: rgba(255,255,255,0.1); border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 13px;">Cancel</button>
+      <button id="delete-confirm" style="padding: 8px 16px; background: #ef4444; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 13px;">Delete</button>
+    </div>
+  `;
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  const confirmBtn = document.getElementById('delete-confirm');
+  const cancelBtn = document.getElementById('delete-cancel');
+
+  const handleDelete = async () => {
+    // Show loading state
+    confirmBtn.textContent = 'Deleting...';
+    confirmBtn.disabled = true;
+
+    try {
+      console.log('🗑️ Deleting:', messageId);
+      
+      if (!window.electron || !window.electron.deleteMessage) {
+        throw new Error('Delete function not available');
+      }
+
+      const result = await window.electron.deleteMessage({ messageId });
+
+      if (result && !result.success) {
+        throw new Error(result.error || 'Delete failed');
+      }
+
+      console.log('✅ Delete request sent successfully');
+      overlay.remove();
+    } catch (error) {
+      console.error('❌ Failed to delete:', error);
+      this.showErrorMessage(error.message || 'Failed to delete message');
+      confirmBtn.textContent = 'Delete';
+      confirmBtn.disabled = false;
+    }
+  };
+
+  confirmBtn.onclick = handleDelete;
+  cancelBtn.onclick = () => overlay.remove();
+  overlay.onclick = (e) => {
+    if (e.target === overlay) overlay.remove();
+  };
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') overlay.remove();
+  }, { once: true });
+}
+
 }
 
 // Initialize chat manager when DOM is ready

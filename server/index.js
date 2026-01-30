@@ -93,92 +93,106 @@ io.on('connection', (socket) => {
   });
 
   socket.on('editMessage', async (data) => {
-    const { messageId, userId, newContent } = data;
+  const { messageId, userId, newContent } = data;
 
-    if (!messageId || !userId || !newContent) {
-      socket.emit('messageEditError', { error: 'Missing required fields' });
+  console.log('📝 Edit request received:', { messageId, userId, newContentLength: newContent?.length });
+
+  if (!messageId || !userId || !newContent) {
+    console.warn('❌ Edit rejected: Missing fields');
+    socket.emit('messageEditError', { error: 'Missing required fields' });
+    return;
+  }
+
+  try {
+    const Message = require('./models/Message');
+    const message = await Message.findById(messageId);
+
+    if (!message) {
+      console.warn('❌ Edit rejected: Message not found:', messageId);
+      socket.emit('messageEditError', { error: 'Message not found' });
       return;
     }
 
-    try {
-      const Message = require('./models/Message');
-      const message = await Message.findById(messageId);
-
-      if (!message) {
-        socket.emit('messageEditError', { error: 'Message not found' });
-        return;
-      }
-
-      if (message.userId !== userId) {
-        socket.emit('messageEditError', { error: 'Unauthorized' });
-        return;
-      }
-
-      message.message = newContent;
-      message.editedAt = new Date();
-      await message.save();
-
-      const roomId = message.chatType === 'server'
-        ? `server:${message.jobId}`
-        : `global:${message.placeId}`;
-
-      io.to(roomId).emit('messageUpdated', {
-        messageId: message._id.toString(),
-        message: message.message,
-        editedAt: message.editedAt,
-        deletedAt: message.deletedAt
-      });
-
-      logger.info('Message edited', { messageId, userId });
-    } catch (error) {
-      logger.error('Failed to edit message', { error: error.message, messageId, userId });
-      socket.emit('messageEditError', { error: 'Failed to edit message' });
-    }
-  });
-
-  socket.on('deleteMessage', async (data) => {
-    const { messageId, userId } = data;
-
-    if (!messageId || !userId) {
-      socket.emit('messageDeleteError', { error: 'Missing required fields' });
+    if (message.userId !== userId) {
+      console.warn('❌ Edit rejected: Unauthorized:', { messageUserId: message.userId, requestUserId: userId });
+      socket.emit('messageEditError', { error: 'Unauthorized' });
       return;
     }
 
-    try {
-      const Message = require('./models/Message');
-      const message = await Message.findById(messageId);
+    message.message = newContent;
+    message.editedAt = new Date();
+    await message.save();
 
-      if (!message) {
-        socket.emit('messageDeleteError', { error: 'Message not found' });
-        return;
-      }
+    const roomId = message.chatType === 'server'
+      ? `server:${message.jobId}`
+      : `global:${message.placeId}`;
 
-      if (message.userId !== userId) {
-        socket.emit('messageDeleteError', { error: 'Unauthorized' });
-        return;
-      }
+    io.to(roomId).emit('messageUpdated', {
+      messageId: message._id.toString(),
+      message: message.message,
+      editedAt: message.editedAt,
+      deletedAt: message.deletedAt
+    });
 
-      message.message = '[deleted]';
-      message.deletedAt = new Date();
-      await message.save();
+    console.log('✅ Message edited successfully:', messageId);
+    logger.info('Message edited', { messageId, userId });
+  } catch (error) {
+    console.error('❌ Edit failed:', error);
+    logger.error('Failed to edit message', { error: error.message, messageId, userId });
+    socket.emit('messageEditError', { error: 'Failed to edit message' });
+  }
+});
 
-      const roomId = message.chatType === 'server'
-        ? `server:${message.jobId}`
-        : `global:${message.placeId}`;
+socket.on('deleteMessage', async (data) => {
+  const { messageId, userId } = data;
 
-      io.to(roomId).emit('messageUpdated', {
-        messageId: message._id.toString(),
-        message: message.message,
-        editedAt: message.editedAt,
-        deletedAt: message.deletedAt
-      });
+  console.log('🗑️ Delete request received:', { messageId, userId });
 
-      logger.info('Message deleted', { messageId, userId });
-    } catch (error) {
-      logger.error('Failed to delete message', { error: error.message, messageId, userId });
-      socket.emit('messageDeleteError', { error: 'Failed to delete message' });
+  if (!messageId || !userId) {
+    console.warn('❌ Delete rejected: Missing fields');
+    socket.emit('messageDeleteError', { error: 'Missing required fields' });
+    return;
+  }
+
+  try {
+    const Message = require('./models/Message');
+    const message = await Message.findById(messageId);
+
+    if (!message) {
+      console.warn('❌ Delete rejected: Message not found:', messageId);
+      socket.emit('messageDeleteError', { error: 'Message not found' });
+      return;
     }
-  });
+
+    if (message.userId !== userId) {
+      console.warn('❌ Delete rejected: Unauthorized:', { messageUserId: message.userId, requestUserId: userId });
+      socket.emit('messageDeleteError', { error: 'Unauthorized' });
+      return;
+    }
+
+    message.message = '[deleted]';
+    message.deletedAt = new Date();
+    await message.save();
+
+    const roomId = message.chatType === 'server'
+      ? `server:${message.jobId}`
+      : `global:${message.placeId}`;
+
+    io.to(roomId).emit('messageUpdated', {
+      messageId: message._id.toString(),
+      message: message.message,
+      editedAt: message.editedAt,
+      deletedAt: message.deletedAt
+    });
+
+    console.log('✅ Message deleted successfully:', messageId);
+    logger.info('Message deleted', { messageId, userId });
+  } catch (error) {
+    console.error('❌ Delete failed:', error);
+    logger.error('Failed to delete message', { error: error.message, messageId, userId });
+    socket.emit('messageDeleteError', { error: 'Failed to delete message' });
+  }
+});
 
   socket.on('disconnect', () => {
     // Remove user from typing state if they were typing

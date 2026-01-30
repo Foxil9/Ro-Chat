@@ -69,14 +69,16 @@ class ChatManager {
     console.log('Chat manager initialized');
   }
 
-  /**
+ /**
    * Load current user ID
    */
   async loadCurrentUserId() {
     try {
       const user = await this.getCurrentUser();
       if (user) {
-        this.userId = user.userId;
+        // CRITICAL: Convert to number to match server messages
+        this.userId = parseInt(user.userId);
+        console.log('✅ User ID loaded:', this.userId, '(type:', typeof this.userId, ')');
       }
     } catch (error) {
       console.error('Failed to load user ID:', error);
@@ -797,44 +799,60 @@ class ChatManager {
     }
 
     // Add edit/delete menu for own messages (not deleted)
+    // Add edit/delete buttons for own messages (not deleted)
     if (message.userId === this.userId && message.messageId && !message.deletedAt) {
-      const menuEl = document.createElement('div');
-      menuEl.className = 'msg-menu';
-      menuEl.style.cssText = `
-        position: absolute;
-        top: 4px;
-        right: 4px;
+      console.log('✅ Adding buttons for message:', message.messageId);
+      
+      const actionsEl = document.createElement('div');
+      actionsEl.style.cssText = `
         display: none;
-        gap: 4px;
+        gap: 8px;
+        margin-top: 8px;
       `;
-
+      
       const editBtn = document.createElement('button');
-      editBtn.innerHTML = '✏️';
-      editBtn.className = 'msg-menu-btn';
+      editBtn.innerHTML = '✏️ Edit';
       editBtn.style.cssText = `
-        background: rgba(255, 255, 255, 0.1);
-        border: none;
-        border-radius: 4px;
-        padding: 4px 8px;
+        padding: 6px 12px;
+        background: rgba(59, 130, 246, 0.2);
+        border: 1px solid rgba(59, 130, 246, 0.5);
+        border-radius: 6px;
+        color: white;
         cursor: pointer;
-        font-size: 14px;
+        font-size: 13px;
       `;
-      editBtn.onclick = () => this.startEditMessage(message.messageId, message.message);
-
+      editBtn.onclick = () => {
+        console.log('🔵 EDIT CLICKED:', message.messageId);
+        this.showEditModal(message.messageId, message.message);
+      };
+      
       const deleteBtn = document.createElement('button');
-      deleteBtn.innerHTML = '🗑️';
-      deleteBtn.className = 'msg-menu-btn';
-      deleteBtn.style.cssText = editBtn.style.cssText;
-      deleteBtn.onclick = () => this.deleteMessage(message.messageId);
-
-      menuEl.appendChild(editBtn);
-      menuEl.appendChild(deleteBtn);
-
-      messageEl.style.position = 'relative';
-      messageEl.onmouseenter = () => { menuEl.style.display = 'flex'; };
-      messageEl.onmouseleave = () => { menuEl.style.display = 'none'; };
-
-      messageEl.appendChild(menuEl);
+      deleteBtn.innerHTML = '🗑️ Delete';
+      deleteBtn.style.cssText = `
+        padding: 6px 12px;
+        background: rgba(239, 68, 68, 0.2);
+        border: 1px solid rgba(239, 68, 68, 0.5);
+        border-radius: 6px;
+        color: white;
+        cursor: pointer;
+        font-size: 13px;
+      `;
+      deleteBtn.onclick = () => {
+        console.log('🔴 DELETE CLICKED:', message.messageId);
+        this.showDeleteModal(message.messageId, message.message);
+      };
+      
+      actionsEl.appendChild(editBtn);
+      actionsEl.appendChild(deleteBtn);
+      
+      messageEl.onmouseenter = () => {
+        actionsEl.style.display = 'flex';
+      };
+      messageEl.onmouseleave = () => {
+        actionsEl.style.display = 'none';
+      };
+      
+      contentColumnEl.appendChild(actionsEl);
     }
 
     // Assemble content column
@@ -1206,111 +1224,170 @@ class ChatManager {
 
     console.log('Cooldown ended - you can send messages again');
   }
-
-  /**
-   * Start editing a message
+/**
+   * Show edit modal
    */
-  startEditMessage(messageId, currentText) {
-    const messageEl = this.messagesContainer.querySelector(`[data-message-id="${messageId}"]`);
-    if (!messageEl) return;
-
-    const bubbleEl = messageEl.querySelector('.msg-bubble');
-    if (!bubbleEl) return;
-
-    const originalText = currentText;
-
-    const inputEl = document.createElement('input');
-    inputEl.type = 'text';
-    inputEl.value = originalText;
-    inputEl.style.cssText = `
-      width: 100%;
-      padding: 8px;
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      border-radius: 8px;
-      color: white;
-      font-size: 14px;
+  showEditModal(messageId, currentText) {
+    console.log('🔵 EDIT MODAL OPENING:', messageId);
+    
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
     `;
 
-    const saveBtn = document.createElement('button');
-    saveBtn.textContent = 'Save';
-    saveBtn.style.cssText = `
-      margin-top: 4px;
-      padding: 4px 12px;
-      background: #4ade80;
-      border: none;
-      border-radius: 4px;
-      color: white;
-      cursor: pointer;
-      font-size: 12px;
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      background: rgba(26, 29, 46, 0.95);
+      border: 2px solid rgba(102, 126, 234, 0.3);
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 16px 64px rgba(0, 0, 0, 0.5);
     `;
 
-    const cancelBtn = document.createElement('button');
-    cancelBtn.textContent = 'Cancel';
-    cancelBtn.style.cssText = saveBtn.style.cssText;
-    cancelBtn.style.background = '#6b7280';
-    cancelBtn.style.marginLeft = '4px';
+    modal.innerHTML = `
+      <h2 style="margin: 0 0 16px 0; color: white;">✏️ Edit Message</h2>
+      <input type="text" id="edit-input" value="${this.escapeHtml(currentText)}" style="
+        width: 100%;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        color: white;
+        font-size: 14px;
+        margin-bottom: 16px;
+      ">
+      <div style="display: flex; gap: 12px; justify-content: flex-end;">
+        <button id="edit-cancel" style="padding: 10px 20px; background: rgba(255,255,255,0.1); border: none; border-radius: 8px; color: white; cursor: pointer;">Cancel</button>
+        <button id="edit-save" style="padding: 10px 20px; background: #667eea; border: none; border-radius: 8px; color: white; cursor: pointer;">Save</button>
+      </div>
+    `;
 
-    const btnContainer = document.createElement('div');
-    btnContainer.appendChild(saveBtn);
-    btnContainer.appendChild(cancelBtn);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
 
-    const restore = () => {
-      bubbleEl.textContent = this.escapeHtml(originalText);
-      this.renderAllMessages();
-    };
+    const input = document.getElementById('edit-input');
+    const saveBtn = document.getElementById('edit-save');
+    const cancelBtn = document.getElementById('edit-cancel');
 
-    saveBtn.onclick = async () => {
-      const newText = inputEl.value.trim();
-      if (!newText || newText === originalText) {
-        restore();
+    setTimeout(() => {
+      input.focus();
+      input.select();
+    }, 100);
+
+    const handleSave = async () => {
+      const newText = input.value.trim();
+      if (!newText || newText === currentText) {
+        overlay.remove();
         return;
       }
 
       try {
-        if (window.electron && window.electron.editMessage) {
+        console.log('💾 Saving edit:', messageId, newText);
+        if (window.electron?.editMessage) {
           await window.electron.editMessage({ messageId, newContent: newText });
         }
+        overlay.remove();
       } catch (error) {
-        console.error('Failed to edit message:', error);
-        restore();
+        console.error('Failed to edit:', error);
+        overlay.remove();
       }
     };
 
-    cancelBtn.onclick = restore;
-
-    inputEl.onkeypress = (e) => {
-      if (e.key === 'Enter') {
-        saveBtn.click();
-      } else if (e.key === 'Escape') {
-        cancelBtn.click();
-      }
+    saveBtn.onclick = handleSave;
+    cancelBtn.onclick = () => overlay.remove();
+    overlay.onclick = (e) => {
+      if (e.target === overlay) overlay.remove();
     };
-
-    bubbleEl.innerHTML = '';
-    bubbleEl.appendChild(inputEl);
-    bubbleEl.appendChild(btnContainer);
-    inputEl.focus();
+    input.onkeypress = (e) => {
+      if (e.key === 'Enter') handleSave();
+      if (e.key === 'Escape') overlay.remove();
+    };
   }
 
   /**
-   * Delete a message
+   * Show delete modal
    */
-  async deleteMessage(messageId) {
-    if (!confirm('Delete this message?')) return;
+  showDeleteModal(messageId, messageText) {
+    console.log('🔴 DELETE MODAL OPENING:', messageId);
+    
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+    `;
 
-    try {
-      if (window.electron && window.electron.deleteMessage) {
-        await window.electron.deleteMessage({ messageId });
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      background: rgba(26, 29, 46, 0.95);
+      border: 2px solid rgba(239, 68, 68, 0.3);
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 16px 64px rgba(0, 0, 0, 0.5);
+    `;
+
+    modal.innerHTML = `
+      <h2 style="margin: 0 0 16px 0; color: white;">🗑️ Delete Message</h2>
+      <p style="color: rgba(255,255,255,0.7); margin: 0 0 12px 0;">Are you sure you want to delete this message?</p>
+      <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; margin-bottom: 16px; color: rgba(255,255,255,0.7);">
+        ${this.escapeHtml(messageText)}
+      </div>
+      <div style="display: flex; gap: 12px; justify-content: flex-end;">
+        <button id="delete-cancel" style="padding: 10px 20px; background: rgba(255,255,255,0.1); border: none; border-radius: 8px; color: white; cursor: pointer;">Cancel</button>
+        <button id="delete-confirm" style="padding: 10px 20px; background: #ef4444; border: none; border-radius: 8px; color: white; cursor: pointer;">Delete</button>
+      </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    const confirmBtn = document.getElementById('delete-confirm');
+    const cancelBtn = document.getElementById('delete-cancel');
+
+    const handleDelete = async () => {
+      try {
+        console.log('🗑️ Deleting:', messageId);
+        if (window.electron?.deleteMessage) {
+          await window.electron.deleteMessage({ messageId });
+        }
+        overlay.remove();
+      } catch (error) {
+        console.error('Failed to delete:', error);
+        overlay.remove();
       }
-    } catch (error) {
-      console.error('Failed to delete message:', error);
-    }
-  }
+    };
 
-  // REMOVED GAME BROWSER FEATURE
-  // showGameBrowser(), closeGameBrowser(), createGameElement(), joinServer() methods removed
-  // These violated RoChat's core principle of being a lightweight overlay that syncs to the current game
+    confirmBtn.onclick = handleDelete;
+    cancelBtn.onclick = () => overlay.remove();
+    overlay.onclick = (e) => {
+      if (e.target === overlay) overlay.remove();
+    };
+  }
+  
 }
 
 // Initialize chat manager when DOM is ready

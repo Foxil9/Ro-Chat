@@ -1228,6 +1228,7 @@ class ChatManager {
 
     console.log('Cooldown ended - you can send messages again');
   }
+
 /**
    * Show edit modal
    */
@@ -1255,27 +1256,28 @@ class ChatManager {
       background: rgba(26, 29, 46, 0.95);
       border: 2px solid rgba(102, 126, 234, 0.3);
       border-radius: 12px;
-      padding: 20px;
-      max-width: 380px;
+      padding: 16px;
+      max-width: 320px;
       width: 90%;
       box-shadow: 0 16px 64px rgba(0, 0, 0, 0.5);
     `;
 
     modal.innerHTML = `
-      <h2 style="margin: 0 0 16px 0; color: white;">✏️ Edit Message</h2>
+      <h2 style="margin: 0 0 12px 0; color: white; font-size: 16px;">✏️ Edit Message</h2>
       <input type="text" id="edit-input" value="${this.escapeHtml(currentText)}" style="
         width: 100%;
-        padding: 12px;
+        padding: 10px;
         background: rgba(255, 255, 255, 0.08);
         border: 1px solid rgba(255, 255, 255, 0.2);
         border-radius: 8px;
         color: white;
         font-size: 14px;
-        margin-bottom: 16px;
+        margin-bottom: 12px;
+        box-sizing: border-box;
       ">
-      <div style="display: flex; gap: 12px; justify-content: flex-end;">
-        <button id="edit-cancel" style="padding: 10px 20px; background: rgba(255,255,255,0.1); border: none; border-radius: 8px; color: white; cursor: pointer;">Cancel</button>
-        <button id="edit-save" style="padding: 10px 20px; background: #667eea; border: none; border-radius: 8px; color: white; cursor: pointer;">Save</button>
+      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button id="edit-cancel" style="padding: 8px 16px; background: rgba(255,255,255,0.1); border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 13px;">Cancel</button>
+        <button id="edit-save" style="padding: 8px 16px; background: #667eea; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 13px;">Save</button>
       </div>
     `;
 
@@ -1300,7 +1302,7 @@ class ChatManager {
 
       try {
         console.log('💾 Saving edit:', messageId, newText);
-        if (window.electron && window.electron.deleteMessage) {
+        if (window.electron && window.electron.editMessage) {
           await window.electron.editMessage({ messageId, newContent: newText });
         }
         overlay.remove();
@@ -1321,7 +1323,7 @@ class ChatManager {
     };
   }
 
-  /**
+ /**
    * Show delete modal
    */
   showDeleteModal(messageId, messageText) {
@@ -1348,21 +1350,21 @@ class ChatManager {
       background: rgba(26, 29, 46, 0.95);
       border: 2px solid rgba(239, 68, 68, 0.3);
       border-radius: 12px;
-      padding: 20px;
-      max-width: 380px;
+      padding: 16px;
+      max-width: 320px;
       width: 90%;
       box-shadow: 0 16px 64px rgba(0, 0, 0, 0.5);
     `;
 
     modal.innerHTML = `
-      <h2 style="margin: 0 0 16px 0; color: white;">🗑️ Delete Message</h2>
-      <p style="color: rgba(255,255,255,0.7); margin: 0 0 12px 0;">Are you sure you want to delete this message?</p>
-      <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; margin-bottom: 16px; color: rgba(255,255,255,0.7);">
+      <h2 style="margin: 0 0 12px 0; color: white; font-size: 16px;">🗑️ Delete Message</h2>
+      <p style="color: rgba(255,255,255,0.7); margin: 0 0 10px 0; font-size: 13px;">Are you sure you want to delete this message?</p>
+      <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; margin-bottom: 12px; color: rgba(255,255,255,0.7); font-size: 13px;">
         ${this.escapeHtml(messageText)}
       </div>
-      <div style="display: flex; gap: 12px; justify-content: flex-end;">
-        <button id="delete-cancel" style="padding: 10px 20px; background: rgba(255,255,255,0.1); border: none; border-radius: 8px; color: white; cursor: pointer;">Cancel</button>
-        <button id="delete-confirm" style="padding: 10px 20px; background: #ef4444; border: none; border-radius: 8px; color: white; cursor: pointer;">Delete</button>
+      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button id="delete-cancel" style="padding: 8px 16px; background: rgba(255,255,255,0.1); border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 13px;">Cancel</button>
+        <button id="delete-confirm" style="padding: 8px 16px; background: #ef4444; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 13px;">Delete</button>
       </div>
     `;
 

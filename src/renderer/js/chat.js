@@ -798,27 +798,29 @@ class ChatManager {
     }
 
 
-    if (message.userId === this.userId && message.messageId && !message.deletedAt) {
-      console.log('✅ Adding buttons for message:', message.messageId);
-      const actionsEl = document.createElement('div');
+    // Assemble content column
+    contentColumnEl.appendChild(headerEl);
+    contentColumnEl.appendChild(bubbleEl);
 
-      
+    // Add edit/delete buttons UNDER the message bubble
+    if (message.userId === this.userId && message.messageId && !message.deletedAt) {
+      const actionsEl = document.createElement('div');
       actionsEl.style.cssText = `
         display: none;
         gap: 8px;
-        margin-top: 8px;
+        margin-top: 4px;
       `;
       
       const editBtn = document.createElement('button');
       editBtn.textContent = 'Edit';
       editBtn.style.cssText = `
-        padding: 6px 12px;
+        padding: 4px 10px;
         background: transparent;
         border: none;
         border-radius: 6px;
-        color: rgba(255, 255, 255, 0.7);
+        color: rgba(255, 255, 255, 0.5);
         cursor: pointer;
-        font-size: 13px;
+        font-size: 12px;
         transition: all 0.2s;
       `;
       editBtn.onmouseenter = () => {
@@ -827,54 +829,39 @@ class ChatManager {
       };
       editBtn.onmouseleave = () => {
         editBtn.style.background = 'transparent';
-        editBtn.style.color = 'rgba(255, 255, 255, 0.7)';
+        editBtn.style.color = 'rgba(255, 255, 255, 0.5)';
       };
-      editBtn.onclick = () => {
-        console.log('🔵 EDIT CLICKED:', message.messageId);
-        this.showEditModal(message.messageId, message.message);
-      };
+      editBtn.onclick = () => this.showEditModal(message.messageId, message.message);
       
       const deleteBtn = document.createElement('button');
       deleteBtn.textContent = 'Delete';
       deleteBtn.style.cssText = `
-        padding: 6px 12px;
+        padding: 4px 10px;
         background: transparent;
         border: none;
         border-radius: 6px;
-        color: rgba(255, 255, 255, 0.7);
+        color: rgba(255, 255, 255, 0.5);
         cursor: pointer;
-        font-size: 13px;
+        font-size: 12px;
         transition: all 0.2s;
       `;
       deleteBtn.onmouseenter = () => {
-        deleteBtn.style.background = 'rgba(255, 255, 255, 0.1)';
-        deleteBtn.style.color = 'white';
+        deleteBtn.style.background = 'rgba(239, 68, 68, 0.2)';
+        deleteBtn.style.color = '#ef4444';
       };
       deleteBtn.onmouseleave = () => {
         deleteBtn.style.background = 'transparent';
-        deleteBtn.style.color = 'rgba(255, 255, 255, 0.7)';
+        deleteBtn.style.color = 'rgba(255, 255, 255, 0.5)';
       };
-      deleteBtn.onclick = () => {
-        console.log('🔴 DELETE CLICKED:', message.messageId);
-        this.showDeleteModal(message.messageId, message.message);
-      };
+      deleteBtn.onclick = () => this.showDeleteModal(message.messageId, message.message);
       
       actionsEl.appendChild(editBtn);
       actionsEl.appendChild(deleteBtn);
-      
-      messageEl.onmouseenter = () => {
-        actionsEl.style.display = 'flex';
-      };
-      messageEl.onmouseleave = () => {
-        actionsEl.style.display = 'none';
-      };
-      
       contentColumnEl.appendChild(actionsEl);
+      
+      messageEl.onmouseenter = () => { actionsEl.style.display = 'flex'; };
+      messageEl.onmouseleave = () => { actionsEl.style.display = 'none'; };
     }
-
-    // Assemble content column
-    contentColumnEl.appendChild(headerEl);
-    contentColumnEl.appendChild(bubbleEl);
 
     // Assemble main message element
     messageEl.appendChild(profilePicEl);

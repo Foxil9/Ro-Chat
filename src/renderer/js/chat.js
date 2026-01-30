@@ -276,7 +276,7 @@ class ChatManager {
   /**
    * Handle incoming message from socket
    */
-  handleIncomingMessage(data) {
+ handleIncomingMessage(data) {
     const chatType = data.chatType || this.activeTab;
 
     // Deduplicate: If this is OUR message (echo from server), update the optimistic one
@@ -286,19 +286,18 @@ class ChatManager {
 
       // Check if last message is our optimistic message (no messageId yet)
       if (lastMessage && !lastMessage.messageId && lastMessage.userId === this.userId && lastMessage.message === data.message) {
+        console.log('📝 Updating optimistic message with server data');
+        
         // Update the message object with server data
         lastMessage.messageId = data.messageId;
         lastMessage.timestamp = new Date(data.timestamp).getTime();
         lastMessage.editedAt = data.editedAt;
         lastMessage.deletedAt = data.deletedAt;
 
-        // Update the DOM element if this is the active tab
+        // RE-RENDER to show buttons now that we have messageId
         if (chatType === this.activeTab) {
-          const messageElements = this.messagesContainer.querySelectorAll('.chat-msg');
-          const lastElement = messageElements[messageElements.length - 1];
-          if (lastElement) {
-            lastElement.setAttribute('data-message-id', data.messageId);
-          }
+          console.log('🔄 Re-rendering messages to show buttons');
+          this.renderAllMessages();
         }
 
         return; // Don't add duplicate
@@ -539,7 +538,7 @@ class ChatManager {
     // Add message to UI immediately (optimistic update)
     const currentUser = await this.getCurrentUser();
     this.addMessage({
-      userId: currentUser?.userId || 'local',
+      userId: currentUser?.userId ? parseInt(currentUser.userId) : 'local',
       username: currentUser?.username || 'You',
       displayName: currentUser?.displayName,
       picture: currentUser?.picture,
@@ -798,12 +797,12 @@ class ChatManager {
       bubbleEl.appendChild(editedLabel);
     }
 
-    // Add edit/delete menu for own messages (not deleted)
-    // Add edit/delete buttons for own messages (not deleted)
+
     if (message.userId === this.userId && message.messageId && !message.deletedAt) {
       console.log('✅ Adding buttons for message:', message.messageId);
-      
       const actionsEl = document.createElement('div');
+
+      
       actionsEl.style.cssText = `
         display: none;
         gap: 8px;
@@ -811,32 +810,50 @@ class ChatManager {
       `;
       
       const editBtn = document.createElement('button');
-      editBtn.innerHTML = '✏️ Edit';
+      editBtn.textContent = 'Edit';
       editBtn.style.cssText = `
         padding: 6px 12px;
-        background: rgba(59, 130, 246, 0.2);
-        border: 1px solid rgba(59, 130, 246, 0.5);
+        background: transparent;
+        border: none;
         border-radius: 6px;
-        color: white;
+        color: rgba(255, 255, 255, 0.7);
         cursor: pointer;
         font-size: 13px;
+        transition: all 0.2s;
       `;
+      editBtn.onmouseenter = () => {
+        editBtn.style.background = 'rgba(255, 255, 255, 0.1)';
+        editBtn.style.color = 'white';
+      };
+      editBtn.onmouseleave = () => {
+        editBtn.style.background = 'transparent';
+        editBtn.style.color = 'rgba(255, 255, 255, 0.7)';
+      };
       editBtn.onclick = () => {
         console.log('🔵 EDIT CLICKED:', message.messageId);
         this.showEditModal(message.messageId, message.message);
       };
       
       const deleteBtn = document.createElement('button');
-      deleteBtn.innerHTML = '🗑️ Delete';
+      deleteBtn.textContent = 'Delete';
       deleteBtn.style.cssText = `
         padding: 6px 12px;
-        background: rgba(239, 68, 68, 0.2);
-        border: 1px solid rgba(239, 68, 68, 0.5);
+        background: transparent;
+        border: none;
         border-radius: 6px;
-        color: white;
+        color: rgba(255, 255, 255, 0.7);
         cursor: pointer;
         font-size: 13px;
+        transition: all 0.2s;
       `;
+      deleteBtn.onmouseenter = () => {
+        deleteBtn.style.background = 'rgba(255, 255, 255, 0.1)';
+        deleteBtn.style.color = 'white';
+      };
+      deleteBtn.onmouseleave = () => {
+        deleteBtn.style.background = 'transparent';
+        deleteBtn.style.color = 'rgba(255, 255, 255, 0.7)';
+      };
       deleteBtn.onclick = () => {
         console.log('🔴 DELETE CLICKED:', message.messageId);
         this.showDeleteModal(message.messageId, message.message);
@@ -1251,8 +1268,8 @@ class ChatManager {
       background: rgba(26, 29, 46, 0.95);
       border: 2px solid rgba(102, 126, 234, 0.3);
       border-radius: 12px;
-      padding: 24px;
-      max-width: 500px;
+      padding: 20px;
+      max-width: 380px;
       width: 90%;
       box-shadow: 0 16px 64px rgba(0, 0, 0, 0.5);
     `;
@@ -1296,7 +1313,7 @@ class ChatManager {
 
       try {
         console.log('💾 Saving edit:', messageId, newText);
-        if (window.electron?.editMessage) {
+        if (window.electron && window.electron.deleteMessage) {
           await window.electron.editMessage({ messageId, newContent: newText });
         }
         overlay.remove();
@@ -1344,8 +1361,8 @@ class ChatManager {
       background: rgba(26, 29, 46, 0.95);
       border: 2px solid rgba(239, 68, 68, 0.3);
       border-radius: 12px;
-      padding: 24px;
-      max-width: 500px;
+      padding: 20px;
+      max-width: 380px;
       width: 90%;
       box-shadow: 0 16px 64px rgba(0, 0, 0, 0.5);
     `;
@@ -1371,7 +1388,7 @@ class ChatManager {
     const handleDelete = async () => {
       try {
         console.log('🗑️ Deleting:', messageId);
-        if (window.electron?.deleteMessage) {
+        if (window.electron && window.electron.deleteMessage) {
           await window.electron.deleteMessage({ messageId });
         }
         overlay.remove();

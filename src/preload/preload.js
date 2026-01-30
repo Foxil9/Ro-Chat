@@ -153,6 +153,21 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.on('socket:message', listener);
     return () => ipcRenderer.removeListener('socket:message', listener);
   },
+   editMessage: (data) => ipcRenderer.invoke('chat:editMessage', data),
+  deleteMessage: (data) => ipcRenderer.invoke('chat:deleteMessage', data),
+  
+  onMessageEdited: (callback) => {
+    const listener = (event, data) => callback(data);
+    ipcRenderer.on('socket:messageEdited', listener);
+    return () => ipcRenderer.removeListener('socket:messageEdited', listener);
+  },
+  
+  onMessageDeleted: (callback) => {
+    const listener = (event, data) => callback(data);
+    ipcRenderer.on('socket:messageDeleted', listener);
+    return () => ipcRenderer.removeListener('socket:messageDeleted', listener);
+  },
+  
 
   startDetection: () => ipcRenderer.invoke('detection:start'),
 

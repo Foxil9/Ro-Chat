@@ -37,7 +37,19 @@ function setupDetectorEvents() {
 function setupSocketEvents() {
   if (!socketClient.socket) {
     logger.warn('setupSocketEvents called but socket not initialized yet');
+      socketClient.socket.on('messageEdited', (data) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('socket:messageEdited', data);
+    }
+  });
+
+  socketClient.socket.on('messageDeleted', (data) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('socket:messageDeleted', data);
+    }
+  });
     return;
+    
   }
 
   logger.info('Setting up socket event listeners');
@@ -75,6 +87,8 @@ function registerHandlers() {
   ipcMain.handle('chat:send', handleSendMessage);
   ipcMain.handle('chat:history', handleLoadHistory);
   ipcMain.handle('chat:emitTyping', handleEmitTyping);
+  ipcMain.handle('chat:editMessage', handleEditMessage);
+  ipcMain.handle('chat:deleteMessage', handleDeleteMessage);
   // REMOVED GAME BROWSER FEATURE - chat:getGames handler removed
 
   // Window control handlers
@@ -651,6 +665,41 @@ async function handleOpenExternal(event, url) {
     return { success: true };
   } catch (error) {
     logger.error('Failed to open external URL', sanitizeError({ error: error.message }));
+    return { success: false, error: error.message };
+  }
+}
+/**
+ * Handle edit message request
+ */
+async function handleEditMessage(event, { messageId, newMessage }) {
+  try {
+    const user = robloxAuth.getCurrentUser();
+    if (!user) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    socketClient.emitEditMessage(messageId, user.userId, newMessage);
+    return { success: true };
+  } catch (error) {
+    logger.error('Failed to edit message', sanitizeError({ error: error.message }));
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Handle delete message request
+ */
+async function handleDeleteMessage(event, { messageId }) {
+  try {
+    const user = robloxAuth.getCurrentUser();
+    if (!user) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    socketClient.emitDeleteMessage(messageId, user.userId);
+    return { success: true };
+  } catch (error) {
+    logger.error('Failed to delete message', sanitizeError({ error: error.message }));
     return { success: false, error: error.message };
   }
 }

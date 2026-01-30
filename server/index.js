@@ -104,6 +104,84 @@ io.on('connection', (socket) => {
     sessionManager.handleDisconnect(socket.id);
     logger.info('Client disconnected', { socketId: socket.id });
   });
+  socket.on('editMessage', async (data) => {
+    try {
+      const { messageId, userId, newContent } = data;
+      
+      // Find and update message in database
+      const Message = require('./models/Message');
+      const message = await Message.findById(messageId);
+      
+      if (!message) {
+        socket.emit('messageEditError', { error: 'Message not found' });
+        return;
+      }
+      
+      // Verify user owns the message
+      if (message.userId !== userId) {
+        socket.emit('messageEditError', { error: 'Unauthorized' });
+        return;
+      }
+      
+      // Update message
+      message.message = newContent;
+      message.editedAt = new Date();
+      await message.save();
+      
+      // Broadcast to all users in the room
+      const roomId = message.chatType === 'server' 
+        ? `server:${message.jobId}` 
+        : `global:${message.placeId}`;
+      
+      io.to(roomId).emit('messageEdited', {
+        messageId,
+        newContent,
+        editedAt: message.editedAt
+      });
+      
+      logger.info('Message edited', { messageId, userId });
+    } catch (error) {
+      logger.error('Failed to edit message', { error: error.message });
+      socket.emit('messageEditError', { error: 'Failed to edit message' });
+    }
+  });
+  
+  socket.on('deleteMessage', async (data) => {
+    try {
+      const { messageId, userId } = data;
+      
+      // Find message in database
+      const Message = require('./models/Message');
+      const message = await Message.findById(messageId);
+      
+      if (!message) {
+        socket.emit('messageDeleteError', { error: 'Message not found' });
+        return;
+      }
+      
+      // Verify user owns the message
+      if (message.userId !== userId) {
+        socket.emit('messageDeleteError', { error: 'Unauthorized' });
+        return;
+      }
+      
+      // Get room before deleting
+      const roomId = message.chatType === 'server' 
+        ? `server:${message.jobId}` 
+        : `global:${message.placeId}`;
+      
+      // Delete message from database
+      await Message.findByIdAndDelete(messageId);
+      
+      // Broadcast to all users in the room
+      io.to(roomId).emit('messageDeleted', { messageId });
+      
+      logger.info('Message deleted', { messageId, userId });
+    } catch (error) {
+      logger.error('Failed to delete message', { error: error.message });
+      socket.emit('messageDeleteError', { error: 'Failed to delete message' });
+    }
+  });
 });
 
 // Export io for use in routes

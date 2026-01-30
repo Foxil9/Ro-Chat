@@ -256,16 +256,26 @@ class ChatManager {
     }
   }
 
-  /**
-   * Setup message update listeners (edit/delete)
-   */
- /**
+/**
  * Setup message update listeners (edit/delete)
  */
 setupMessageUpdateListeners() {
   if (window.electron && window.electron.onMessage) {
     window.electron.onMessage((data) => {
       this.handleIncomingMessage(data);
+    });
+  }
+  
+  // Add edit/delete listeners
+  if (window.electron && window.electron.onMessageEdited) {
+    window.electron.onMessageEdited((data) => {
+      this.handleMessageEdited(data);
+    });
+  }
+  
+  if (window.electron && window.electron.onMessageDeleted) {
+    window.electron.onMessageDeleted((data) => {
+      this.handleMessageDeleted(data);
     });
   }
 }
@@ -665,10 +675,10 @@ addMessage(messageData) {
     }
   }
 
-  /**
-   * Render a single message
-   * Remote messages appear on the right, local messages on the left
-   */
+/**
+ * Render a single message
+ * Remote messages appear on the right, local messages on the left
+ */
 renderMessage(message) {
   const messageEl = document.createElement('div');
   messageEl.className = `chat-msg ${message.isLocal ? 'local' : 'remote'}`;
@@ -728,6 +738,28 @@ renderMessage(message) {
   const bubbleEl = document.createElement('div');
   bubbleEl.className = 'msg-bubble';
   bubbleEl.textContent = this.escapeHtml(message.message);
+
+  // Add edit/delete buttons for user's own messages
+  if (message.isLocal && message.messageId) {
+    const actionsEl = document.createElement('div');
+    actionsEl.className = 'msg-actions';
+    
+    const editBtn = document.createElement('button');
+    editBtn.className = 'msg-action-btn edit-btn';
+    editBtn.textContent = '✏️';
+    editBtn.title = 'Edit message';
+    editBtn.onclick = () => this.handleEditMessage(message.messageId, message.message);
+    
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'msg-action-btn delete-btn';
+    deleteBtn.textContent = '🗑️';
+    deleteBtn.title = 'Delete message';
+    deleteBtn.onclick = () => this.handleDeleteMessage(message.messageId);
+    
+    actionsEl.appendChild(editBtn);
+    actionsEl.appendChild(deleteBtn);
+    bubbleEl.appendChild(actionsEl);
+  }
 
   contentColumnEl.appendChild(headerEl);
   contentColumnEl.appendChild(bubbleEl);
@@ -1127,7 +1159,103 @@ showErrorMessage(errorText) {
     console.log('Cooldown ended - you can send messages again');
   }
 
+/**
+ * Handle edit message click
+ */
+async handleEditMessage(messageId, currentMessage) {
+  const newMessage = prompt('Edit message:', currentMessage);
+  if (!newMessage || newMessage === currentMessage) return;
 
+  // Validate new message
+  if (window.messageValidator) {
+    const validation = window.messageValidator.validate(newMessage);
+    if (!validation.valid) {
+      alert(validation.error);
+      return;
+    }
+  }
+
+  try {
+    if (window.electron && window.electron.editMessage) {
+      const result = await window.electron.editMessage({
+        messageId,
+        newMessage
+      });
+
+      if (!result.success) {
+        alert(result.error || 'Failed to edit message');
+      }
+    }
+  } catch (error) {
+    console.error('Failed to edit message:', error);
+    alert('Failed to edit message');
+  }
+}
+
+/**
+ * Handle delete message click
+ */
+async handleDeleteMessage(messageId) {
+  if (!confirm('Delete this message?')) return;
+
+  try {
+    if (window.electron && window.electron.deleteMessage) {
+      const result = await window.electron.deleteMessage({ messageId });
+
+      if (!result.success) {
+        alert(result.error || 'Failed to delete message');
+      }
+    }
+  } catch (error) {
+    console.error('Failed to delete message:', error);
+    alert('Failed to delete message');
+  }
+}
+
+/**
+ * Handle message edited event from server
+ */
+handleMessageEdited(data) {
+  const { messageId, newContent } = data;
+  
+  // Find message in both tabs
+  for (const chatType of ['server', 'global']) {
+    const messages = this.messages[chatType];
+    const messageIndex = messages.findIndex(m => m.messageId === messageId);
+    
+    if (messageIndex !== -1) {
+      messages[messageIndex].message = newContent;
+      messages[messageIndex].editedAt = Date.now();
+      
+      // Re-render if this is the active tab
+      if (chatType === this.activeTab) {
+        this.renderAllMessages();
+      }
+    }
+  }
+}
+
+/**
+ * Handle message deleted event from server
+ */
+handleMessageDeleted(data) {
+  const { messageId } = data;
+  
+  // Remove message from both tabs
+  for (const chatType of ['server', 'global']) {
+    const messages = this.messages[chatType];
+    const messageIndex = messages.findIndex(m => m.messageId === messageId);
+    
+    if (messageIndex !== -1) {
+      messages.splice(messageIndex, 1);
+      
+      // Re-render if this is the active tab
+      if (chatType === this.activeTab) {
+        this.renderAllMessages();
+      }
+    }
+  }
+}
 }
 
 // Initialize chat manager when DOM is ready

@@ -82,126 +82,19 @@ io.on('connection', (socket) => {
       roomTypers.delete(username);
     }
 
-    // Store username on socket for cleanup on disconnect
     socket.currentUsername = username;
     socket.currentRoomId = roomId;
 
-    // Broadcast current list of typing users to all clients in room
     io.to(roomId).emit('typingIndicator', {
       typingUsers: Array.from(roomTypers)
     });
   });
 
-  socket.on('editMessage', async (data) => {
-  const { messageId, userId, newContent } = data;
-
-  console.log('📝 Edit request received:', { messageId, userId, newContentLength: newContent?.length });
-
-  if (!messageId || !userId || !newContent) {
-    console.warn('❌ Edit rejected: Missing fields');
-    socket.emit('messageEditError', { error: 'Missing required fields' });
-    return;
-  }
-
-  try {
-    const Message = require('./models/Message');
-    const message = await Message.findById(messageId);
-
-    if (!message) {
-      console.warn('❌ Edit rejected: Message not found:', messageId);
-      socket.emit('messageEditError', { error: 'Message not found' });
-      return;
-    }
-
-    if (message.userId !== userId) {
-      console.warn('❌ Edit rejected: Unauthorized:', { messageUserId: message.userId, requestUserId: userId });
-      socket.emit('messageEditError', { error: 'Unauthorized' });
-      return;
-    }
-
-    message.message = newContent;
-    message.editedAt = new Date();
-    await message.save();
-
-    const roomId = message.chatType === 'server'
-      ? `server:${message.jobId}`
-      : `global:${message.placeId}`;
-
-    io.to(roomId).emit('messageUpdated', {
-      messageId: message._id.toString(),
-      message: message.message,
-      editedAt: message.editedAt,
-      deletedAt: message.deletedAt
-    });
-
-    console.log('✅ Message edited successfully:', messageId);
-    logger.info('Message edited', { messageId, userId });
-  } catch (error) {
-    console.error('❌ Edit failed:', error);
-    logger.error('Failed to edit message', { error: error.message, messageId, userId });
-    socket.emit('messageEditError', { error: 'Failed to edit message' });
-  }
-});
-
-socket.on('deleteMessage', async (data) => {
-  const { messageId, userId } = data;
-
-  console.log('🗑️ Delete request received:', { messageId, userId });
-
-  if (!messageId || !userId) {
-    console.warn('❌ Delete rejected: Missing fields');
-    socket.emit('messageDeleteError', { error: 'Missing required fields' });
-    return;
-  }
-
-  try {
-    const Message = require('./models/Message');
-    const message = await Message.findById(messageId);
-
-    if (!message) {
-      console.warn('❌ Delete rejected: Message not found:', messageId);
-      socket.emit('messageDeleteError', { error: 'Message not found' });
-      return;
-    }
-
-    if (message.userId !== userId) {
-      console.warn('❌ Delete rejected: Unauthorized:', { messageUserId: message.userId, requestUserId: userId });
-      socket.emit('messageDeleteError', { error: 'Unauthorized' });
-      return;
-    }
-
-    message.message = '[deleted]';
-    message.deletedAt = new Date();
-    await message.save();
-
-    const roomId = message.chatType === 'server'
-      ? `server:${message.jobId}`
-      : `global:${message.placeId}`;
-
-    io.to(roomId).emit('messageUpdated', {
-      messageId: message._id.toString(),
-      message: message.message,
-      editedAt: message.editedAt,
-      deletedAt: message.deletedAt
-    });
-
-    console.log('✅ Message deleted successfully:', messageId);
-    logger.info('Message deleted', { messageId, userId });
-  } catch (error) {
-    console.error('❌ Delete failed:', error);
-    logger.error('Failed to delete message', { error: error.message, messageId, userId });
-    socket.emit('messageDeleteError', { error: 'Failed to delete message' });
-  }
-});
-
   socket.on('disconnect', () => {
-    // Remove user from typing state if they were typing
     if (socket.currentUsername && socket.currentRoomId) {
       const roomTypers = typingUsers.get(socket.currentRoomId);
       if (roomTypers) {
         roomTypers.delete(socket.currentUsername);
-
-        // Broadcast updated typing list to room
         io.to(socket.currentRoomId).emit('typingIndicator', {
           typingUsers: Array.from(roomTypers)
         });

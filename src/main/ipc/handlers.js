@@ -34,10 +34,6 @@ function setupDetectorEvents() {
   });
 }
 
-/**
- * Setup socket client event forwarding to renderer
- * This must be called AFTER the socket is connected
- */
 function setupSocketEvents() {
   if (!socketClient.socket) {
     logger.warn('setupSocketEvents called but socket not initialized yet');
@@ -55,24 +51,6 @@ function setupSocketEvents() {
   socketClient.socket.on('message', (data) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('socket:message', data);
-    }
-  });
-
-  socketClient.socket.on('messageUpdated', (data) => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('socket:messageUpdated', data);
-    }
-  });
-
-  socketClient.socket.on('messageEditError', (data) => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('socket:messageEditError', data);
-    }
-  });
-
-  socketClient.socket.on('messageDeleteError', (data) => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('socket:messageDeleteError', data);
     }
   });
 }
@@ -97,8 +75,6 @@ function registerHandlers() {
   ipcMain.handle('chat:send', handleSendMessage);
   ipcMain.handle('chat:history', handleLoadHistory);
   ipcMain.handle('chat:emitTyping', handleEmitTyping);
-  ipcMain.handle('chat:editMessage', handleEditMessage);
-  ipcMain.handle('chat:deleteMessage', handleDeleteMessage);
   // REMOVED GAME BROWSER FEATURE - chat:getGames handler removed
 
   // Window control handlers
@@ -662,41 +638,6 @@ async function handleEmitTyping(event, { jobId, username, isTyping }) {
   }
 }
 
-/**
- * Handle edit message request
- */
-async function handleEditMessage(event, { messageId, newContent }) {
-  try {
-    const user = robloxAuth.getCurrentUser();
-    if (!user) {
-      return { success: false, error: 'Not authenticated' };
-    }
-
-    socketClient.emitEditMessage(messageId, user.userId, newContent);
-    return { success: true };
-  } catch (error) {
-    logger.error('Failed to emit edit message', sanitizeError({ error: error.message }));
-    return { success: false, error: error.message };
-  }
-}
-
-/**
- * Handle delete message request
- */
-async function handleDeleteMessage(event, { messageId }) {
-  try {
-    const user = robloxAuth.getCurrentUser();
-    if (!user) {
-      return { success: false, error: 'Not authenticated' };
-    }
-
-    socketClient.emitDeleteMessage(messageId, user.userId);
-    return { success: true };
-  } catch (error) {
-    logger.error('Failed to emit delete message', sanitizeError({ error: error.message }));
-    return { success: false, error: error.message };
-  }
-}
 
 // ==================== SHELL HANDLERS ====================
 

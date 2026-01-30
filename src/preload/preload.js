@@ -23,14 +23,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // Chat methods
-  chat: {
-    sendMessage: (data) => ipcRenderer.invoke('chat:send', data),
-    loadHistory: (data) => ipcRenderer.invoke('chat:history', data),
-    emitTyping: (data) => ipcRenderer.invoke('chat:emitTyping', data),
-    editMessage: (data) => ipcRenderer.invoke('chat:editMessage', data),
-    deleteMessage: (data) => ipcRenderer.invoke('chat:deleteMessage', data)
-    // REMOVED GAME BROWSER FEATURE - getGames() removed
-  },
+ chat: {
+  sendMessage: (data) => ipcRenderer.invoke('chat:send', data),
+  loadHistory: (data) => ipcRenderer.invoke('chat:history', data),
+  emitTyping: (data) => ipcRenderer.invoke('chat:emitTyping', data)
+},
 
   // Event listeners
   onServerChanged: (callback) => {
@@ -85,11 +82,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('socket:message', listener);
   },
 
-  onMessageUpdated: (callback) => {
-    const listener = (event, data) => callback(data);
-    ipcRenderer.on('socket:messageUpdated', listener);
-    return () => ipcRenderer.removeListener('socket:messageUpdated', listener);
-  },
 
   onMessageEditError: (callback) => {
     const listener = (event, data) => callback(data);
@@ -139,8 +131,6 @@ contextBridge.exposeInMainWorld('electron', {
   sendMessage: (data) => ipcRenderer.invoke('chat:send', data),
   loadHistory: (data) => ipcRenderer.invoke('chat:history', data),
   emitTyping: (data) => ipcRenderer.invoke('chat:emitTyping', data),
-  editMessage: (data) => ipcRenderer.invoke('chat:editMessage', data),
-  deleteMessage: (data) => ipcRenderer.invoke('chat:deleteMessage', data),
 
   // Event listeners
   onServerChanged: (callback) => {
@@ -162,24 +152,6 @@ contextBridge.exposeInMainWorld('electron', {
     const listener = (event, data) => callback(data);
     ipcRenderer.on('socket:message', listener);
     return () => ipcRenderer.removeListener('socket:message', listener);
-  },
-
-  onMessageUpdated: (callback) => {
-    const listener = (event, data) => callback(data);
-    ipcRenderer.on('socket:messageUpdated', listener);
-    return () => ipcRenderer.removeListener('socket:messageUpdated', listener);
-  },
-
-  onMessageEditError: (callback) => {
-    const listener = (event, data) => callback(data);
-    ipcRenderer.on('socket:messageEditError', listener);
-    return () => ipcRenderer.removeListener('socket:messageEditError', listener);
-  },
-
-  onMessageDeleteError: (callback) => {
-    const listener = (event, data) => callback(data);
-    ipcRenderer.on('socket:messageDeleteError', listener);
-    return () => ipcRenderer.removeListener('socket:messageDeleteError', listener);
   },
 
   startDetection: () => ipcRenderer.invoke('detection:start'),

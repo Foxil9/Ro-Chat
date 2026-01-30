@@ -263,103 +263,47 @@ class ChatManager {
  * Setup message update listeners (edit/delete)
  */
 setupMessageUpdateListeners() {
-  // Listen for message updates
-  if (window.electron && window.electron.onMessageUpdated) {
-    window.electron.onMessageUpdated((data) => {
-      this.handleMessageUpdated(data);
-    });
-  }
-
-  // Listen for incoming messages
   if (window.electron && window.electron.onMessage) {
     window.electron.onMessage((data) => {
       this.handleIncomingMessage(data);
     });
   }
-
-  // Listen for edit errors
-  if (window.electron && window.electron.onMessageEditError) {
-    window.electron.onMessageEditError((data) => {
-      console.error('❌ Edit failed:', data.error);
-      this.showErrorMessage(data.error || 'Failed to edit message');
-    });
-  }
-
-  // Listen for delete errors
-  if (window.electron && window.electron.onMessageDeleteError) {
-    window.electron.onMessageDeleteError((data) => {
-      console.error('❌ Delete failed:', data.error);
-      this.showErrorMessage(data.error || 'Failed to delete message');
-    });
-  }
 }
-  /**
-   * Handle incoming message from socket
-   */
- handleIncomingMessage(data) {
-    const chatType = data.chatType || this.activeTab;
+ 
+handleIncomingMessage(data) {
+  const chatType = data.chatType || this.activeTab;
 
-    // Deduplicate: If this is OUR message (echo from server), update the optimistic one
-    if (data.userId === this.userId) {
-      const messages = this.messages[chatType];
-      const lastMessage = messages[messages.length - 1];
+  if (data.userId === this.userId) {
+    const messages = this.messages[chatType];
+    const lastMessage = messages[messages.length - 1];
 
-      // Check if last message is our optimistic message (no messageId yet)
-      if (lastMessage && !lastMessage.messageId && lastMessage.userId === this.userId && lastMessage.message === data.message) {
-        console.log('📝 Updating optimistic message with server data');
-        
-        // Update the message object with server data
-        lastMessage.messageId = data.messageId;
-        lastMessage.timestamp = new Date(data.timestamp).getTime();
-        lastMessage.editedAt = data.editedAt;
-        lastMessage.deletedAt = data.deletedAt;
+    if (lastMessage && !lastMessage.messageId && lastMessage.userId === this.userId && lastMessage.message === data.message) {
+      console.log('📝 Updating optimistic message with server data');
+      
+      lastMessage.messageId = data.messageId;
+      lastMessage.timestamp = new Date(data.timestamp).getTime();
 
-        // RE-RENDER to show buttons now that we have messageId
-        if (chatType === this.activeTab) {
-          console.log('🔄 Re-rendering messages to show buttons');
-          this.renderAllMessages();
-        }
-
-        return; // Don't add duplicate
+      if (chatType === this.activeTab) {
+        console.log('🔄 Re-rendering messages');
+        this.renderAllMessages();
       }
-    }
 
-    // Add as new message (from other users or failed deduplication)
-    this.addMessage({
-      messageId: data.messageId,
-      userId: data.userId,
-      username: data.username,
-      displayName: data.displayName,
-      picture: data.picture,
-      message: data.message,
-      timestamp: new Date(data.timestamp).getTime(),
-      isLocal: false,
-      chatType: chatType,
-      editedAt: data.editedAt,
-      deletedAt: data.deletedAt
-    });
-  }
-
-  /**
-   * Handle message update from socket (edit/delete)
-   */
-  handleMessageUpdated(data) {
-    const { messageId, message, editedAt, deletedAt } = data;
-
-    for (const chatType of ['server', 'global']) {
-      const messageIndex = this.messages[chatType].findIndex(m => m.messageId === messageId);
-      if (messageIndex !== -1) {
-        this.messages[chatType][messageIndex].message = message;
-        this.messages[chatType][messageIndex].editedAt = editedAt;
-        this.messages[chatType][messageIndex].deletedAt = deletedAt;
-
-        if (chatType === this.activeTab) {
-          this.renderAllMessages();
-        }
-        break;
-      }
+      return;
     }
   }
+
+  this.addMessage({
+    messageId: data.messageId,
+    userId: data.userId,
+    username: data.username,
+    displayName: data.displayName,
+    picture: data.picture,
+    message: data.message,
+    timestamp: new Date(data.timestamp).getTime(),
+    isLocal: false,
+    chatType: chatType
+  });
+}
 
   /**
    * Handle typing indicator from server
@@ -679,36 +623,31 @@ setupMessageUpdateListeners() {
   /**
    * Add a message to the chat
    */
-  addMessage(messageData) {
-    const chatType = messageData.chatType || this.activeTab;
-    const message = {
-      messageId: messageData.messageId || null,
-      userId: messageData.userId,
-      username: messageData.username,
-      displayName: messageData.displayName || messageData.username,
-      picture: messageData.picture || null,
-      message: messageData.message,
-      timestamp: messageData.timestamp || Date.now(),
-      isLocal: messageData.isLocal || false,
-      chatType,
-      editedAt: messageData.editedAt || null,
-      deletedAt: messageData.deletedAt || null
-    };
+addMessage(messageData) {
+  const chatType = messageData.chatType || this.activeTab;
+  const message = {
+    messageId: messageData.messageId || null,
+    userId: messageData.userId,
+    username: messageData.username,
+    displayName: messageData.displayName || messageData.username,
+    picture: messageData.picture || null,
+    message: messageData.message,
+    timestamp: messageData.timestamp || Date.now(),
+    isLocal: messageData.isLocal || false,
+    chatType
+  };
 
-    // Add to appropriate tab
-    this.messages[chatType].push(message);
+  this.messages[chatType].push(message);
 
-    // Enforce 50 message limit client-side
-    if (this.messages[chatType].length > this.MAX_MESSAGES) {
-      this.messages[chatType].shift();
-    }
-
-    // Only render if this is the active tab
-    if (chatType === this.activeTab) {
-      this.renderMessage(message);
-      this.scrollToBottom();
-    }
+  if (this.messages[chatType].length > this.MAX_MESSAGES) {
+    this.messages[chatType].shift();
   }
+
+  if (chatType === this.activeTab) {
+    this.renderMessage(message);
+    this.scrollToBottom();
+  }
+}
 
   /**
    * Add system message
@@ -730,165 +669,74 @@ setupMessageUpdateListeners() {
    * Render a single message
    * Remote messages appear on the right, local messages on the left
    */
-  renderMessage(message) {
-    const messageEl = document.createElement('div');
-    // Note: 'local' means sent by user (left), 'remote' means from others (right)
-    messageEl.className = `chat-msg ${message.isLocal ? 'local' : 'remote'}`;
-    if (message.messageId) {
-      messageEl.setAttribute('data-message-id', message.messageId);
-    }
-
-    const timestamp = new Date(message.timestamp).toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-
-    const displayName = message.displayName && message.displayName.trim()
-      ? message.displayName
-      : message.username;
-    const username = message.username;
-    const picture = message.picture;
-
-    // Avatar container (circle) - use profile picture if available
-    const profilePicEl = document.createElement('div');
-    profilePicEl.className = 'msg-profile-pic';
-
-    if (picture && picture.trim()) {
-      // Use actual profile picture
-      const imgEl = document.createElement('img');
-      imgEl.src = picture;
-      imgEl.alt = displayName;
-      imgEl.onerror = () => {
-        // Fallback to initial letter if image fails to load
-        profilePicEl.innerHTML = '';
-        profilePicEl.textContent = this.escapeHtml(displayName.charAt(0).toUpperCase());
-      };
-      profilePicEl.appendChild(imgEl);
-    } else {
-      // DEBUG FIX: Fallback to first letter when picture is null/empty
-      profilePicEl.textContent = this.escapeHtml(displayName.charAt(0).toUpperCase());
-    }
-
-    // Content column (header + body)
-    const contentColumnEl = document.createElement('div');
-    contentColumnEl.className = 'msg-content-column';
-
-    // Message header row (display name, username, timestamp)
-    const headerEl = document.createElement('div');
-    headerEl.className = 'msg-header';
-
-    const displayNameEl = document.createElement('span');
-    displayNameEl.className = 'msg-display-name';
-    displayNameEl.textContent = this.escapeHtml(displayName);
-
-    const usernameEl = document.createElement('span');
-    usernameEl.className = 'msg-username';
-    usernameEl.textContent = `(${this.escapeHtml(username)})`;
-
-    const timeEl = document.createElement('span');
-    timeEl.className = 'msg-time';
-    timeEl.textContent = timestamp;
-
-    headerEl.appendChild(displayNameEl);
-    headerEl.appendChild(usernameEl);
-    headerEl.appendChild(timeEl);
-
-    // Message content bubble
-    const bubbleEl = document.createElement('div');
-    bubbleEl.className = 'msg-bubble';
-
-    // Show deleted or actual message
-    if (message.deletedAt) {
-      bubbleEl.textContent = '[deleted]';
-      bubbleEl.style.fontStyle = 'italic';
-      bubbleEl.style.opacity = '0.5';
-    } else {
-      bubbleEl.textContent = this.escapeHtml(message.message);
-    }
-
-    // Add edited label if message was edited
-    if (message.editedAt && !message.deletedAt) {
-      const editedLabel = document.createElement('span');
-      editedLabel.className = 'msg-edited';
-      editedLabel.textContent = ' (edited)';
-      editedLabel.style.fontSize = '11px';
-      editedLabel.style.opacity = '0.6';
-      editedLabel.style.fontStyle = 'italic';
-      bubbleEl.appendChild(editedLabel);
-    }
-
-
-    // Assemble content column
-    contentColumnEl.appendChild(headerEl);
-    contentColumnEl.appendChild(bubbleEl);
-
-    // Add edit/delete buttons UNDER the message bubble
-    if (message.userId === this.userId && message.messageId && !message.deletedAt) {
-      const actionsEl = document.createElement('div');
-      actionsEl.style.cssText = `
-        display: none;
-        gap: 8px;
-        margin-top: 4px;
-      `;
-      
-      const editBtn = document.createElement('button');
-      editBtn.textContent = 'Edit';
-      editBtn.style.cssText = `
-        padding: 4px 10px;
-        background: transparent;
-        border: none;
-        border-radius: 6px;
-        color: rgba(255, 255, 255, 0.5);
-        cursor: pointer;
-        font-size: 12px;
-        transition: all 0.2s;
-      `;
-      editBtn.onmouseenter = () => {
-        editBtn.style.background = 'rgba(255, 255, 255, 0.1)';
-        editBtn.style.color = 'white';
-      };
-      editBtn.onmouseleave = () => {
-        editBtn.style.background = 'transparent';
-        editBtn.style.color = 'rgba(255, 255, 255, 0.5)';
-      };
-      editBtn.onclick = () => this.showEditModal(message.messageId, message.message);
-      
-      const deleteBtn = document.createElement('button');
-      deleteBtn.textContent = 'Delete';
-      deleteBtn.style.cssText = `
-        padding: 4px 10px;
-        background: transparent;
-        border: none;
-        border-radius: 6px;
-        color: rgba(255, 255, 255, 0.5);
-        cursor: pointer;
-        font-size: 12px;
-        transition: all 0.2s;
-      `;
-      deleteBtn.onmouseenter = () => {
-        deleteBtn.style.background = 'rgba(239, 68, 68, 0.2)';
-        deleteBtn.style.color = '#ef4444';
-      };
-      deleteBtn.onmouseleave = () => {
-        deleteBtn.style.background = 'transparent';
-        deleteBtn.style.color = 'rgba(255, 255, 255, 0.5)';
-      };
-      deleteBtn.onclick = () => this.showDeleteModal(message.messageId, message.message);
-      
-      actionsEl.appendChild(editBtn);
-      actionsEl.appendChild(deleteBtn);
-      contentColumnEl.appendChild(actionsEl);
-      
-      messageEl.onmouseenter = () => { actionsEl.style.display = 'flex'; };
-      messageEl.onmouseleave = () => { actionsEl.style.display = 'none'; };
-    }
-
-    // Assemble main message element
-    messageEl.appendChild(profilePicEl);
-    messageEl.appendChild(contentColumnEl);
-
-    this.messagesContainer.appendChild(messageEl);
+renderMessage(message) {
+  const messageEl = document.createElement('div');
+  messageEl.className = `chat-msg ${message.isLocal ? 'local' : 'remote'}`;
+  if (message.messageId) {
+    messageEl.setAttribute('data-message-id', message.messageId);
   }
+
+  const timestamp = new Date(message.timestamp).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+
+  const displayName = message.displayName && message.displayName.trim()
+    ? message.displayName
+    : message.username;
+  const username = message.username;
+  const picture = message.picture;
+
+  const profilePicEl = document.createElement('div');
+  profilePicEl.className = 'msg-profile-pic';
+
+  if (picture && picture.trim()) {
+    const imgEl = document.createElement('img');
+    imgEl.src = picture;
+    imgEl.alt = displayName;
+    imgEl.onerror = () => {
+      profilePicEl.innerHTML = '';
+      profilePicEl.textContent = this.escapeHtml(displayName.charAt(0).toUpperCase());
+    };
+    profilePicEl.appendChild(imgEl);
+  } else {
+    profilePicEl.textContent = this.escapeHtml(displayName.charAt(0).toUpperCase());
+  }
+
+  const contentColumnEl = document.createElement('div');
+  contentColumnEl.className = 'msg-content-column';
+
+  const headerEl = document.createElement('div');
+  headerEl.className = 'msg-header';
+
+  const displayNameEl = document.createElement('span');
+  displayNameEl.className = 'msg-display-name';
+  displayNameEl.textContent = this.escapeHtml(displayName);
+
+  const usernameEl = document.createElement('span');
+  usernameEl.className = 'msg-username';
+  usernameEl.textContent = `(${this.escapeHtml(username)})`;
+
+  const timeEl = document.createElement('span');
+  timeEl.className = 'msg-time';
+  timeEl.textContent = timestamp;
+
+  headerEl.appendChild(displayNameEl);
+  headerEl.appendChild(usernameEl);
+  headerEl.appendChild(timeEl);
+
+  const bubbleEl = document.createElement('div');
+  bubbleEl.className = 'msg-bubble';
+  bubbleEl.textContent = this.escapeHtml(message.message);
+
+  contentColumnEl.appendChild(headerEl);
+  contentColumnEl.appendChild(bubbleEl);
+
+  messageEl.appendChild(profilePicEl);
+  messageEl.appendChild(contentColumnEl);
+
+  this.messagesContainer.appendChild(messageEl);
+}
 
   /**
    * Render all messages for active tab
@@ -1279,216 +1127,6 @@ showErrorMessage(errorText) {
     console.log('Cooldown ended - you can send messages again');
   }
 
-/**
-   * Show edit modal
-   */
- /**
- * Show edit modal
- */
-showEditModal(messageId, currentText) {
-  console.log('🔵 EDIT MODAL OPENING:', messageId);
-  
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(10px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10000;
-  `;
-
-  const modal = document.createElement('div');
-  modal.style.cssText = `
-    background: rgba(26, 29, 46, 0.95);
-    border: 2px solid rgba(102, 126, 234, 0.3);
-    border-radius: 12px;
-    padding: 16px;
-    max-width: 320px;
-    width: 90%;
-    box-shadow: 0 16px 64px rgba(0, 0, 0, 0.5);
-  `;
-
-  modal.innerHTML = `
-    <h2 style="margin: 0 0 12px 0; color: white; font-size: 16px;">✏️ Edit Message</h2>
-    <input type="text" id="edit-input" value="${this.escapeHtml(currentText)}" style="
-      width: 100%;
-      padding: 10px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 8px;
-      color: white;
-      font-size: 14px;
-      margin-bottom: 12px;
-      box-sizing: border-box;
-    ">
-    <div style="display: flex; gap: 8px; justify-content: flex-end;">
-      <button id="edit-cancel" style="padding: 8px 16px; background: rgba(255,255,255,0.1); border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 13px;">Cancel</button>
-      <button id="edit-save" style="padding: 8px 16px; background: #667eea; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 13px;">Save</button>
-    </div>
-  `;
-
-  overlay.appendChild(modal);
-  document.body.appendChild(overlay);
-
-  const input = document.getElementById('edit-input');
-  const saveBtn = document.getElementById('edit-save');
-  const cancelBtn = document.getElementById('edit-cancel');
-
-  setTimeout(() => {
-    input.focus();
-    input.select();
-  }, 100);
-
-  const handleSave = async () => {
-    const newText = input.value.trim();
-    if (!newText) {
-      this.showErrorMessage('Message cannot be empty');
-      return;
-    }
-    
-    if (newText === currentText) {
-      overlay.remove();
-      return;
-    }
-
-    // Show loading state
-    saveBtn.textContent = 'Saving...';
-    saveBtn.disabled = true;
-
-    try {
-      console.log('💾 Saving edit:', messageId, newText);
-      
-      if (!window.electron || !window.electron.editMessage) {
-        throw new Error('Edit function not available');
-      }
-
-      const result = await window.electron.editMessage({ 
-        messageId, 
-        newContent: newText 
-      });
-
-      if (result && !result.success) {
-        throw new Error(result.error || 'Edit failed');
-      }
-
-      console.log('✅ Edit request sent successfully');
-      overlay.remove();
-    } catch (error) {
-      console.error('❌ Failed to edit:', error);
-      this.showErrorMessage(error.message || 'Failed to edit message');
-      saveBtn.textContent = 'Save';
-      saveBtn.disabled = false;
-    }
-  };
-
-  saveBtn.onclick = handleSave;
-  cancelBtn.onclick = () => overlay.remove();
-  overlay.onclick = (e) => {
-    if (e.target === overlay) overlay.remove();
-  };
-  input.onkeypress = (e) => {
-    if (e.key === 'Enter') handleSave();
-  };
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') overlay.remove();
-  }, { once: true });
-}
-
- /**
- * Show delete modal
- */
-showDeleteModal(messageId, messageText) {
-  console.log('🔴 DELETE MODAL OPENING:', messageId);
-  
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(10px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10000;
-  `;
-
-  const modal = document.createElement('div');
-  modal.style.cssText = `
-    background: rgba(26, 29, 46, 0.95);
-    border: 2px solid rgba(239, 68, 68, 0.3);
-    border-radius: 12px;
-    padding: 16px;
-    max-width: 320px;
-    width: 90%;
-    box-shadow: 0 16px 64px rgba(0, 0, 0, 0.5);
-  `;
-
-  modal.innerHTML = `
-    <h2 style="margin: 0 0 12px 0; color: white; font-size: 16px;">🗑️ Delete Message</h2>
-    <p style="color: rgba(255,255,255,0.7); margin: 0 0 10px 0; font-size: 13px;">Are you sure you want to delete this message?</p>
-    <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; margin-bottom: 12px; color: rgba(255,255,255,0.7); font-size: 13px; max-height: 60px; overflow-y: auto;">
-      ${this.escapeHtml(messageText)}
-    </div>
-    <div style="display: flex; gap: 8px; justify-content: flex-end;">
-      <button id="delete-cancel" style="padding: 8px 16px; background: rgba(255,255,255,0.1); border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 13px;">Cancel</button>
-      <button id="delete-confirm" style="padding: 8px 16px; background: #ef4444; border: none; border-radius: 8px; color: white; cursor: pointer; font-size: 13px;">Delete</button>
-    </div>
-  `;
-
-  overlay.appendChild(modal);
-  document.body.appendChild(overlay);
-
-  const confirmBtn = document.getElementById('delete-confirm');
-  const cancelBtn = document.getElementById('delete-cancel');
-
-  const handleDelete = async () => {
-    // Show loading state
-    confirmBtn.textContent = 'Deleting...';
-    confirmBtn.disabled = true;
-
-    try {
-      console.log('🗑️ Deleting:', messageId);
-      
-      if (!window.electron || !window.electron.deleteMessage) {
-        throw new Error('Delete function not available');
-      }
-
-      const result = await window.electron.deleteMessage({ messageId });
-
-      if (result && !result.success) {
-        throw new Error(result.error || 'Delete failed');
-      }
-
-      console.log('✅ Delete request sent successfully');
-      overlay.remove();
-    } catch (error) {
-      console.error('❌ Failed to delete:', error);
-      this.showErrorMessage(error.message || 'Failed to delete message');
-      confirmBtn.textContent = 'Delete';
-      confirmBtn.disabled = false;
-    }
-  };
-
-  confirmBtn.onclick = handleDelete;
-  cancelBtn.onclick = () => overlay.remove();
-  overlay.onclick = (e) => {
-    if (e.target === overlay) overlay.remove();
-  };
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') overlay.remove();
-  }, { once: true });
-}
 
 }
 

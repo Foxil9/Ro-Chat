@@ -2,6 +2,8 @@
 
 class ChatManager {
   constructor() {
+    this.editingMessageId = null;
+  this.editingOriginalMessage = null;
     this.messages = { server: [], global: [] };
     this.messageInput = null;
     this.sendButton = null;
@@ -489,6 +491,12 @@ handleIncomingMessage(data) {
 
     if (!message) return;
 
+    // Check if in edit mode
+    if (this.editingMessageId) {
+      await this.saveEdit(message);
+      return;
+    }
+
     // Validate message
     if (window.messageValidator) {
       const validation = window.messageValidator.validate(message);
@@ -616,6 +624,40 @@ handleIncomingMessage(data) {
   }
 
   /**
+   * Save edited message
+   */
+  async saveEdit(newMessage) {
+    // Validate message
+    if (window.messageValidator) {
+      const validation = window.messageValidator.validate(newMessage);
+      if (!validation.valid) {
+        this.showValidationError(validation.error, validation.highlightWord);
+        return;
+      }
+    }
+
+    try {
+      if (window.electron && window.electron.editMessage) {
+        const result = await window.electron.editMessage({
+          messageId: this.editingMessageId,
+          newMessage
+        });
+
+        if (!result.success) {
+          alert(result.error || 'Failed to edit message');
+          return;
+        }
+        
+        // Success - cancel edit mode
+        this.cancelEdit();
+      }
+    } catch (error) {
+      console.error('Failed to edit message:', error);
+      alert('Failed to edit message');
+    }
+  }
+
+  /**
    * Get current user info
    */
   async getCurrentUser() {
@@ -675,11 +717,13 @@ addMessage(messageData) {
     }
   }
 
-/**
- * Render a single message
- * Remote messages appear on the right, local messages on the left
- */
 renderMessage(message) {
+  if (message.isLocal && message.messageId) {
+  console.log('✅ Adding edit/delete buttons for message:', message.messageId);
+  const actionsEl = document.createElement('div');
+  actionsEl.className = 'msg-actions';
+  actionsEl.style.border = '2px solid red'; // TEMP DEBUG - remove after testing
+  }
   const messageEl = document.createElement('div');
   messageEl.className = `chat-msg ${message.isLocal ? 'local' : 'remote'}`;
   if (message.messageId) {
@@ -739,7 +783,10 @@ renderMessage(message) {
   bubbleEl.className = 'msg-bubble';
   bubbleEl.textContent = this.escapeHtml(message.message);
 
-  // Add edit/delete buttons for user's own messages
+  contentColumnEl.appendChild(headerEl);
+  contentColumnEl.appendChild(bubbleEl);
+
+  // Add edit/delete buttons AFTER the bubble, not inside it
   if (message.isLocal && message.messageId) {
     const actionsEl = document.createElement('div');
     actionsEl.className = 'msg-actions';
@@ -758,11 +805,8 @@ renderMessage(message) {
     
     actionsEl.appendChild(editBtn);
     actionsEl.appendChild(deleteBtn);
-    bubbleEl.appendChild(actionsEl);
+    contentColumnEl.appendChild(actionsEl); // Append to column, not bubble
   }
-
-  contentColumnEl.appendChild(headerEl);
-  contentColumnEl.appendChild(bubbleEl);
 
   messageEl.appendChild(profilePicEl);
   messageEl.appendChild(contentColumnEl);
@@ -1162,42 +1206,133 @@ showErrorMessage(errorText) {
 /**
  * Handle edit message click
  */
+/**
+ * Handle edit message click
+ */
 async handleEditMessage(messageId, currentMessage) {
-  const newMessage = prompt('Edit message:', currentMessage);
-  if (!newMessage || newMessage === currentMessage) return;
+  // Set edit mode
+  this.editingMessageId = messageId;
+  this.editingOriginalMessage = currentMessage;
+  
+  // Populate input with current message
+  this.messageInput.value = currentMessage;
+  this.messageInput.focus();
+  
+  // Show edit banner
+  this.showEditBanner();
+  
+  // Change send button to "Save"
+  this.sendButton.textContent = 'Save';
+}
 
-  // Validate new message
-  if (window.messageValidator) {
-    const validation = window.messageValidator.validate(newMessage);
-    if (!validation.valid) {
-      alert(validation.error);
-      return;
-    }
+/**
+ * Show edit message banner
+ */
+showEditBanner() {
+  // Remove existing banner if any
+  const existing = document.querySelector('.edit-message-banner');
+  if (existing) existing.remove();
+  
+  const banner = document.createElement('div');
+  banner.className = 'edit-message-banner';
+  banner.innerHTML = `
+    <span class="edit-banner-text">Editing message</span>
+    <button class="edit-banner-cancel">✕</button>
+  `;
+  
+  // Cancel button
+  banner.querySelector('.edit-banner-cancel').onclick = () => {
+    this.cancelEdit();
+  };
+  
+  // Insert before chat input
+  const chatContainer = document.querySelector('.chat-container');
+  const chatInput = document.querySelector('.chat-input');
+  if (chatContainer && chatInput) {
+    chatContainer.insertBefore(banner, chatInput);
   }
+}
 
-  try {
-    if (window.electron && window.electron.editMessage) {
-      const result = await window.electron.editMessage({
-        messageId,
-        newMessage
-      });
-
-      if (!result.success) {
-        alert(result.error || 'Failed to edit message');
-      }
-    }
-  } catch (error) {
-    console.error('Failed to edit message:', error);
-    alert('Failed to edit message');
-  }
+/**
+ * Cancel edit mode
+ */
+cancelEdit() {
+  this.editingMessageId = null;
+  this.editingOriginalMessage = null;
+  this.messageInput.value = '';
+  this.sendButton.textContent = 'Send';
+  
+  const banner = document.querySelector('.edit-message-banner');
+  if (banner) banner.remove();
 }
 
 /**
  * Handle delete message click
  */
 async handleDeleteMessage(messageId) {
-  if (!confirm('Delete this message?')) return;
+  // Find the message to show in popup
+  const message = this.findMessageById(messageId);
+  const messageText = message ? message.message : 'this message';
+  
+  this.showDeleteConfirmation(messageId, messageText);
+}
 
+/**
+ * Find message by ID in current messages
+ */
+findMessageById(messageId) {
+  for (const chatType of ['server', 'global']) {
+    const found = this.messages[chatType].find(m => m.messageId === messageId);
+    if (found) return found;
+  }
+  return null;
+}
+
+/**
+ * Show delete confirmation popup
+ */
+showDeleteConfirmation(messageId, messageText) {
+  const popup = document.createElement('div');
+  popup.className = 'delete-confirmation';
+  popup.innerHTML = `
+    <div class="delete-popup">
+      <div class="delete-popup-title">Delete Message</div>
+      <div class="delete-popup-message">${this.escapeHtml(messageText)}</div>
+      <div style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
+        Are you sure you want to delete this message? This cannot be undone.
+      </div>
+      <div class="delete-popup-actions">
+        <button class="delete-popup-btn delete-popup-cancel">Cancel</button>
+        <button class="delete-popup-btn delete-popup-confirm">Delete</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(popup);
+  
+  // Cancel button
+  popup.querySelector('.delete-popup-cancel').onclick = () => {
+    popup.remove();
+  };
+  
+  // Confirm button
+  popup.querySelector('.delete-popup-confirm').onclick = async () => {
+    popup.remove();
+    await this.confirmDelete(messageId);
+  };
+  
+  // Click outside to close
+  popup.onclick = (e) => {
+    if (e.target === popup) {
+      popup.remove();
+    }
+  };
+}
+
+/**
+ * Confirm and execute delete
+ */
+async confirmDelete(messageId) {
   try {
     if (window.electron && window.electron.deleteMessage) {
       const result = await window.electron.deleteMessage({ messageId });

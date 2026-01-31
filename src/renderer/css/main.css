@@ -836,8 +836,6 @@ body::after {
     width: auto;
     max-width: 400px;
     display: block;
-    position: relative;
-    z-index: 1;
 }
 /* Modern Input Bar */
 .input-container {
@@ -2066,13 +2064,11 @@ input[type="checkbox"] {
     opacity: 0;
   }
 }
-/* Message action buttons */
+/* Message action buttons - Edit/Delete - positioned BELOW message */
 .msg-actions {
-  position: absolute;
-  top: 4px;
-  right: 4px;
   display: flex;
-  gap: 4px;
+  gap: 6px;
+  margin-top: 6px;
   opacity: 0;
   transition: opacity 0.2s ease;
 }
@@ -2082,24 +2078,145 @@ input[type="checkbox"] {
 }
 
 .msg-action-btn {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border: none;
-  background: rgba(0, 0, 0, 0.6);
-  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  padding: 0;
 }
 
 .msg-action-btn:hover {
-  background: rgba(102, 126, 234, 0.8);
+  background: rgba(102, 126, 234, 0.9);
   transform: scale(1.1);
 }
 
 .msg-action-btn.delete-btn:hover {
-  background: rgba(254, 107, 139, 0.8);
+  background: rgba(254, 107, 139, 0.9);
+}
+/* Edit message banner */
+.edit-message-banner {
+  position: absolute;
+  bottom: 70px;
+  left: 16px;
+  right: 16px;
+  background: rgba(102, 126, 234, 0.2);
+  border: 1px solid rgba(102, 126, 234, 0.4);
+  border-radius: 8px 8px 0 0;
+  padding: 8px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+  animation: slideUp 0.2s ease;
+}
+
+.edit-banner-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.edit-banner-cancel {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.edit-banner-cancel:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+/* Delete confirmation popup */
+.delete-confirmation {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease;
+}
+
+.delete-popup {
+  background: rgba(26, 29, 46, 0.95);
+  border: 2px solid rgba(254, 107, 139, 0.4);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  animation: scaleIn 0.3s ease;
+}
+
+.delete-popup-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fe6b8b;
+  margin: 0 0 12px 0;
+}
+
+.delete-popup-message {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+.delete-popup-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.delete-popup-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.delete-popup-confirm {
+  background: rgba(254, 107, 139, 0.3);
+  color: #fe6b8b;
+  border: 1px solid rgba(254, 107, 139, 0.5);
+}
+
+.delete-popup-confirm:hover {
+  background: rgba(254, 107, 139, 0.5);
+  color: white;
+}
+
+.delete-popup-cancel {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.delete-popup-cancel:hover {
+  background: rgba(255, 255, 255, 0.15);
 }

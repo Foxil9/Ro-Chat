@@ -4,6 +4,7 @@ node_modules/
 # Build outputs
 dist/
 build/
+out/
 nul
 
 # Environment variables
@@ -15,29 +16,30 @@ nul
 # Logs
 logs/
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # OS files
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # IDE files
 .vscode/
 .idea/
 *.swp
-.claude/
 *.swo
-.clineignore
-Implemntation Prompts.md
-.clinerules
-*.xml
-CLAUDE.md
-MEMORY.md
-# Electron
-out/
+*.swn
 
 # Testing
 coverage/
+.vitest/
+*.test.js.snap
 
 # Temporary files
 *.tmp
 .cache/
+.temp/
+
+personal_note_to_my_self.txt

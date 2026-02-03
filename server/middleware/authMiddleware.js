@@ -50,7 +50,7 @@ async function fetchRobloxPublicKeys() {
 
 /**
  * Verify JWT signature using Roblox public keys
- * Uses Node.js built-in crypto for RS256 verification - no external JWT library needed
+ * Uses Node.js built-in crypto for RS256/ES256 verification - no external JWT library needed
  */
 async function verifyJWTSignature(token) {
   try {
@@ -79,8 +79,12 @@ async function verifyJWTSignature(token) {
       return false;
     }
 
-    // Only accept RS256 - reject weaker or unexpected algorithms
-    if (alg !== 'RS256') {
+    // Only accept RS256 and ES256 - reject weaker or unexpected algorithms
+    const SUPPORTED_ALGS = {
+      'RS256': 'RSA-SHA256',
+      'ES256': 'SHA256',
+    };
+    if (!SUPPORTED_ALGS[alg]) {
       logger.warn('Unsupported JWT algorithm', { alg });
       return false;
     }
@@ -95,13 +99,18 @@ async function verifyJWTSignature(token) {
     // Convert JWK to Node.js KeyObject for cryptographic verification
     const publicKey = crypto.createPublicKey({ key: matchingKey, format: 'jwk' });
 
-    // Verify RSA-SHA256 signature against the signed data (header.payload)
+    // Verify signature against the signed data (header.payload)
     const signedData = headerB64 + '.' + payloadB64;
     const signature = Buffer.from(signatureB64.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
 
-    const isValid = crypto.createVerify('RSA-SHA256')
-      .update(signedData)
-      .verify(publicKey, signature);
+    const verifier = crypto.createVerify(SUPPORTED_ALGS[alg]);
+    verifier.update(signedData);
+
+    const verifyOptions = alg === 'ES256'
+      ? { dsaEncoding: 'ieee-p1363' }
+      : undefined;
+
+    const isValid = verifier.verify(publicKey, signature, verifyOptions);
 
     if (!isValid) {
       logger.warn('JWT signature cryptographic verification failed', { kid });

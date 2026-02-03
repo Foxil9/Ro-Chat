@@ -4,12 +4,14 @@ const messageSchema = new mongoose.Schema({
   jobId: {
     type: String,
     required: false, // Optional for global messages
-    index: true
+    index: true,
+    maxlength: 100
   },
   placeId: {
     type: String,
     required: false, // Optional for server-specific messages
-    index: true
+    index: true,
+    maxlength: 50
   },
   chatType: {
     type: String,
@@ -24,7 +26,8 @@ const messageSchema = new mongoose.Schema({
   },
   username: {
     type: String,
-    required: true
+    required: true,
+    maxlength: 50
   },
   message: {
     type: String,

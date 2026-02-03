@@ -4,11 +4,20 @@ const logger = require('../logging/logger');
 const MONGODB_URI = process.env.DB_URL || 'mongodb://localhost:27017/rochat';
 
 /**
- * Connect to MongoDB
+ * Connect to MongoDB with security hardening
  */
 async function connectDatabase() {
   try {
-    await mongoose.connect(MONGODB_URI);
+    await mongoose.connect(MONGODB_URI, {
+      // Limit connection pool to prevent resource exhaustion
+      maxPoolSize: 10,
+      // Close sockets after 45 seconds of inactivity
+      socketTimeoutMS: 45000,
+      // Timeout initial connection after 10 seconds
+      serverSelectionTimeoutMS: 10000,
+      // Enforce strict query mode - reject unknown query filters
+      strictQuery: true
+    });
     
     logger.info('Connected to MongoDB');
     

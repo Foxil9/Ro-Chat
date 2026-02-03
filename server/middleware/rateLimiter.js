@@ -130,8 +130,58 @@ function clearRateLimit(userId) {
   logger.info('Rate limit cleared for user', { userId });
 }
 
+/**
+ * IP-based rate limiter for unauthenticated routes (auth, oauth)
+ * Prevents brute-force attacks on login/token endpoints
+ */
+const ipRequestTimes = new Map();
+const IP_RATE_LIMIT = {
+  MAX_REQUESTS: 15,
+  WINDOW_MS: 60000 // 1 minute
+};
+
+function ipRateLimiter(req, res, next) {
+  try {
+    const ip = req.ip || req.connection.remoteAddress || 'unknown';
+    const now = Date.now();
+
+    let timestamps = ipRequestTimes.get(ip) || [];
+    timestamps = timestamps.filter(time => time > now - IP_RATE_LIMIT.WINDOW_MS);
+
+    if (timestamps.length >= IP_RATE_LIMIT.MAX_REQUESTS) {
+      logger.warn('IP rate limit hit', { ip, count: timestamps.length });
+      return res.status(429).json({
+        success: false,
+        error: 'Too many requests. Please try again later.',
+        retryAfter: Math.ceil(IP_RATE_LIMIT.WINDOW_MS / 1000)
+      });
+    }
+
+    timestamps.push(now);
+    ipRequestTimes.set(ip, timestamps);
+    next();
+  } catch (error) {
+    logger.error('IP rate limiter error', { error: error.message });
+    next();
+  }
+}
+
+// Clean up IP rate limit entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, timestamps] of ipRequestTimes.entries()) {
+    const recent = timestamps.filter(t => t > now - IP_RATE_LIMIT.WINDOW_MS);
+    if (recent.length === 0) {
+      ipRequestTimes.delete(ip);
+    } else {
+      ipRequestTimes.set(ip, recent);
+    }
+  }
+}, 300000);
+
 module.exports = {
   rateLimiter,
+  ipRateLimiter,
   getRateLimitStatus,
   clearRateLimit
 };

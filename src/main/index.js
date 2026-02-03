@@ -125,16 +125,45 @@ app.whenReady().then(() => {
   setupAutoUpdater(mainWindow);
 
   // Check if user is authenticated
-  if (secureStore.isAuthenticated()) {
-    logger.info('User is authenticated, starting detector');
-    // Enable always-on-top for authenticated users with screen-saver level
-    if (mainWindow) {
-      mainWindow.setAlwaysOnTop(true, 'screen-saver');
+  const checkAuthAndStart = async () => {
+    try {
+      // Try to get a valid access token (this will auto-refresh if needed)
+      const auth = secureStore.getAuth();
+      if (auth && auth.refreshToken) {
+        logger.info('Attempting to restore session with refresh token');
+        try {
+          const robloxAuth = require('./auth/robloxAuth');
+          await robloxAuth.getAccessToken(); // This will refresh if expired
+          logger.info('Session restored successfully, starting detector');
+
+          // Enable always-on-top for authenticated users with screen-saver level
+          if (mainWindow) {
+            mainWindow.setAlwaysOnTop(true, 'screen-saver');
+          }
+          detector.start();
+          return;
+        } catch (refreshError) {
+          logger.warn('Failed to refresh token on startup', { error: refreshError.message });
+          secureStore.clearAuth();
+        }
+      } else if (secureStore.isAuthenticated()) {
+        logger.info('User is authenticated, starting detector');
+        // Enable always-on-top for authenticated users with screen-saver level
+        if (mainWindow) {
+          mainWindow.setAlwaysOnTop(true, 'screen-saver');
+        }
+        detector.start();
+        return;
+      }
+
+      logger.info('User not authenticated, showing login view');
+    } catch (error) {
+      logger.error('Error checking authentication', { error: error.message });
+      logger.info('Showing login view due to error');
     }
-    detector.start();
-  } else {
-    logger.info('User not authenticated, showing login view');
-  }
+  };
+
+  checkAuthAndStart();
 
   // Handle macOS dock icon click
   app.on('activate', () => {

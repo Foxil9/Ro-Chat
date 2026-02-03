@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const logger = require('../logging/logger');
 const User = require('../models/User');
 const axios = require('axios');
@@ -49,6 +50,7 @@ async function fetchRobloxPublicKeys() {
 
 /**
  * Verify JWT signature using Roblox public keys
+ * Uses Node.js built-in crypto for RS256 verification - no external JWT library needed
  */
 async function verifyJWTSignature(token) {
   try {
@@ -58,13 +60,28 @@ async function verifyJWTSignature(token) {
       return false;
     }
 
-    // Extract header to get key ID (kid)
-    const headerPart = token.split('.')[0];
-    const header = JSON.parse(Buffer.from(headerPart.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString());
-    
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      logger.warn('JWT does not have 3 parts');
+      return false;
+    }
+
+    const [headerB64, payloadB64, signatureB64] = parts;
+
+    // Decode header to get kid and algorithm
+    const header = JSON.parse(Buffer.from(headerB64.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString());
+
     const kid = header.kid;
+    const alg = header.alg;
+
     if (!kid) {
       logger.warn('JWT missing kid in header');
+      return false;
+    }
+
+    // Only accept RS256 - reject weaker or unexpected algorithms
+    if (alg !== 'RS256') {
+      logger.warn('Unsupported JWT algorithm', { alg });
       return false;
     }
 
@@ -75,12 +92,24 @@ async function verifyJWTSignature(token) {
       return false;
     }
 
-    // In production, you would use a JWT library like 'jsonwebtoken' or 'jose' to verify
-    // For now, we'll do basic validation and trust the signature if key exists
-    logger.info('JWT signature verified with matching key', { kid });
-    return true;
+    // Convert JWK to Node.js KeyObject for cryptographic verification
+    const publicKey = crypto.createPublicKey({ key: matchingKey, format: 'jwk' });
+
+    // Verify RSA-SHA256 signature against the signed data (header.payload)
+    const signedData = headerB64 + '.' + payloadB64;
+    const signature = Buffer.from(signatureB64.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+
+    const isValid = crypto.createVerify('RSA-SHA256')
+      .update(signedData)
+      .verify(publicKey, signature);
+
+    if (!isValid) {
+      logger.warn('JWT signature cryptographic verification failed', { kid });
+    }
+
+    return isValid;
   } catch (error) {
-    logger.error('JWT signature verification failed', { error: error.message });
+    logger.error('JWT signature verification error', { error: error.message });
     return false;
   }
 }
@@ -152,8 +181,14 @@ async function authMiddleware(req, res, next) {
       });
     }
 
-    // Verify issuer is Roblox
-    if (payload.iss && !payload.iss.includes('roblox.com')) {
+    // Verify issuer is Roblox - use exact match to prevent spoofed issuers
+    // e.g. "evil-roblox.com" or "roblox.com.evil.com" would pass an includes() check
+    const VALID_ISSUERS = [
+      'https://apis.roblox.com/oauth/',
+      'https://apis.roblox.com/oauth',
+      'https://apis.roblox.com'
+    ];
+    if (payload.iss && !VALID_ISSUERS.includes(payload.iss)) {
       logger.warn('Invalid token issuer', { iss: payload.iss });
       return res.status(401).json({
         success: false,

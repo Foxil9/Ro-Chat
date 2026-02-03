@@ -8,14 +8,12 @@ const userSchema = new mongoose.Schema({
   },
   username: {
     type: String,
-    required: true
+    required: true,
+    maxlength: 50
   },
   displayName: {
-    type: String
-  },
-  robloxToken: {
     type: String,
-    select: false // Never return token in queries by default
+    maxlength: 100
   },
   lastSeen: {
     type: Date,

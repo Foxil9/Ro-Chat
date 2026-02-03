@@ -1,14 +1,29 @@
 const Store = require('electron-store');
 const { app } = require('electron');
+const crypto = require('crypto');
+const os = require('os');
 const logger = require('../logging/logger');
 const { sanitizeError } = require('../utils/sanitizer');
 
-// Initialize Store with encryption
+// Derive a machine-specific encryption key so stored tokens
+// are not decryptable with a single hardcoded key shared across all installs
+function deriveEncryptionKey() {
+  const machineId = [
+    os.hostname(),
+    os.userInfo().username,
+    os.homedir(),
+    'rochat-v1-secure'
+  ].join(':');
+  return crypto.createHash('sha256').update(machineId).digest('hex');
+}
+
+// Initialize Store with machine-derived encryption key
 const secureStore = new Store({
   name: 'rochat-auth',
-  encryptionKey: 'rochat-secure-storage-key', // In production, use a more secure key
+  encryptionKey: deriveEncryptionKey(),
   defaults: {
-    auth: null
+    auth: null,
+    logPosition: null
   }
 });
 
@@ -86,9 +101,49 @@ function isAuthenticated() {
   return isAuth;
 }
 
+// Save log file position
+function saveLogPosition(filePath, position) {
+  try {
+    secureStore.set('logPosition', { filePath, position, savedAt: Date.now() });
+    logger.debug('Saved log position', { filePath, position });
+    return true;
+  } catch (error) {
+    logger.error('Failed to save log position', sanitizeError({ error: error.message }));
+    return false;
+  }
+}
+
+// Get log file position
+function getLogPosition() {
+  try {
+    const logPos = secureStore.get('logPosition');
+    if (logPos) {
+      logger.debug('Retrieved log position', { filePath: logPos.filePath, position: logPos.position });
+    }
+    return logPos;
+  } catch (error) {
+    logger.error('Failed to get log position', sanitizeError({ error: error.message }));
+    return null;
+  }
+}
+
+// Clear log position
+function clearLogPosition() {
+  try {
+    secureStore.delete('logPosition');
+    return true;
+  } catch (error) {
+    logger.error('Failed to clear log position', sanitizeError({ error: error.message }));
+    return false;
+  }
+}
+
 module.exports = {
   saveAuth,
   getAuth,
   clearAuth,
-  isAuthenticated
+  isAuthenticated,
+  saveLogPosition,
+  getLogPosition,
+  clearLogPosition
 };

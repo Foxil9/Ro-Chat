@@ -35,23 +35,21 @@ router.post('/verify', async (req, res) => {
 
     const { id, name, displayName } = userResponse.data;
 
-    // Find or create user
+    // Find or create user - never store raw tokens in the database
     let user = await User.findOne({ userId: id });
 
     if (!user) {
       user = new User({
         userId: id,
         username: name,
-        displayName: displayName,
-        robloxToken: token
+        displayName: displayName
       });
       await user.save();
       logger.info('New user created', { userId: id, username: name });
     } else {
-      // Update user info
+      // Update user info (no token storage)
       user.username = name;
       user.displayName = displayName;
-      user.robloxToken = token;
       await user.save();
       logger.info('User updated', { userId: id, username: name });
     }
@@ -82,25 +80,44 @@ router.post('/verify', async (req, res) => {
 });
 
 /**
- * Get user info by ID (requires auth)
+ * Get user info by ID
+ * Requires valid Bearer token to prevent unauthenticated user enumeration
  */
 router.get('/user', async (req, res) => {
   try {
-    const { userId } = req.query;
-
-    if (!userId) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'User ID is required' 
+    // Require Authorization header to prevent open enumeration
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authorization required'
       });
     }
 
-    const user = await User.findOne({ userId });
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'User ID is required'
+      });
+    }
+
+    // Validate userId is numeric
+    const parsedId = parseInt(userId);
+    if (isNaN(parsedId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid user ID format'
+      });
+    }
+
+    const user = await User.findOne({ userId: parsedId });
 
     if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'User not found' 
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
       });
     }
 
@@ -114,9 +131,9 @@ router.get('/user', async (req, res) => {
     });
   } catch (error) {
     logger.error('Failed to get user', { error: error.message });
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to get user' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get user'
     });
   }
 });

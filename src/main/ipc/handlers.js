@@ -37,19 +37,7 @@ function setupDetectorEvents() {
 function setupSocketEvents() {
   if (!socketClient.socket) {
     logger.warn('setupSocketEvents called but socket not initialized yet');
-      socketClient.socket.on('messageEdited', (data) => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('socket:messageEdited', data);
-    }
-  });
-
-  socketClient.socket.on('messageDeleted', (data) => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('socket:messageDeleted', data);
-    }
-  });
     return;
-    
   }
 
   logger.info('Setting up socket event listeners');
@@ -63,6 +51,24 @@ function setupSocketEvents() {
   socketClient.socket.on('message', (data) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('socket:message', data);
+    }
+  });
+
+  socketClient.socket.on('messageUpdated', (data) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('socket:messageUpdated', data);
+    }
+  });
+
+  socketClient.socket.on('messageEditError', (data) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('socket:messageEditError', data);
+    }
+  });
+
+  socketClient.socket.on('messageDeleteError', (data) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('socket:messageDeleteError', data);
     }
   });
 }
@@ -657,9 +663,27 @@ async function handleEmitTyping(event, { jobId, username, isTyping }) {
 
 /**
  * Handle opening external URL
+ * Validates protocol to prevent javascript:/data:/file: attacks
  */
 async function handleOpenExternal(event, url) {
   try {
+    if (!url || typeof url !== 'string') {
+      return { success: false, error: 'Invalid URL' };
+    }
+
+    let parsed;
+    try {
+      parsed = new URL(url);
+    } catch (e) {
+      return { success: false, error: 'Invalid URL format' };
+    }
+
+    // Only allow http and https protocols
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      logger.warn('Blocked non-HTTP URL protocol', { protocol: parsed.protocol });
+      return { success: false, error: 'Only HTTP/HTTPS URLs are allowed' };
+    }
+
     logger.info('Opening external URL');
     await shell.openExternal(url);
     return { success: true };

@@ -2,15 +2,24 @@ const fs = require('fs');
 const path = require('path');
 const { EventEmitter } = require('events');
 const logger = require('../logging/logger');
+const secureStore = require('../storage/secureStore');
 
-// Roblox log directory path
-const LOG_DIR = process.env.LOCALAPPDATA 
+// Roblox log directory path - validated to prevent path traversal
+const RAW_LOG_DIR = process.env.LOCALAPPDATA
   ? path.join(process.env.LOCALAPPDATA, 'Roblox', 'logs')
   : path.join(process.env.HOME, '.roblox', 'logs');
 
+// Resolve to absolute path and verify it contains expected Roblox path segments
+const LOG_DIR = path.resolve(RAW_LOG_DIR);
+if (!LOG_DIR.includes('Roblox') || !LOG_DIR.includes('logs')) {
+  // If environment variables were tampered with, fall back to a safe no-op directory
+  logger.error('Log directory path does not contain expected Roblox path segments', { logDir: LOG_DIR });
+}
+
 // Regex patterns for parsing log lines
 // Format: [FLog::Output] ! Joining game 'jobId' place placeId at IP
-const JOIN_PATTERN = /\[FLog::Output\]\s*!\s*Joining\s*game\s*['"`]([0-9a-f-]+)['"`]\s*place\s*(\d+)/i;
+// Only accept single/double quotes (not backticks) to avoid matching unintended log lines
+const JOIN_PATTERN = /\[FLog::Output\]\s*!\s*Joining\s*game\s*['"]([0-9a-f-]+)['"]\s*place\s*(\d+)/i;
 const SERVER_PATTERN = /gameplacejobid/i;
 const DISCONNECT_PATTERN = /\[FLog::[^\]]*\].*?(Disconnected|disconnect|leaving game|HttpRbxApiService stopped|Game has shut down|You have been kicked|Connection lost)/i;
 
@@ -36,6 +45,14 @@ class LogMonitor extends EventEmitter {
 
     logger.info('Starting log monitor', { logDir: LOG_DIR });
     this.isMonitoring = true;
+
+    // Restore last log position if exists
+    const savedPos = secureStore.getLogPosition();
+    if (savedPos && savedPos.filePath) {
+      logger.info('Restoring saved log position', { filePath: savedPos.filePath, position: savedPos.position });
+      this.currentLogFile = savedPos.filePath;
+      this.lastPosition = savedPos.position;
+    }
 
     // Initial check for log file
     this.checkLogFile();
@@ -68,9 +85,15 @@ class LogMonitor extends EventEmitter {
       this.currentStream = null;
     }
 
-    // Reset state
-    this.currentLogFile = null;
-    this.lastPosition = 0;
+    // Save current position before stopping
+    if (this.currentLogFile && this.lastPosition > 0) {
+      logger.info('Saving log position before stop', { filePath: this.currentLogFile, position: this.lastPosition });
+      secureStore.saveLogPosition(this.currentLogFile, this.lastPosition);
+    }
+
+    // DON'T reset state - keep for next start
+    // this.currentLogFile = null;
+    // this.lastPosition = 0;
   }
 
   /**
@@ -88,10 +111,17 @@ class LogMonitor extends EventEmitter {
         .filter(file => file.endsWith('.log') && file.toLowerCase().includes('player'))
         .map(file => {
           try {
+            const filePath = path.join(LOG_DIR, file);
+            // Validate resolved path stays within LOG_DIR (prevent path traversal via symlinks or crafted names)
+            const resolvedPath = path.resolve(filePath);
+            if (!resolvedPath.startsWith(LOG_DIR)) {
+              logger.warn('Log file path traversal blocked', { file });
+              return null;
+            }
             return {
               name: file,
-              path: path.join(LOG_DIR, file),
-              mtime: fs.statSync(path.join(LOG_DIR, file)).mtime
+              path: resolvedPath,
+              mtime: fs.statSync(resolvedPath).mtime
             };
           } catch (statError) {
             logger.debug('Failed to stat log file', { file, error: statError.message });
@@ -113,7 +143,16 @@ class LogMonitor extends EventEmitter {
       if (this.currentLogFile !== mostRecent.path) {
         logger.info('New log file detected', { file: mostRecent.name });
         this.currentLogFile = mostRecent.path;
-        this.lastPosition = 0; // Reset position for new file
+
+        // Start from the END of the file for new files to avoid false positives
+        try {
+          const stats = fs.statSync(mostRecent.path);
+          this.lastPosition = stats.size;
+          logger.info('Starting from end of new log file', { position: this.lastPosition });
+        } catch (error) {
+          logger.error('Failed to get file size for new log', { error: error.message });
+          this.lastPosition = 0;
+        }
       }
     } catch (error) {
       logger.error('Error checking log file', { error: error.message });
@@ -161,6 +200,11 @@ class LogMonitor extends EventEmitter {
           this.parseLogs(newData);
           this.lastPosition = fileSize;
           this.currentStream = null;
+
+          // Save position after successful read
+          if (this.currentLogFile && this.lastPosition > 0) {
+            secureStore.saveLogPosition(this.currentLogFile, this.lastPosition);
+          }
         } catch (parseError) {
           logger.error('Error parsing logs', { error: parseError.message });
           this.currentStream = null;

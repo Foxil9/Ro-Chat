@@ -231,12 +231,23 @@ router.get('/history', async (req, res) => {
     }
 
     if (before) {
-      query.createdAt = { $lt: new Date(before) };
+      // Validate 'before' is a valid date string to prevent injection
+      const beforeDate = new Date(before);
+      if (isNaN(beforeDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid date format for "before" parameter'
+        });
+      }
+      query.createdAt = { $lt: beforeDate };
     }
+
+    // Validate and clamp limit to prevent excessive queries
+    const parsedLimit = Math.min(Math.max(parseInt(limit) || 50, 1), 100);
 
     const messages = await Message.find(query)
       .sort({ createdAt: -1 })
-      .limit(parseInt(limit));
+      .limit(parsedLimit);
 
     const formattedMessages = messages.reverse().map(msg => ({
       messageId: msg._id.toString(),
@@ -268,25 +279,50 @@ router.get('/history', async (req, res) => {
  * Receive chat message from Roblox
  * This endpoint would be called by a script running in Roblox
  * or by monitoring Roblox logs (would be in main process)
+ * Protected with rate limiting to prevent abuse
  */
-router.post('/receive', async (req, res) => {
+router.post('/receive', rateLimiter, async (req, res) => {
   try {
     const { jobId, userId, username, message, timestamp } = req.body;
 
     if (!jobId || !userId || !username || !message) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Missing required fields' 
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields'
       });
+    }
+
+    // Validate field types and lengths
+    if (typeof jobId !== 'string' || jobId.length > 100) {
+      return res.status(400).json({ success: false, error: 'Invalid jobId' });
+    }
+    if (typeof username !== 'string' || username.length > 50) {
+      return res.status(400).json({ success: false, error: 'Invalid username' });
+    }
+
+    // Validate and sanitize message content
+    const validation = validateMessage(message);
+    if (!validation.valid) {
+      return res.status(400).json({ success: false, error: validation.error });
+    }
+    const sanitizedMsg = sanitizeMessage(message);
+
+    // Validate timestamp if provided
+    let createdAt = new Date();
+    if (timestamp) {
+      const parsedTime = new Date(timestamp);
+      if (!isNaN(parsedTime.getTime())) {
+        createdAt = parsedTime;
+      }
     }
 
     // Save message to database
     const newMessage = new Message({
       jobId,
-      userId,
+      userId: String(userId),
       username,
-      message,
-      createdAt: timestamp ? new Date(timestamp) : new Date()
+      message: sanitizedMsg,
+      createdAt
     });
     await newMessage.save();
 
@@ -296,20 +332,20 @@ router.post('/receive', async (req, res) => {
     // Broadcast message to all clients in the room
     io.to(jobId).emit('message', {
       jobId,
-      userId,
+      userId: String(userId),
       username,
-      message,
+      message: sanitizedMsg,
       timestamp: newMessage.createdAt
     });
 
-    logger.info('Message received', { jobId, userId, username });
+    logger.info('Message received', { jobId, username });
 
     res.json({ success: true });
   } catch (error) {
     logger.error('Failed to receive message', { error: error.message });
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to receive message' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to receive message'
     });
   }
 });

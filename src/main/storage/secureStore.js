@@ -2,6 +2,8 @@ const Store = require('electron-store');
 const { app } = require('electron');
 const crypto = require('crypto');
 const os = require('os');
+const fs = require('fs');
+const path = require('path');
 const logger = require('../logging/logger');
 const { sanitizeError } = require('../utils/sanitizer');
 
@@ -17,15 +19,35 @@ function deriveEncryptionKey() {
   return crypto.createHash('sha256').update(machineId).digest('hex');
 }
 
-// Initialize Store with machine-derived encryption key
-const secureStore = new Store({
-  name: 'rochat-auth',
-  encryptionKey: deriveEncryptionKey(),
-  defaults: {
-    auth: null,
-    logPosition: null
+function createStore() {
+  return new Store({
+    name: 'rochat-auth',
+    encryptionKey: deriveEncryptionKey(),
+    defaults: {
+      auth: null,
+      logPosition: null
+    }
+  });
+}
+
+// Initialize Store. If the existing file was encrypted with the old hardcoded key,
+// it cannot be decrypted with the new machine-derived key.
+// Delete the stale file and start fresh — user re-authenticates once.
+let secureStore;
+try {
+  secureStore = createStore();
+} catch (initError) {
+  try {
+    const userData = app.getPath('userData');
+    const storeFile = path.join(userData, 'rochat-auth.json');
+    if (fs.existsSync(storeFile)) {
+      fs.unlinkSync(storeFile);
+    }
+  } catch (e) {
+    // ignore cleanup errors
   }
-});
+  secureStore = createStore();
+}
 
 // Save authentication data
 function saveAuth(authData) {

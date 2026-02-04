@@ -170,6 +170,7 @@ contextBridge.exposeInMainWorld('electron', {
   
 
   startDetection: () => ipcRenderer.invoke('detection:start'),
+  stopDetection: () => ipcRenderer.invoke('detection:stop'),
 
   // Shell methods
   openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url)

@@ -11,37 +11,45 @@ const PUBLIC_KEYS_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 /**
  * Fetch Roblox's public keys for JWT verification
  */
-async function fetchRobloxPublicKeys() {
+async function fetchRobloxPublicKeys(retryCount = 0) {
   try {
     const now = Date.now();
-    
+
     // Return cached keys if still valid
     if (robloxPublicKeys && (now - publicKeysLastFetch) < PUBLIC_KEYS_CACHE_DURATION) {
       return robloxPublicKeys;
     }
 
-    // Fetch from Roblox's JWKS endpoint
+    // Fetch from Roblox's JWKS endpoint with longer timeout and retry
     const response = await axios.get('https://apis.roblox.com/oauth/.well-known/openid-configuration', {
-      timeout: 5000
+      timeout: 10000  // Increased to 10 seconds
     });
 
     if (response.data && response.data.jwks_uri) {
       const jwksResponse = await axios.get(response.data.jwks_uri, {
-        timeout: 5000
+        timeout: 10000  // Increased to 10 seconds
       });
-      
+
       robloxPublicKeys = jwksResponse.data.keys;
       publicKeysLastFetch = now;
-      logger.info('Fetched Roblox public keys for JWT verification');
+      logger.info('Fetched Roblox public keys for JWT verification', { keyCount: robloxPublicKeys.length });
       return robloxPublicKeys;
     }
 
     throw new Error('Failed to fetch JWKS URI');
   } catch (error) {
-    logger.error('Failed to fetch Roblox public keys', { error: error.message });
+    logger.error('Failed to fetch Roblox public keys', { error: error.message, retryCount });
+
+    // Retry once if first attempt fails
+    if (retryCount === 0) {
+      logger.info('Retrying public key fetch...');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
+      return fetchRobloxPublicKeys(1);
+    }
+
     // Return cached keys if available, even if expired
     if (robloxPublicKeys) {
-      logger.warn('Using expired public keys cache');
+      logger.warn('Using expired public keys cache', { age: now - publicKeysLastFetch });
       return robloxPublicKeys;
     }
     return null;
@@ -57,13 +65,13 @@ async function verifyJWTSignature(token) {
     const publicKeys = await fetchRobloxPublicKeys();
     if (!publicKeys || publicKeys.length === 0) {
       logger.warn('No public keys available for JWT verification');
-      return false;
+      return { valid: false, reason: 'No public keys available' };
     }
 
     const parts = token.split('.');
     if (parts.length !== 3) {
       logger.warn('JWT does not have 3 parts');
-      return false;
+      return { valid: false, reason: 'Invalid JWT format' };
     }
 
     const [headerB64, payloadB64, signatureB64] = parts;
@@ -76,7 +84,7 @@ async function verifyJWTSignature(token) {
 
     if (!kid) {
       logger.warn('JWT missing kid in header');
-      return false;
+      return { valid: false, reason: 'Missing key ID in token' };
     }
 
     // Only accept RS256 and ES256 - reject weaker or unexpected algorithms
@@ -86,14 +94,17 @@ async function verifyJWTSignature(token) {
     };
     if (!SUPPORTED_ALGS[alg]) {
       logger.warn('Unsupported JWT algorithm', { alg });
-      return false;
+      return { valid: false, reason: `Unsupported algorithm: ${alg}` };
     }
 
     // Find matching public key
     const matchingKey = publicKeys.find(key => key.kid === kid);
     if (!matchingKey) {
-      logger.warn('No matching public key found for kid', { kid });
-      return false;
+      logger.warn('No matching public key found for kid', { kid, availableKids: publicKeys.map(k => k.kid) });
+      // Try to refresh keys in case they've been rotated
+      robloxPublicKeys = null;
+      publicKeysLastFetch = 0;
+      return { valid: false, reason: 'Key not found - try logging in again' };
     }
 
     // Convert JWK to Node.js KeyObject for cryptographic verification
@@ -106,20 +117,26 @@ async function verifyJWTSignature(token) {
     const verifier = crypto.createVerify(SUPPORTED_ALGS[alg]);
     verifier.update(signedData);
 
-    const verifyOptions = alg === 'ES256'
-      ? { dsaEncoding: 'ieee-p1363' }
-      : undefined;
-
-    const isValid = verifier.verify(publicKey, signature, verifyOptions);
-
-    if (!isValid) {
-      logger.warn('JWT signature cryptographic verification failed', { kid });
+    // For ES256, we need to specify the signature encoding
+    let isValid;
+    if (alg === 'ES256') {
+      // ES256 signatures in JWT use IEEE P1363 format (raw R||S concatenation)
+      isValid = verifier.verify(publicKey, signature, { dsaEncoding: 'ieee-p1363' });
+    } else {
+      // RS256 uses standard PKCS#1 v1.5 signature format
+      isValid = verifier.verify(publicKey, signature);
     }
 
-    return isValid;
+    if (!isValid) {
+      logger.warn('JWT signature cryptographic verification failed', { kid, alg });
+      return { valid: false, reason: 'Signature verification failed - try logging in again' };
+    }
+
+    logger.info('JWT signature verified successfully', { kid, alg });
+    return { valid: true };
   } catch (error) {
-    logger.error('JWT signature verification error', { error: error.message });
-    return false;
+    logger.error('JWT signature verification error', { error: error.message, stack: error.stack });
+    return { valid: false, reason: `Verification error: ${error.message}` };
   }
 }
 
@@ -163,12 +180,12 @@ async function authMiddleware(req, res, next) {
     }
 
     // Verify token signature with Roblox's public keys
-    const isValidSignature = await verifyJWTSignature(token);
-    if (!isValidSignature) {
-      logger.warn('Token signature verification failed');
+    const signatureResult = await verifyJWTSignature(token);
+    if (!signatureResult.valid) {
+      logger.warn('Token signature verification failed', { reason: signatureResult.reason });
       return res.status(401).json({
         success: false,
-        error: 'Invalid token signature'
+        error: signatureResult.reason || 'Invalid token signature'
       });
     }
 

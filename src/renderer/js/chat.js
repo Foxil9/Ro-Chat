@@ -23,6 +23,10 @@ class ChatManager {
     this.currentlyTyping = false;
     this.typingUsers = new Set();
     this.userId = null;
+    this.connectButton = null;
+    this.connectCooldownTimer = null;
+    this.connectCooldownEndTime = null;
+    this.CONNECT_COOLDOWN_SECONDS = 10;
   }
 
   /**
@@ -208,9 +212,9 @@ class ChatManager {
     // }
 
     // Connect button
-    const btnConnect = document.getElementById('connect-btn');
-    if (btnConnect) {
-      btnConnect.addEventListener('click', () => this.handleConnect());
+    this.connectButton = document.getElementById('connect-btn');
+    if (this.connectButton) {
+      this.connectButton.addEventListener('click', () => this.handleConnect());
     }
 
     // REMOVED GAME BROWSER FEATURE
@@ -221,19 +225,97 @@ class ChatManager {
    * Handle connect button click
    */
   async handleConnect() {
+    // Check if button is on cooldown
+    if (this.connectCooldownEndTime && Date.now() < this.connectCooldownEndTime) {
+      console.log('Connect button is on cooldown');
+      return;
+    }
+
     try {
-      if (window.electron && window.electron.startDetection) {
+      if (!this.connectButton) return;
+
+      // Disable button and show restart in progress
+      this.connectButton.disabled = true;
+      this.connectButton.textContent = 'Restarting...';
+
+      if (window.electron && window.electron.stopDetection && window.electron.startDetection) {
+        // Stop detection first
+        await window.electron.stopDetection();
+        console.log('Detection stopped');
+
+        // Wait a brief moment before restarting
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Start detection again
         const result = await window.electron.startDetection();
         if (result.success) {
-          this.addSystemMessage('Starting detection...', 'server');
+          this.addSystemMessage('Detection restarted!', 'server');
+          console.log('Detection restarted successfully');
         } else {
-          this.addSystemMessage('Failed to start detection', 'server');
+          this.addSystemMessage('Failed to restart detection', 'server');
+          console.error('Failed to restart detection:', result);
         }
       }
+
+      // Start cooldown
+      this.startConnectCooldown();
     } catch (error) {
-      console.error('Failed to start detection:', error);
-      this.addSystemMessage('Error starting detection', 'server');
+      console.error('Failed to restart detection:', error);
+      this.addSystemMessage('Error restarting detection', 'server');
+
+      // Re-enable button on error
+      if (this.connectButton) {
+        this.connectButton.disabled = false;
+        this.connectButton.textContent = 'Connect';
+      }
     }
+  }
+
+  /**
+   * Start connect button cooldown
+   */
+  startConnectCooldown() {
+    // Clear any existing cooldown
+    if (this.connectCooldownTimer) {
+      clearInterval(this.connectCooldownTimer);
+    }
+
+    // Set cooldown end time
+    this.connectCooldownEndTime = Date.now() + (this.CONNECT_COOLDOWN_SECONDS * 1000);
+
+    // Update button every 100ms
+    this.connectCooldownTimer = setInterval(() => {
+      const remaining = Math.ceil((this.connectCooldownEndTime - Date.now()) / 1000);
+
+      if (remaining <= 0) {
+        this.endConnectCooldown();
+      } else {
+        if (this.connectButton) {
+          this.connectButton.textContent = `Wait ${remaining}s`;
+        }
+      }
+    }, 100);
+  }
+
+  /**
+   * End connect button cooldown
+   */
+  endConnectCooldown() {
+    // Clear timer
+    if (this.connectCooldownTimer) {
+      clearInterval(this.connectCooldownTimer);
+      this.connectCooldownTimer = null;
+    }
+
+    this.connectCooldownEndTime = null;
+
+    // Re-enable button
+    if (this.connectButton) {
+      this.connectButton.disabled = false;
+      this.connectButton.textContent = 'Connect';
+    }
+
+    console.log('Connect cooldown ended');
   }
 
   /**
@@ -587,8 +669,17 @@ handleIncomingMessage(data) {
 
           console.log('Server returned error:', result);
 
+          // Check if it's an authentication error (401)
+          if (result.status === 401) {
+            // Token is invalid or expired - user needs to re-authenticate
+            const errorMsg = result.error || 'Authentication failed';
+            this.addSystemMessage(`⚠️ ${errorMsg}. Please logout and login again.`, this.activeTab);
+            console.error('Authentication error:', errorMsg);
+            return;
+          }
+
           // Check if it's a rate limit error (429 status or specific error messages)
-          if (result.status === 429 || 
+          if (result.status === 429 ||
               (result.error && (
                 result.error.includes('Wait') && result.error.includes('seconds') ||
                 result.error.includes('seconds') && (result.error.includes('slow') || result.error.includes('spam') || result.error.includes('fast')) ||
@@ -597,7 +688,7 @@ handleIncomingMessage(data) {
             // Extract wait time from error message - look for any number followed by 'seconds'
             const match = result.error.match(/(\d+)\s*seconds?/i);
             const waitSeconds = match ? parseInt(match[1]) : 30; // Default 30s if can't parse
-            
+
             console.log('Cooldown triggered, waiting', waitSeconds, 'seconds');
             this.startCooldown(waitSeconds);
           }

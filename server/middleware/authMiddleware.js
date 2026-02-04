@@ -57,6 +57,24 @@ async function fetchRobloxPublicKeys(retryCount = 0) {
 }
 
 /**
+ * Decode base64url string (handles missing padding)
+ */
+function base64urlDecode(str) {
+  // Replace URL-safe characters
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+
+  // Add padding if needed
+  const padding = base64.length % 4;
+  if (padding === 2) {
+    base64 += '==';
+  } else if (padding === 3) {
+    base64 += '=';
+  }
+
+  return Buffer.from(base64, 'base64');
+}
+
+/**
  * Verify JWT signature using Roblox public keys
  * Uses Node.js built-in crypto for RS256/ES256 verification - no external JWT library needed
  */
@@ -77,10 +95,13 @@ async function verifyJWTSignature(token) {
     const [headerB64, payloadB64, signatureB64] = parts;
 
     // Decode header to get kid and algorithm
-    const header = JSON.parse(Buffer.from(headerB64.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString());
+    const headerBuffer = base64urlDecode(headerB64);
+    const header = JSON.parse(headerBuffer.toString('utf8'));
 
     const kid = header.kid;
     const alg = header.alg;
+
+    logger.info('Verifying JWT', { kid, alg, keyCount: publicKeys.length });
 
     if (!kid) {
       logger.warn('JWT missing kid in header');
@@ -107,35 +128,59 @@ async function verifyJWTSignature(token) {
       return { valid: false, reason: 'Key not found - try logging in again' };
     }
 
+    logger.info('Found matching key', { kid, keyType: matchingKey.kty, use: matchingKey.use });
+
     // Convert JWK to Node.js KeyObject for cryptographic verification
     const publicKey = crypto.createPublicKey({ key: matchingKey, format: 'jwk' });
 
     // Verify signature against the signed data (header.payload)
     const signedData = headerB64 + '.' + payloadB64;
-    const signature = Buffer.from(signatureB64.replace(/-/g, '+').replace(/_/g, '/'), 'base64');
+    const signature = base64urlDecode(signatureB64);
+
+    logger.info('Signature details', {
+      signedDataLength: signedData.length,
+      signatureLength: signature.length,
+      alg
+    });
 
     const verifier = crypto.createVerify(SUPPORTED_ALGS[alg]);
     verifier.update(signedData);
 
     // For ES256, we need to specify the signature encoding
     let isValid;
-    if (alg === 'ES256') {
-      // ES256 signatures in JWT use IEEE P1363 format (raw R||S concatenation)
-      isValid = verifier.verify(publicKey, signature, { dsaEncoding: 'ieee-p1363' });
-    } else {
-      // RS256 uses standard PKCS#1 v1.5 signature format
-      isValid = verifier.verify(publicKey, signature);
+    try {
+      if (alg === 'ES256') {
+        // ES256 signatures in JWT use IEEE P1363 format (raw R||S concatenation)
+        isValid = verifier.verify(publicKey, signature, { dsaEncoding: 'ieee-p1363' });
+      } else {
+        // RS256 uses standard PKCS#1 v1.5 signature format
+        isValid = verifier.verify(publicKey, signature);
+      }
+    } catch (verifyError) {
+      logger.error('Signature verification threw error', {
+        error: verifyError.message,
+        alg,
+        kid
+      });
+      return { valid: false, reason: `Verification failed: ${verifyError.message}` };
     }
 
     if (!isValid) {
-      logger.warn('JWT signature cryptographic verification failed', { kid, alg });
+      logger.warn('JWT signature cryptographic verification failed', {
+        kid,
+        alg,
+        signatureLength: signature.length
+      });
       return { valid: false, reason: 'Signature verification failed - try logging in again' };
     }
 
-    logger.info('JWT signature verified successfully', { kid, alg });
+    logger.info('✅ JWT signature verified successfully', { kid, alg });
     return { valid: true };
   } catch (error) {
-    logger.error('JWT signature verification error', { error: error.message, stack: error.stack });
+    logger.error('JWT signature verification error', {
+      error: error.message,
+      stack: error.stack
+    });
     return { valid: false, reason: `Verification error: ${error.message}` };
   }
 }
@@ -163,8 +208,17 @@ async function authMiddleware(req, res, next) {
       const tokenParts = token.split('.');
       if (tokenParts.length === 3) {
         // Decode JWT payload (base64url encoded)
-        const base64 = tokenParts[1].replace(/-/g, '+').replace(/_/g, '/');
-        payload = JSON.parse(Buffer.from(base64, 'base64').toString());
+        const payloadBuffer = base64urlDecode(tokenParts[1]);
+        payload = JSON.parse(payloadBuffer.toString('utf8'));
+
+        logger.info('Token payload decoded', {
+          iss: payload.iss,
+          sub: payload.sub,
+          exp: payload.exp,
+          iat: payload.iat,
+          hasExp: !!payload.exp,
+          isExpired: payload.exp ? Date.now() >= payload.exp * 1000 : false
+        });
       } else {
         return res.status(401).json({
           success: false,

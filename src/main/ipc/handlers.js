@@ -265,6 +265,25 @@ async function handleSendMessage(event, { jobId, placeId, chatType, message }) {
       return { success: false, error: 'No valid auth token. Please log in again.' };
     }
 
+    // Log token details for debugging (first 20 chars only for security)
+    try {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const header = JSON.parse(Buffer.from(parts[0].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString());
+        const payload = JSON.parse(Buffer.from(parts[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString());
+        logger.info('Token details', {
+          alg: header.alg,
+          kid: header.kid,
+          iss: payload.iss,
+          exp: payload.exp,
+          timeUntilExpiry: payload.exp ? Math.floor((payload.exp * 1000 - Date.now()) / 1000) : 'unknown',
+          tokenPrefix: token.substring(0, 20) + '...'
+        });
+      }
+    } catch (e) {
+      logger.warn('Could not parse token for logging', { error: e.message });
+    }
+
     logger.info('Sending message with auth', { hasToken: !!token });
 
     // Send to backend server

@@ -75,6 +75,60 @@ function base64urlDecode(str) {
 }
 
 /**
+ * Convert IEEE P1363 signature format to DER format for ECDSA
+ * JWT uses IEEE P1363 (raw r||s), but Node.js crypto expects DER by default
+ */
+function convertIEEEP1363ToDER(signature) {
+  // For P-256 (ES256), signature is 64 bytes: 32 bytes r + 32 bytes s
+  if (signature.length !== 64) {
+    throw new Error(`Expected 64-byte signature for ES256, got ${signature.length}`);
+  }
+
+  const r = signature.slice(0, 32);
+  const s = signature.slice(32, 64);
+
+  // Helper to encode an integer in DER format
+  function encodeInteger(value) {
+    // Remove leading zeros, but keep one if the value would be interpreted as negative
+    let i = 0;
+    while (i < value.length - 1 && value[i] === 0 && (value[i + 1] & 0x80) === 0) {
+      i++;
+    }
+    const trimmed = value.slice(i);
+
+    // Add a leading zero if the MSB is set (to keep it positive)
+    const needsPadding = (trimmed[0] & 0x80) !== 0;
+    const length = trimmed.length + (needsPadding ? 1 : 0);
+
+    const result = Buffer.alloc(2 + length);
+    result[0] = 0x02; // INTEGER tag
+    result[1] = length;
+
+    if (needsPadding) {
+      result[2] = 0x00;
+      trimmed.copy(result, 3);
+    } else {
+      trimmed.copy(result, 2);
+    }
+
+    return result;
+  }
+
+  const rDER = encodeInteger(r);
+  const sDER = encodeInteger(s);
+
+  // SEQUENCE tag + length + r + s
+  const sequenceLength = rDER.length + sDER.length;
+  const der = Buffer.alloc(2 + sequenceLength);
+  der[0] = 0x30; // SEQUENCE tag
+  der[1] = sequenceLength;
+  rDER.copy(der, 2);
+  sDER.copy(der, 2 + rDER.length);
+
+  return der;
+}
+
+/**
  * Verify JWT signature using Roblox public keys
  * Uses Node.js built-in crypto for RS256/ES256 verification - no external JWT library needed
  */
@@ -148,25 +202,41 @@ async function verifyJWTSignature(token) {
 
     // Verify signature against the signed data (header.payload)
     const signedData = headerB64 + '.' + payloadB64;
-    const signature = base64urlDecode(signatureB64);
+    const signatureIEEE = base64urlDecode(signatureB64);
 
     logger.info('Signature details', {
       signedDataLength: signedData.length,
-      signatureLength: signature.length,
+      signatureLength: signatureIEEE.length,
       alg,
-      signatureHex: signature.toString('hex').substring(0, 32) + '...'
+      signatureHex: signatureIEEE.toString('hex').substring(0, 32) + '...'
     });
+
+    // For ES256, convert IEEE P1363 format to DER format
+    let signature = signatureIEEE;
+    if (alg === 'ES256') {
+      try {
+        signature = convertIEEEP1363ToDER(signatureIEEE);
+        logger.info('Converted IEEE P1363 signature to DER', {
+          ieeeLength: signatureIEEE.length,
+          derLength: signature.length
+        });
+      } catch (conversionError) {
+        logger.error('Failed to convert signature format', {
+          error: conversionError.message
+        });
+        return { valid: false, reason: `Signature format error: ${conversionError.message}` };
+      }
+    }
 
     const verifier = crypto.createVerify(SUPPORTED_ALGS[alg]);
     verifier.update(signedData);
 
-    // For ES256, we need to specify the signature encoding
+    // Verify the signature
     let isValid;
     try {
       if (alg === 'ES256') {
-        // ES256 signatures in JWT use IEEE P1363 format (raw R||S concatenation)
-        logger.info('Attempting ES256 verification with ieee-p1363 encoding');
-        isValid = verifier.verify(publicKey, signature, { dsaEncoding: 'ieee-p1363' });
+        logger.info('Attempting ES256 verification with DER signature');
+        isValid = verifier.verify(publicKey, signature);
         logger.info('ES256 verification result', { isValid });
       } else {
         // RS256 uses standard PKCS#1 v1.5 signature format

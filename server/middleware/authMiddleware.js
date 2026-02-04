@@ -111,7 +111,7 @@ async function verifyJWTSignature(token) {
     // Only accept RS256 and ES256 - reject weaker or unexpected algorithms
     const SUPPORTED_ALGS = {
       'RS256': 'RSA-SHA256',
-      'ES256': 'SHA256',
+      'ES256': 'sha256',  // For ECDSA, use lowercase hash name
     };
     if (!SUPPORTED_ALGS[alg]) {
       logger.warn('Unsupported JWT algorithm', { alg });
@@ -131,7 +131,20 @@ async function verifyJWTSignature(token) {
     logger.info('Found matching key', { kid, keyType: matchingKey.kty, use: matchingKey.use });
 
     // Convert JWK to Node.js KeyObject for cryptographic verification
-    const publicKey = crypto.createPublicKey({ key: matchingKey, format: 'jwk' });
+    let publicKey;
+    try {
+      publicKey = crypto.createPublicKey({ key: matchingKey, format: 'jwk' });
+      logger.info('Successfully created public key from JWK', {
+        keyType: matchingKey.kty,
+        curve: matchingKey.crv
+      });
+    } catch (keyError) {
+      logger.error('Failed to create public key from JWK', {
+        error: keyError.message,
+        keyType: matchingKey.kty
+      });
+      return { valid: false, reason: `Key creation failed: ${keyError.message}` };
+    }
 
     // Verify signature against the signed data (header.payload)
     const signedData = headerB64 + '.' + payloadB64;
@@ -140,7 +153,8 @@ async function verifyJWTSignature(token) {
     logger.info('Signature details', {
       signedDataLength: signedData.length,
       signatureLength: signature.length,
-      alg
+      alg,
+      signatureHex: signature.toString('hex').substring(0, 32) + '...'
     });
 
     const verifier = crypto.createVerify(SUPPORTED_ALGS[alg]);
@@ -151,14 +165,19 @@ async function verifyJWTSignature(token) {
     try {
       if (alg === 'ES256') {
         // ES256 signatures in JWT use IEEE P1363 format (raw R||S concatenation)
+        logger.info('Attempting ES256 verification with ieee-p1363 encoding');
         isValid = verifier.verify(publicKey, signature, { dsaEncoding: 'ieee-p1363' });
+        logger.info('ES256 verification result', { isValid });
       } else {
         // RS256 uses standard PKCS#1 v1.5 signature format
+        logger.info('Attempting RS256 verification');
         isValid = verifier.verify(publicKey, signature);
+        logger.info('RS256 verification result', { isValid });
       }
     } catch (verifyError) {
       logger.error('Signature verification threw error', {
         error: verifyError.message,
+        stack: verifyError.stack,
         alg,
         kid
       });

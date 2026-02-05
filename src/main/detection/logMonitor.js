@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { EventEmitter } = require('events');
+const chokidar = require('chokidar');
 const logger = require('../logging/logger');
 const secureStore = require('../storage/secureStore');
 
@@ -32,6 +33,24 @@ class LogMonitor extends EventEmitter {
     this.lastPosition = 0;
     this.lastServerInfo = null;
     this.currentStream = null;
+    // Directory watcher for detecting new log files
+    this.dirWatcher = null;
+    this.dirCheckInterval = null;
+    this._debounceTimer = null;
+  }
+
+  /**
+   * Debounced wrapper for checkLogFile to prevent race conditions
+   * between watcher, fallback timer, and content poll
+   */
+  _debouncedCheckLogFile() {
+    if (this._debounceTimer) {
+      clearTimeout(this._debounceTimer);
+    }
+    this._debounceTimer = setTimeout(() => {
+      this._debounceTimer = null;
+      this.checkLogFile();
+    }, 500);
   }
 
   /**
@@ -57,10 +76,55 @@ class LogMonitor extends EventEmitter {
     // Initial check for log file
     this.checkLogFile();
 
-    // Set up interval to check for new log entries (every 5000ms)
+    // Set up chokidar directory watcher for new log files
+    this._startDirectoryWatcher();
+
+    // Fallback interval to check for new log files every 15s
+    // Catches missed watcher events (OneDrive, network drives, junctions)
+    this.dirCheckInterval = setInterval(() => {
+      this._debouncedCheckLogFile();
+    }, 15000);
+
+    // Set up interval to check for new log entries (every 2000ms)
     this.watchInterval = setInterval(() => {
       this.readNewLogs();
-    }, 5000);
+    }, 2000);
+  }
+
+  /**
+   * Start chokidar directory watcher for new log files
+   */
+  _startDirectoryWatcher() {
+    if (!fs.existsSync(LOG_DIR)) {
+      logger.warn('Cannot watch log directory - does not exist', { logDir: LOG_DIR });
+      return;
+    }
+
+    try {
+      this.dirWatcher = chokidar.watch(LOG_DIR, {
+        ignoreInitial: true, // Critical: don't fire 'add' for existing files at startup
+        depth: 0, // Only watch top-level directory
+        usePolling: false, // Use native fs events (faster on Windows)
+        awaitWriteFinish: false
+      });
+
+      this.dirWatcher.on('add', (filePath) => {
+        const fileName = path.basename(filePath);
+        // Only react to new .log files containing 'player'
+        if (fileName.endsWith('.log') && fileName.toLowerCase().includes('player')) {
+          logger.info('New log file detected by watcher', { fileName });
+          this._debouncedCheckLogFile();
+        }
+      });
+
+      this.dirWatcher.on('error', (error) => {
+        logger.error('Directory watcher error', { error: error.message });
+      });
+
+      logger.info('Directory watcher started', { logDir: LOG_DIR });
+    } catch (error) {
+      logger.error('Failed to start directory watcher', { error: error.message });
+    }
   }
 
   /**
@@ -78,6 +142,24 @@ class LogMonitor extends EventEmitter {
     if (this.watchInterval) {
       clearInterval(this.watchInterval);
       this.watchInterval = null;
+    }
+
+    // Cleanup directory watcher
+    if (this.dirWatcher) {
+      this.dirWatcher.close();
+      this.dirWatcher = null;
+    }
+
+    // Cleanup directory check interval
+    if (this.dirCheckInterval) {
+      clearInterval(this.dirCheckInterval);
+      this.dirCheckInterval = null;
+    }
+
+    // Cleanup debounce timer
+    if (this._debounceTimer) {
+      clearTimeout(this._debounceTimer);
+      this._debounceTimer = null;
     }
 
     if (this.currentStream) {
@@ -144,13 +226,50 @@ class LogMonitor extends EventEmitter {
         logger.info('New log file detected', { file: mostRecent.name });
         this.currentLogFile = mostRecent.path;
 
-        // Start from the END of the file for new files to avoid false positives
+        // Read last ~50 lines to catch recent joins that occurred before file switch
         try {
           const stats = fs.statSync(mostRecent.path);
-          this.lastPosition = stats.size;
+          const fileSize = stats.size;
+
+          // Calculate tail bytes: ~50 lines at ~200 chars each = 10KB max
+          const TAIL_BYTES = Math.min(fileSize, 50 * 200);
+
+          if (TAIL_BYTES > 0) {
+            const startOffset = fileSize - TAIL_BYTES;
+
+            // Read tail using sync file operations
+            const fd = fs.openSync(mostRecent.path, 'r');
+            const buffer = Buffer.alloc(TAIL_BYTES);
+            fs.readSync(fd, buffer, 0, TAIL_BYTES, startOffset);
+            fs.closeSync(fd);
+
+            // Convert to string
+            let tailContent = buffer.toString('utf8');
+
+            // If we didn't read from the beginning, discard partial first line
+            if (startOffset > 0) {
+              const firstNewline = tailContent.indexOf('\n');
+              if (firstNewline !== -1) {
+                tailContent = tailContent.slice(firstNewline + 1);
+              }
+            }
+
+            // Parse tail content to catch recent joins
+            if (tailContent.length > 0) {
+              logger.info('Parsing recent lines from new log file', {
+                tailBytes: TAIL_BYTES,
+                fileSize
+              });
+              this.parseLogs(tailContent);
+            }
+          }
+
+          // Set position to end of file for forward reading
+          this.lastPosition = fileSize;
           logger.info('Starting from end of new log file', { position: this.lastPosition });
         } catch (error) {
-          logger.error('Failed to get file size for new log', { error: error.message });
+          logger.error('Failed to read tail of new log file', { error: error.message });
+          // Fall back to reading from beginning
           this.lastPosition = 0;
         }
       }
@@ -164,7 +283,7 @@ class LogMonitor extends EventEmitter {
    */
   readNewLogs() {
     if (!this.currentLogFile) {
-      this.checkLogFile();
+      this._debouncedCheckLogFile();
       return;
     }
 

@@ -242,10 +242,10 @@ describe('utils.js - Shared Utilities', () => {
 
   describe('sanitizeHtml', () => {
     it.each([
-      ['<script>alert("xss")</script>', '<script>alert("xss")</script>'],
-      ["<img src=x onerror='alert(1)'>", '<img src=x onerror=&#039;alert(1)&#039;>'],
-      ['Hello & goodbye', 'Hello & goodbye'],
-      ['<div>"quoted"</div>', '<div>"quoted"</div>'],
+      ['<script>alert("xss")</script>', '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;'],
+      ["<img src=x onerror='alert(1)'>", '&lt;img src=x onerror=&#039;alert(1)&#039;&gt;'],
+      ['Hello & goodbye', 'Hello &amp; goodbye'],
+      ['<div>"quoted"</div>', '&lt;div&gt;&quot;quoted&quot;&lt;/div&gt;'],
       ["it's a test", 'it&#039;s a test'],
       ['normal text', 'normal text'],
     ])('should sanitize %s to %s', (input, expected) => {
@@ -256,8 +256,8 @@ describe('utils.js - Shared Utilities', () => {
       const malicious = '<script>document.cookie</script>';
       const sanitized = sanitizeHtml(malicious);
       expect(sanitized).not.toContain('<script>');
-      expect(sanitized).toContain('<');
-      expect(sanitized).toContain('>');
+      expect(sanitized).toContain('&lt;');
+      expect(sanitized).toContain('&gt;');
     });
   });
 

@@ -10,6 +10,7 @@ import path from 'path';
 
 describe('MessageValidator', () => {
   let validator;
+  let dom;
 
   beforeEach(() => {
     // Load the validator code into JSDOM
@@ -19,7 +20,7 @@ describe('MessageValidator', () => {
     );
 
     // Create a fresh DOM environment for each test
-    const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
+    dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', {
       runScripts: 'dangerously',
       url: 'http://localhost',
     });
@@ -216,6 +217,8 @@ describe('MessageValidator', () => {
   describe('Spam Protection', () => {
     beforeEach(() => {
       vi.useFakeTimers();
+      // Mock Date.now() in the JSDOM window to use fake timers
+      dom.window.Date.now = () => Date.now();
       validator.clearSpamTracking();
     });
 

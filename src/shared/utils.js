@@ -78,14 +78,15 @@ function isEmpty(value) {
  * Sanitize a string to prevent XSS
  */
 function sanitizeHtml(str) {
+  if (!str) return '';
   const map = {
-    '&': '&',
-    '<': '<',
-    '>': '>',
-    '"': '"',
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
     "'": '&#039;'
   };
-  return str.replace(/[&<>"']/g, m => map[m]);
+  return String(str).replace(/[&<>"']/g, m => map[m]);
 }
 
 /**

@@ -84,8 +84,9 @@ class MessageValidator {
     const lowerMessage = message.toLowerCase();
 
     for (const swear of this.swearWords) {
-      // Create regex to match whole word with word boundaries
-      const regex = new RegExp(`\\b${swear}\\b`, 'i');
+      // Match exact word or word with common suffixes (ing, ed, er, s, es, y)
+      // This catches "fuck", "fucking", "fucked", "fucker", "fucks" but not "hello" for "hell"
+      const regex = new RegExp(`\\b${swear}(ing|ed|er|s|es|y)?\\b`, 'i');
 
       if (regex.test(lowerMessage)) {
         return {
@@ -95,11 +96,58 @@ class MessageValidator {
         };
       }
 
-      // Also check for variations with numbers/special chars
-      const variation = swear.split('').join('[^a-z]*');
-      const variationRegex = new RegExp(variation, 'i');
+      // Variation check - catch obfuscated versions like "f*ck", "f.u.c.k", "f-u-c-k"
+      // Pattern 1: All letters present with separators (f.u.c.k, f-u-c-k, f u c k)
+      const allLettersPattern = swear.split('').join('[^a-z]+');
+      const allLettersRegex = new RegExp(allLettersPattern, 'i');
 
-      if (variationRegex.test(lowerMessage)) {
+      // Pattern 2: Optional middle letters with special chars (f*ck, fck, f**k)
+      // Makes middle letters optional: f[^a-z]*u?[^a-z]*c?[^a-z]*k
+      // This catches cases where letters are replaced with symbols
+      if (swear.length >= 3) {
+        const firstLetter = swear[0];
+        const lastLetter = swear[swear.length - 1];
+        const middleLetters = swear.slice(1, -1);
+
+        // Create pattern where middle letters are optional but separated by non-letters
+        const middlePattern = middleLetters.split('').map(letter => `${letter}?[^a-z]*`).join('');
+        const optionalPattern = `${firstLetter}[^a-z]*${middlePattern}${lastLetter}`;
+
+        // Only match if the overall match contains at least one non-letter character
+        // This prevents matching normal words like "fork" for "fuck"
+        const optionalRegex = new RegExp(optionalPattern, 'i');
+        const match = lowerMessage.match(optionalRegex);
+
+        if (match && match[0].match(/[^a-z]/)) {
+          // Verify it's not just the normal word AND doesn't span across words
+          // Prevent matches with spaces (which would span multiple words like "s t" for "shit")
+          const matchedText = match[0].toLowerCase();
+          const hasSpace = matchedText.includes(' ');
+          const isDifferent = matchedText !== swear;
+
+          // Check if match is embedded in a longer alphanumeric sequence (like "https://")
+          // Find the match position and check chars before/after
+          const matchIndex = lowerMessage.indexOf(matchedText);
+          const charBefore = matchIndex > 0 ? lowerMessage[matchIndex - 1] : ' ';
+          const charAfter = matchIndex + matchedText.length < lowerMessage.length
+            ? lowerMessage[matchIndex + matchedText.length]
+            : ' ';
+
+          // Match is valid only if it's not embedded (surrounded by letters/numbers)
+          const isEmbedded = /[a-z0-9]/.test(charBefore) && /[a-z0-9]/.test(charAfter);
+
+          // Only flag if it has special chars, no spaces, and not embedded
+          if (isDifferent && !hasSpace && !isEmbedded) {
+            return {
+              valid: false,
+              error: `Message contains inappropriate language`,
+              highlightWord: swear
+            };
+          }
+        }
+      }
+
+      if (allLettersRegex.test(lowerMessage)) {
         return {
           valid: false,
           error: `Message contains inappropriate language`,

@@ -809,12 +809,6 @@ addMessage(messageData) {
   }
 
 renderMessage(message) {
-  if (message.isLocal && message.messageId) {
-  console.log('✅ Adding edit/delete buttons for message:', message.messageId);
-  const actionsEl = document.createElement('div');
-  actionsEl.className = 'msg-actions';
-  actionsEl.style.border = '2px solid red'; // TEMP DEBUG - remove after testing
-  }
   const messageEl = document.createElement('div');
   messageEl.className = `chat-msg ${message.isLocal ? 'local' : 'remote'}`;
   if (message.messageId) {

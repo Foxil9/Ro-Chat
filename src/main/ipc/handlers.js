@@ -15,6 +15,9 @@ const BACKEND_URL = 'https://ro-chat-zqks.onrender.com';
 let mainWindow = null;
 let settingsWindow = null;
 
+// Store socket listener references for cleanup
+const socketListeners = {};
+
 /**
  * Set the main window reference
  */
@@ -40,35 +43,56 @@ function setupSocketEvents() {
     return;
   }
 
+  // Remove existing listeners first to prevent duplicates
+  cleanupSocketEvents();
+
   logger.info('Setting up socket event listeners');
 
-  socketClient.socket.on('typingIndicator', (data) => {
+  socketListeners.typingIndicator = (data) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('socket:typingIndicator', data);
     }
-  });
+  };
+  socketClient.socket.on('typingIndicator', socketListeners.typingIndicator);
 
-  socketClient.socket.on('message', (data) => {
+  socketListeners.message = (data) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('socket:message', data);
     }
-  });
+  };
+  socketClient.socket.on('message', socketListeners.message);
 
-  socketClient.socket.on('messageUpdated', (data) => {
+  socketListeners.messageUpdated = (data) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('socket:messageUpdated', data);
     }
-  });
+  };
+  socketClient.socket.on('messageUpdated', socketListeners.messageUpdated);
 
-  socketClient.socket.on('messageEditError', (data) => {
+  socketListeners.messageEditError = (data) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('socket:messageEditError', data);
     }
-  });
+  };
+  socketClient.socket.on('messageEditError', socketListeners.messageEditError);
 
-  socketClient.socket.on('messageDeleteError', (data) => {
+  socketListeners.messageDeleteError = (data) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('socket:messageDeleteError', data);
+    }
+  };
+  socketClient.socket.on('messageDeleteError', socketListeners.messageDeleteError);
+}
+
+/**
+ * Clean up socket event listeners
+ */
+function cleanupSocketEvents() {
+  if (!socketClient?.socket) return;
+
+  Object.entries(socketListeners).forEach(([event, handler]) => {
+    if (handler) {
+      socketClient.socket.off(event, handler);
     }
   });
 }

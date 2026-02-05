@@ -42,4 +42,6 @@ coverage/
 .cache/
 .temp/
 
+# Personal Ignores
 personal_note_to_my_self.txt
+IMPLEMENTATION_PLANS.md

@@ -367,25 +367,33 @@ setupMessageUpdateListeners() {
 handleIncomingMessage(data) {
   const chatType = data.chatType || this.activeTab;
 
-  if (data.userId === this.userId) {
+  // Check if this is our own message (deduplication)
+  if (parseInt(data.userId) === this.userId) {
     const messages = this.messages[chatType];
-    const lastMessage = messages[messages.length - 1];
 
-    if (lastMessage && !lastMessage.messageId && lastMessage.userId === this.userId && lastMessage.message === data.message) {
+    // Find ANY pending optimistic message (no messageId yet) with matching content
+    // Normalize whitespace to match server sanitization
+    const normalizedIncoming = data.message.replace(/\s+/g, ' ').trim();
+
+    const pendingIndex = messages.findIndex(m =>
+      !m.messageId &&
+      m.userId === this.userId &&
+      m.message.replace(/\s+/g, ' ').trim() === normalizedIncoming
+    );
+
+    if (pendingIndex !== -1) {
       console.log('📝 Updating optimistic message with server data');
-      
-      lastMessage.messageId = data.messageId;
-      lastMessage.timestamp = new Date(data.timestamp).getTime();
+      messages[pendingIndex].messageId = data.messageId;
+      messages[pendingIndex].timestamp = new Date(data.timestamp).getTime();
 
       if (chatType === this.activeTab) {
-        console.log('🔄 Re-rendering messages');
         this.renderAllMessages();
       }
-
       return;
     }
   }
 
+  // Not our message or no matching optimistic message - add normally
   this.addMessage({
     messageId: data.messageId,
     userId: data.userId,

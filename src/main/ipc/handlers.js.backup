@@ -287,18 +287,7 @@ async function handleSendMessage(event, { jobId, placeId, chatType, message }) {
     const token = tokenManager.getValidToken();
     if (!token) {
       logger.error('No valid token - getValidToken returned null');
-
-      // Emit token expired event to trigger auto-logout
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('auth:tokenExpired');
-      }
-
-      return {
-        success: false,
-        error: 'Session expired. Please log in again.',
-        status: 401,
-        tokenExpired: true
-      };
+      return { success: false, error: 'No valid auth token. Please log in again.' };
     }
 
     // Log token details for debugging (first 20 chars only for security)
@@ -341,23 +330,6 @@ async function handleSendMessage(event, { jobId, placeId, chatType, message }) {
     logger.info('Message sent successfully', { chatType });
     return { success: true };
   } catch (error) {
-    // Handle 401 authentication errors
-    if (error.response?.status === 401) {
-      logger.error('Authentication failed - token expired or invalid');
-
-      // Emit token expired event to trigger auto-logout
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('auth:tokenExpired');
-      }
-
-      return {
-        success: false,
-        error: 'Session expired. Please log in again.',
-        status: 401,
-        tokenExpired: true
-      };
-    }
-
     // Extract error message from response
     let errorMessage = 'Failed to send message';
     let errorReason = 'Unknown error';
@@ -406,19 +378,7 @@ async function handleLoadHistory(event, { jobId, placeId, chatType }) {
     // Get auth token
     const token = tokenManager.getValidToken();
     if (!token) {
-      logger.error('No valid token for history - getValidToken returned null');
-
-      // Emit token expired event to trigger auto-logout
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('auth:tokenExpired');
-      }
-
-      return {
-        success: false,
-        error: 'Session expired. Please log in again.',
-        messages: [],
-        tokenExpired: true
-      };
+      return { success: false, error: 'No valid auth token', messages: [] };
     }
 
     // Fetch from backend server
@@ -441,23 +401,6 @@ async function handleLoadHistory(event, { jobId, placeId, chatType }) {
       messages: response.data.messages || []
     };
   } catch (error) {
-    // Handle 401 authentication errors
-    if (error.response?.status === 401) {
-      logger.error('Authentication failed while loading history - token expired or invalid');
-
-      // Emit token expired event to trigger auto-logout
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('auth:tokenExpired');
-      }
-
-      return {
-        success: false,
-        error: 'Session expired. Please log in again.',
-        messages: [],
-        tokenExpired: true
-      };
-    }
-
     logger.error('Failed to load history', sanitizeError({
       error: error.message,
       chatType,

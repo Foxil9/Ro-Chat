@@ -183,12 +183,6 @@ class ChatManager {
       this.messageInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
-
-          // Block if in cooldown
-          if (this.cooldownEndTime && this.cooldownEndTime > Date.now()) {
-            return;
-          }
-
           this.sendMessage();
         }
       });
@@ -593,7 +587,7 @@ handleIncomingMessage(data) {
       return;
     }
 
-    // CLIENT-SIDE validation for immediate feedback (can be bypassed, server is authoritative)
+    // Validate message
     if (window.messageValidator) {
       const validation = window.messageValidator.validate(message);
       if (!validation.valid) {
@@ -613,11 +607,20 @@ handleIncomingMessage(data) {
       return;
     }
 
-    // Get current user for the message
+    // Add message to UI immediately (optimistic update)
     const currentUser = await this.getCurrentUser();
+    this.addMessage({
+      userId: currentUser?.userId ? parseInt(currentUser.userId) : 'local',
+      username: currentUser?.username || 'You',
+      displayName: currentUser?.displayName,
+      picture: currentUser?.picture,
+      message: message,
+      timestamp: Date.now(),
+      isLocal: true,
+      chatType: this.activeTab
+    });
 
-    // Clear input BEFORE sending (better UX)
-    const sentMessage = message;
+    // Clear input
     this.messageInput.value = '';
 
     // Stop typing indicator
@@ -629,7 +632,7 @@ handleIncomingMessage(data) {
       this.emitTypingStatus(false);
     }
 
-    // Send to backend via IPC - NO OPTIMISTIC UPDATE YET
+    // Send to backend via IPC
     try {
       if (window.electron && window.electron.sendMessage) {
         const startTime = Date.now();
@@ -646,7 +649,7 @@ handleIncomingMessage(data) {
           jobId: this.activeTab === 'server' ? this.currentJobId : undefined,
           placeId: this.currentPlaceId,
           chatType: this.activeTab,
-          message: sentMessage
+          message: message
         });
 
         // Clear warning timeout
@@ -662,55 +665,60 @@ handleIncomingMessage(data) {
           this.hideServerWakeupWarning();
         }
 
-        if (result.success) {
-          // SUCCESS: Add message to UI (will be updated when server broadcasts back)
-          this.addMessage({
-            userId: currentUser?.userId ? parseInt(currentUser.userId) : 'local',
-            username: currentUser?.username || 'You',
-            displayName: currentUser?.displayName,
-            picture: currentUser?.picture,
-            message: sentMessage,
-            timestamp: Date.now(),
-            isLocal: true,
-            chatType: this.activeTab
-          });
-        } else {
-          // FAILURE: Server rejected the message
-          console.log('Server rejected message:', result);
+        if (!result.success) {
+          // Server rejected message (rate limit, profanity, etc.)
+          // Remove optimistically added message
+          const messages = this.messages[this.activeTab];
+          const lastMessage = messages[messages.length - 1];
+          if (lastMessage && lastMessage.isLocal && lastMessage.message === message) {
+            messages.pop();
+            this.renderAllMessages();
+          }
+
+          console.log('Server returned error:', result);
 
           // Check if it's an authentication error (401)
-          if (result.status === 401 || result.tokenExpired) {
-            this.addSystemMessage('⚠️ Session expired. Returning to login...', this.activeTab);
+          if (result.status === 401) {
+            // Token is invalid or expired - user needs to re-authenticate
+            const errorMsg = result.error || 'Authentication failed';
+            this.addSystemMessage(`⚠️ ${errorMsg}. Please logout and login again.`, this.activeTab);
+            console.error('Authentication error:', errorMsg);
             return;
           }
 
-          // Check if it's a rate limit error (429)
+          // Check if it's a rate limit error (429 status or specific error messages)
           if (result.status === 429 ||
               (result.error && (
                 result.error.includes('Wait') && result.error.includes('seconds') ||
                 result.error.includes('seconds') && (result.error.includes('slow') || result.error.includes('spam') || result.error.includes('fast')) ||
                 result.error.includes('CHILL OUT')
               ))) {
-            // Extract wait time and start cooldown
+            // Extract wait time from error message - look for any number followed by 'seconds'
             const match = result.error.match(/(\d+)\s*seconds?/i);
-            const waitSeconds = match ? parseInt(match[1]) : 10;
-            this.startCooldown(waitSeconds);
+            const waitSeconds = match ? parseInt(match[1]) : 30; // Default 30s if can't parse
 
-            // Put the message back in the input so user doesn't lose it
-            this.messageInput.value = sentMessage;
-            return;
+            console.log('Cooldown triggered, waiting', waitSeconds, 'seconds');
+            this.startCooldown(waitSeconds);
           }
 
-          // PROFANITY or other validation error: Show rejected message in gray
-          this.showRejectedMessage(sentMessage, result.error);
+          // No error message shown - only cooldown banner
         }
+      } else {
+        console.log('Mock send:', message);
       }
     } catch (error) {
       console.error('Failed to send message:', error);
 
-      // Put the message back in input on network error
-      this.messageInput.value = sentMessage;
-      this.addSystemMessage('⚠️ Failed to send message. Please try again.', this.activeTab);
+      // Remove optimistically added message on error
+      const messages = this.messages[this.activeTab];
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage && lastMessage.isLocal && lastMessage.message === message) {
+        messages.pop();
+        this.renderAllMessages();
+      }
+
+      // For non-rate-limit errors, just log them but don't show error message
+      console.log('Message error:', error.message);
     }
   }
 
@@ -911,14 +919,7 @@ renderMessage(message) {
 
     const messagesForTab = this.messages[this.activeTab] || [];
     messagesForTab.forEach(msg => {
-      if (msg.isRejected) {
-        const rejectedEl = this.renderRejectedMessage(msg);
-        if (rejectedEl) {
-          this.messagesContainer.appendChild(rejectedEl);
-        }
-      } else {
-        this.renderMessage(msg);
-      }
+      this.renderMessage(msg);
     });
 
     this.scrollToBottom();
@@ -1185,8 +1186,7 @@ showErrorMessage(errorText) {
   }
 
   /**
-   * Start cooldown timer with red countdown display
-   * @param {number} seconds - Cooldown duration in seconds (always 10)
+   * Start cooldown timer
    */
   startCooldown(seconds) {
     // Clear any existing cooldown
@@ -1199,46 +1199,68 @@ showErrorMessage(errorText) {
     // Set cooldown end time
     this.cooldownEndTime = Date.now() + (seconds * 1000);
 
-    // Get or create cooldown overlay
-    let cooldownOverlay = document.getElementById('cooldown-overlay');
-    if (!cooldownOverlay) {
-      cooldownOverlay = this.createCooldownOverlay();
+    // Get cooldown warning elements
+    let cooldownWarning = document.getElementById('cooldown-warning');
+    let cooldownText = document.getElementById('cooldown-text');
+
+    // Create cooldown warning element dynamically if it doesn't exist
+    if (!cooldownWarning) {
+      console.warn('Cooldown warning element not found, creating it');
+      
+      // Find chat container
+      const chatContainer = document.querySelector('.chat-container');
+      if (!chatContainer) {
+        console.error('Chat container not found!');
+        return;
+      }
+
+      // Create cooldown warning element
+      cooldownWarning = document.createElement('div');
+      cooldownWarning.id = 'cooldown-warning';
+      cooldownWarning.className = 'cooldown-warning hidden';
+      cooldownWarning.innerHTML = '⏱️ <span id="cooldown-text">Cooldown: 0s</span>';
+      
+      // Insert before chat input
+      const chatInput = chatContainer.querySelector('.chat-input');
+      if (chatInput) {
+        chatContainer.insertBefore(cooldownWarning, chatInput);
+      } else {
+        chatContainer.appendChild(cooldownWarning);
+      }
+
+      // Get the text element after creating
+      cooldownText = document.getElementById('cooldown-text');
     }
 
-    const countdownEl = document.getElementById('cooldown-countdown');
-    const progressBar = document.getElementById('cooldown-progress-bar');
-
-    // Show overlay
-    cooldownOverlay.classList.add('active');
+    // Show cooldown warning
+    if (cooldownWarning) {
+      cooldownWarning.classList.remove('hidden');
+      cooldownWarning.classList.add('visible');
+      console.log('Cooldown warning shown');
+    } else {
+      console.error('Failed to show cooldown warning');
+    }
 
     // Disable input and send button
     if (this.messageInput) {
       this.messageInput.disabled = true;
-      this.messageInput.classList.add('cooldown-disabled');
+      this.messageInput.placeholder = `Cooldown active...`;
     }
     if (this.sendButton) {
       this.sendButton.disabled = true;
-      this.sendButton.classList.add('cooldown-disabled');
+      this.sendButton.style.opacity = '0.5';
+      this.sendButton.style.cursor = 'not-allowed';
     }
 
     // Update countdown every 100ms for smooth animation
-    const totalMs = seconds * 1000;
     this.cooldownTimer = setInterval(() => {
-      const remaining = this.cooldownEndTime - Date.now();
-      const remainingSeconds = Math.ceil(remaining / 1000);
+      const remaining = Math.ceil((this.cooldownEndTime - Date.now()) / 1000);
 
       if (remaining <= 0) {
         this.endCooldown();
       } else {
-        // Update countdown text
-        if (countdownEl) {
-          countdownEl.textContent = remainingSeconds;
-        }
-
-        // Update progress bar
-        if (progressBar) {
-          const progress = ((totalMs - remaining) / totalMs) * 100;
-          progressBar.style.width = `${progress}%`;
+        if (cooldownText) {
+          cooldownText.textContent = `Cooldown: ${remaining}s - Slow down!`;
         }
       }
     }, 100);
@@ -1256,163 +1278,26 @@ showErrorMessage(errorText) {
 
     this.cooldownEndTime = null;
 
-    // Hide overlay with animation
-    const cooldownOverlay = document.getElementById('cooldown-overlay');
-    if (cooldownOverlay) {
-      cooldownOverlay.classList.remove('active');
-      cooldownOverlay.classList.add('ending');
-
-      setTimeout(() => {
-        cooldownOverlay.classList.remove('ending');
-      }, 300);
+    // Hide cooldown warning
+    const cooldownWarning = document.getElementById('cooldown-warning');
+    if (cooldownWarning) {
+      cooldownWarning.classList.remove('visible');
+      cooldownWarning.classList.add('hidden');
     }
 
     // Re-enable input and send button
     if (this.messageInput) {
       this.messageInput.disabled = false;
-      this.messageInput.classList.remove('cooldown-disabled');
-      this.messageInput.focus();
+      this.messageInput.placeholder = 'Type a message...';
     }
     if (this.sendButton) {
       this.sendButton.disabled = false;
-      this.sendButton.classList.remove('cooldown-disabled');
+      this.sendButton.textContent = 'Send';
+      this.sendButton.style.opacity = '1';
+      this.sendButton.style.cursor = 'pointer';
     }
 
     console.log('Cooldown ended - you can send messages again');
-  }
-
-  /**
-   * Create cooldown overlay element
-   */
-  createCooldownOverlay() {
-    const overlay = document.createElement('div');
-    overlay.id = 'cooldown-overlay';
-    overlay.className = 'cooldown-overlay';
-    overlay.innerHTML = `
-      <div class="cooldown-content">
-        <div class="cooldown-icon">
-          <i class="fas fa-clock"></i>
-        </div>
-        <div class="cooldown-text">
-          <span class="cooldown-label">Slow down!</span>
-          <span class="cooldown-timer">
-            <span id="cooldown-countdown">10</span>s remaining
-          </span>
-        </div>
-        <div class="cooldown-progress">
-          <div id="cooldown-progress-bar" class="cooldown-progress-bar"></div>
-        </div>
-      </div>
-    `;
-
-    // Insert before the chat input
-    const chatContainer = document.querySelector('.chat-container');
-    const chatInput = document.querySelector('.chat-input');
-    if (chatContainer && chatInput) {
-      chatContainer.insertBefore(overlay, chatInput);
-    } else if (chatContainer) {
-      chatContainer.appendChild(overlay);
-    }
-
-    return overlay;
-  }
-
-  /**
-   * Show a rejected message (only visible to sender)
-   * Displayed in a gray box with rejection reason
-   */
-  showRejectedMessage(messageText, reason) {
-    const messageEl = document.createElement('div');
-    messageEl.className = 'chat-msg local rejected';
-
-    const timestamp = new Date().toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-
-    // Create rejection notice
-    const rejectionEl = document.createElement('div');
-    rejectionEl.className = 'msg-rejected-notice';
-    rejectionEl.innerHTML = `
-      <div class="rejected-header">
-        <i class="fas fa-ban"></i>
-        <span>Message Not Sent</span>
-      </div>
-      <div class="rejected-reason">${this.escapeHtml(reason)}</div>
-    `;
-
-    // Create content column with the original message shown muted
-    const contentColumnEl = document.createElement('div');
-    contentColumnEl.className = 'msg-content-column';
-
-    const bubbleEl = document.createElement('div');
-    bubbleEl.className = 'msg-bubble rejected-bubble';
-    bubbleEl.textContent = messageText;
-
-    contentColumnEl.appendChild(rejectionEl);
-    contentColumnEl.appendChild(bubbleEl);
-
-    // Minimal profile area (just for alignment)
-    const profilePicEl = document.createElement('div');
-    profilePicEl.className = 'msg-profile-pic rejected-avatar';
-    profilePicEl.innerHTML = '<i class="fas fa-times"></i>';
-
-    messageEl.appendChild(profilePicEl);
-    messageEl.appendChild(contentColumnEl);
-
-    this.messagesContainer.appendChild(messageEl);
-    this.scrollToBottom();
-
-    // Store in messages array so it persists during tab switches (but only for sender)
-    this.messages[this.activeTab].push({
-      id: `rejected-${Date.now()}`,
-      userId: 'system',
-      username: 'System',
-      message: messageText,
-      timestamp: Date.now(),
-      isLocal: true,
-      isRejected: true,
-      rejectionReason: reason,
-      chatType: this.activeTab
-    });
-  }
-
-  /**
-   * Render a previously rejected message (for tab switch persistence)
-   */
-  renderRejectedMessage(message) {
-    const messageEl = document.createElement('div');
-    messageEl.className = 'chat-msg local rejected';
-    messageEl.setAttribute('data-message-id', message.id);
-
-    const rejectionEl = document.createElement('div');
-    rejectionEl.className = 'msg-rejected-notice';
-    rejectionEl.innerHTML = `
-      <div class="rejected-header">
-        <i class="fas fa-ban"></i>
-        <span>Message Not Sent</span>
-      </div>
-      <div class="rejected-reason">${this.escapeHtml(message.rejectionReason)}</div>
-    `;
-
-    const contentColumnEl = document.createElement('div');
-    contentColumnEl.className = 'msg-content-column';
-
-    const bubbleEl = document.createElement('div');
-    bubbleEl.className = 'msg-bubble rejected-bubble';
-    bubbleEl.textContent = message.message;
-
-    contentColumnEl.appendChild(rejectionEl);
-    contentColumnEl.appendChild(bubbleEl);
-
-    const profilePicEl = document.createElement('div');
-    profilePicEl.className = 'msg-profile-pic rejected-avatar';
-    profilePicEl.innerHTML = '<i class="fas fa-times"></i>';
-
-    messageEl.appendChild(profilePicEl);
-    messageEl.appendChild(contentColumnEl);
-
-    return messageEl;
   }
 
 /**

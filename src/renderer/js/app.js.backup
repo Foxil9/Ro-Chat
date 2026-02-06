@@ -250,39 +250,6 @@ class RoChatApp {
       });
     }
 
-    // Listen for token expired event - auto-logout
-    if (window.electronAPI?.onTokenExpired) {
-      window.electronAPI.onTokenExpired(async () => {
-        console.log('Token expired - auto logging out');
-
-        // Trigger logout
-        try {
-          if (window.electron && window.electron.logout) {
-            await window.electron.logout();
-          }
-        } catch (error) {
-          console.error('Auto-logout failed:', error);
-        }
-
-        // Show login view regardless of logout result
-        this.currentUser = null;
-        this.stopConnectionMonitoring();
-        this.showView('login');
-
-        // Reset login button state
-        const loginBtn = document.getElementById('login-btn');
-        const statusEl = document.getElementById('login-status');
-        if (loginBtn) {
-          loginBtn.disabled = false;
-          loginBtn.textContent = 'Login with Roblox';
-        }
-        if (statusEl) {
-          statusEl.textContent = 'Session expired. Please log in again.';
-          statusEl.className = 'status error';
-        }
-      });
-    }
-
     // Setup auto-hide header if enabled
     if (this.autoHideHeaderEnabled) {
       this.setupAutoHideHeader();

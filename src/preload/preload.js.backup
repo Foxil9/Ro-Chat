@@ -70,12 +70,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('auth:logout', listener);
   },
 
-  onTokenExpired: (callback) => {
-    const listener = () => callback();
-    ipcRenderer.on('auth:tokenExpired', listener);
-    return () => ipcRenderer.removeListener('auth:tokenExpired', listener);
-  },
-
   onTypingIndicator: (callback) => {
     const listener = (event, data) => callback(data);
     ipcRenderer.on('socket:typingIndicator', listener);

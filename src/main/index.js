@@ -25,13 +25,20 @@ app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors');
 function createWindow() {
   logger.info('Creating main window');
 
+  // Get screen dimensions for dynamic max size
+  const { screen } = require('electron');
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+  const maxWidth = Math.floor(screenWidth * 0.9);
+  const maxHeight = Math.floor(screenHeight * 0.9);
+
   mainWindow = new BrowserWindow({
     width: 380,
     height: 600,
     minWidth: 320,
     minHeight: 450,
-    maxWidth: 800,
-    maxHeight: 1200,
+    maxWidth: maxWidth,
+    maxHeight: maxHeight,
     show: false,
     frame: false,
     transparent: false,

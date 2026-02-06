@@ -100,6 +100,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     minimize: () => ipcRenderer.invoke('window:minimize'),
     maximize: () => ipcRenderer.invoke('window:maximize'),
     close: () => ipcRenderer.invoke('window:close'),
+    toggleFullscreen: () => ipcRenderer.invoke('window:fullscreen'),
     setAlwaysOnTop: (flag) => ipcRenderer.invoke('window:setAlwaysOnTop', flag),
     setOpacity: (opacity) => ipcRenderer.invoke('window:setOpacity', opacity),
     openSettings: () => ipcRenderer.invoke('window:openSettings')
@@ -126,6 +127,9 @@ contextBridge.exposeInMainWorld('electron', {
   // Auth methods
   logout: () => ipcRenderer.invoke('auth:logout'),
   getAuthStatus: () => ipcRenderer.invoke('auth:getStatus'),
+
+  // Window methods
+  toggleFullscreen: () => ipcRenderer.invoke('window:fullscreen'),
 
   // Chat methods
   sendMessage: (data) => ipcRenderer.invoke('chat:send', data),

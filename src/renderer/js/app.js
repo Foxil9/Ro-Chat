@@ -183,6 +183,14 @@ class RoChatApp {
       });
     }
 
+    // F11 fullscreen toggle
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'F11') {
+        e.preventDefault();
+        window.electron.toggleFullscreen();
+      }
+    });
+
     // Listen for server changes
     window.electronAPI.detection.onServerChanged((serverInfo) => {
       this.handleServerChanged(serverInfo);

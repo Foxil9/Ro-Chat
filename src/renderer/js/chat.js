@@ -883,19 +883,23 @@ renderMessage(message) {
   if (message.isLocal && message.messageId) {
     const actionsEl = document.createElement('div');
     actionsEl.className = 'msg-actions';
-    
+
     const editBtn = document.createElement('button');
     editBtn.className = 'msg-action-btn edit-btn';
-    editBtn.textContent = '✏️';
     editBtn.title = 'Edit message';
     editBtn.onclick = () => this.handleEditMessage(message.messageId, message.message);
-    
+    const editIcon = document.createElement('i');
+    editIcon.className = 'fas fa-edit';
+    editBtn.appendChild(editIcon);
+
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'msg-action-btn delete-btn';
-    deleteBtn.textContent = '🗑️';
     deleteBtn.title = 'Delete message';
     deleteBtn.onclick = () => this.handleDeleteMessage(message.messageId);
-    
+    const deleteIcon = document.createElement('i');
+    deleteIcon.className = 'fas fa-trash';
+    deleteBtn.appendChild(deleteIcon);
+
     actionsEl.appendChild(editBtn);
     actionsEl.appendChild(deleteBtn);
     contentColumnEl.appendChild(actionsEl); // Append to column, not bubble
@@ -1325,19 +1329,26 @@ showEditBanner() {
   // Remove existing banner if any
   const existing = document.querySelector('.edit-message-banner');
   if (existing) existing.remove();
-  
+
   const banner = document.createElement('div');
   banner.className = 'edit-message-banner';
-  banner.innerHTML = `
-    <span class="edit-banner-text">Editing message</span>
-    <button class="edit-banner-cancel">✕</button>
-  `;
-  
-  // Cancel button
-  banner.querySelector('.edit-banner-cancel').onclick = () => {
+
+  const bannerText = document.createElement('span');
+  bannerText.className = 'edit-banner-text';
+  bannerText.textContent = 'Editing message';
+
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'edit-banner-cancel';
+  const cancelIcon = document.createElement('i');
+  cancelIcon.className = 'fas fa-times';
+  cancelBtn.appendChild(cancelIcon);
+  cancelBtn.onclick = () => {
     this.cancelEdit();
   };
-  
+
+  banner.appendChild(bannerText);
+  banner.appendChild(cancelBtn);
+
   // Insert before chat input
   const chatContainer = document.querySelector('.chat-container');
   const chatInput = document.querySelector('.chat-input');

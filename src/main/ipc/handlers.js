@@ -125,6 +125,7 @@ function registerHandlers() {
   ipcMain.handle('window:minimize', handleMinimize);
   ipcMain.handle('window:maximize', handleMaximize);
   ipcMain.handle('window:close', handleClose);
+  ipcMain.handle('window:fullscreen', handleFullscreen);
   ipcMain.handle('window:setAlwaysOnTop', handleSetAlwaysOnTop);
   ipcMain.handle('window:setOpacity', handleSetOpacity);
   ipcMain.handle('window:openSettings', handleOpenSettings);
@@ -436,6 +437,13 @@ function handleMinimize(event) {
       // Get current position (in case tab was moved)
       const currentBounds = mainWindow.getBounds();
 
+      // Recalculate max size based on current screen
+      const { screen } = require('electron');
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+      const maxWidth = Math.floor(screenWidth * 0.9);
+      const maxHeight = Math.floor(screenHeight * 0.9);
+
       // Restore to original size but at current position
       mainWindow.setResizable(true);
       mainWindow.setBounds({
@@ -445,7 +453,7 @@ function handleMinimize(event) {
         y: currentBounds.y
       }, true);
       mainWindow.setMinimumSize(320, 450);
-      mainWindow.setMaximumSize(800, 1200);
+      mainWindow.setMaximumSize(maxWidth, maxHeight);
       mainWindow.isMinimizedTab = false;
 
       // Remove move listener
@@ -502,6 +510,16 @@ function handleClose(event) {
     mainWindow.close();
   }
   return { success: true };
+}
+
+/**
+ * Handle window fullscreen toggle
+ */
+function handleFullscreen(event) {
+  if (mainWindow) {
+    mainWindow.setFullScreen(!mainWindow.isFullScreen());
+  }
+  return { success: true, isFullscreen: mainWindow?.isFullScreen() || false };
 }
 
 /**

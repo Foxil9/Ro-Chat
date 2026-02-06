@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' https: data:;">
   <title>RoChat - Settings</title>
   <link rel="stylesheet" href="../css/main.css">
   <link rel="stylesheet" href="../css/themes.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     body {
       margin: 0;
@@ -29,8 +30,8 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: linear-gradient(180deg, rgba(15, 17, 23, 0.95) 0%, rgba(26, 29, 46, 0.9) 100%);
-      border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
       border-radius: 16px 16px 0 0;
       -webkit-app-region: drag;
     }
@@ -71,7 +72,7 @@
       color: var(--text-primary);
       margin: 0 0 16px 0;
       padding-bottom: 8px;
-      border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+      border-bottom: 1px solid var(--border-color);
     }
 
     .setting-item {
@@ -96,8 +97,8 @@
     .setting-item select {
       width: 100%;
       padding: 10px 16px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 2px solid rgba(255, 255, 255, 0.1);
+      background: var(--bg-secondary);
+      border: 2px solid var(--border-color);
       border-radius: var(--radius-md);
       color: var(--text-primary);
       font-size: 14px;
@@ -107,7 +108,7 @@
 
     .setting-item select:focus {
       outline: none;
-      border-color: var(--accent-purple);
+      border-color: var(--primary);
     }
 
     .slider-container {
@@ -124,14 +125,14 @@
     }
 
     .slider-value {
-      color: var(--accent-purple);
+      color: var(--primary);
       font-weight: 600;
     }
 
     input[type="range"] {
       width: 100%;
       height: 6px;
-      background: rgba(255, 255, 255, 0.1);
+      background: var(--bg-tertiary);
       border-radius: 3px;
       outline: none;
       -webkit-appearance: none;
@@ -141,15 +142,15 @@
       -webkit-appearance: none;
       width: 18px;
       height: 18px;
-      background: var(--accent-purple);
+      background: var(--primary);
       border-radius: 50%;
       cursor: pointer;
-      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+      box-shadow: var(--shadow-sm);
     }
 
     input[type="range"]::-webkit-slider-thumb:hover {
       transform: scale(1.1);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6);
+      box-shadow: var(--shadow-md);
     }
   </style>
 </head>
@@ -157,7 +158,7 @@
   <div class="settings-window">
     <div class="settings-header">
       <h2>Settings</h2>
-      <button id="close-settings-btn" class="btn-icon close-btn">✕</button>
+      <button id="close-settings-btn" class="btn-icon close-btn"><i class="fas fa-times"></i></button>
     </div>
 
     <div class="settings-content">
@@ -228,7 +229,7 @@
         <div class="setting-item">
           <div style="display: flex; align-items: center; gap: 12px;">
             <label style="flex: 1;">Chat Keybind</label>
-            <button id="keybind-btn" style="padding: 8px 16px; background: rgba(102, 126, 234, 0.2); border: 2px solid rgba(102, 126, 234, 0.4); border-radius: 8px; color: var(--text-primary); cursor: pointer; min-width: 120px; font-size: 13px;">Press to set</button>
+            <button id="keybind-btn" style="padding: 8px 16px; background: var(--bg-tertiary); border: 2px solid var(--border-color); border-radius: 8px; color: var(--text-primary); cursor: pointer; min-width: 120px; font-size: 13px;">Press to set</button>
           </div>
         </div>
       </div>
@@ -240,7 +241,7 @@
 
       <div class="setting-group">
         <h3>Support</h3>
-        <a href="#" id="coffee-link-settings" class="coffee-link">☕ Buy me a coffee</a>
+        <a href="#" id="coffee-link-settings" class="coffee-link"><i class="fas fa-coffee"></i> Buy me a coffee</a>
       </div>
 
       <div class="setting-group">

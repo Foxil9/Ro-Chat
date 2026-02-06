@@ -3,19 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' https: data:;">
   <title>RoChat</title>
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/themes.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
-  <!-- Background Orbs -->
-  <div class="bg-orbs">
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-    <div class="orb orb-3"></div>
-  </div>
-
   <div id="app">
     <!-- Login View -->
     <div id="login-view" class="view hidden">
@@ -40,9 +34,9 @@
             <span class="server-text" id="server-text">Not connected</span>
           </div>
           <div class="header-right">
-            <button id="minimize-btn" class="btn-icon">─</button>
-            <button id="settings-btn" class="btn-icon">⚙️</button>
-            <button id="close-btn" class="btn-icon close-btn">✕</button>
+            <button id="minimize-btn" class="btn-icon"><i class="fas fa-minus"></i></button>
+            <button id="settings-btn" class="btn-icon"><i class="fas fa-cog"></i></button>
+            <button id="close-btn" class="btn-icon close-btn"><i class="fas fa-times"></i></button>
           </div>
         </div>
         <div class="chat-tabs" id="chat-tabs">
@@ -62,7 +56,7 @@
         <div class="chat-footer">
           <button id="connect-btn" class="btn btn-secondary">Connect</button>
           <!-- REMOVED GAME BROWSER FEATURE - Browse button removed -->
-          <a href="#" id="coffee-link" class="coffee-link">☕ Buy me a coffee</a>
+          <a href="#" id="coffee-link" class="coffee-link"><i class="fas fa-coffee"></i> Buy me a coffee</a>
         </div>
       </div>
     </div>

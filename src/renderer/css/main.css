@@ -92,6 +92,10 @@ input, textarea {
 
 .app-container { overflow: hidden; }
 
+/* Font Awesome Icon Sizing */
+.btn-icon i, .icon-btn i { font-size: 14px; }
+.msg-action-btn i { font-size: 14px; }
+.coffee-link i { font-size: 12px; }
 
 @keyframes pageLoad {
     from {

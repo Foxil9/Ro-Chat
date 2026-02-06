@@ -113,7 +113,7 @@ input, textarea {
     width: 80px;
     background: var(--bg-secondary);
     border-right: 1px solid var(--border-color);
-    box-shadow: var(--shadow-md);
+    /* box-shadow: var(--shadow-md); */ /* Removed for flat design */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -135,7 +135,7 @@ input, textarea {
     font-weight: bold;
     color: white;
     font-size: 18px;
-    box-shadow: var(--shadow-md);
+    /* box-shadow: var(--shadow-md); */ /* Removed for flat design */
     transition: var(--transition-base);
     cursor: pointer;
 }
@@ -143,7 +143,7 @@ input, textarea {
 .logo:hover {
     background: var(--primary-hover);
     transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
+    /* box-shadow: var(--shadow-lg); */ /* Removed for flat design */
 }
 
 .session-list {
@@ -178,7 +178,7 @@ input, textarea {
 .session-item.active {
     background: var(--primary);
     color: white;
-    box-shadow: var(--shadow-md);
+    /* box-shadow: var(--shadow-md); */ /* Removed for flat design */
 }
 
 .status-indicator {
@@ -253,10 +253,10 @@ input, textarea {
     gap: 8px;
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border-color);
-    box-shadow: var(--shadow-sm);
+    /* box-shadow: var(--shadow-sm); */ /* Removed for flat design */
     flex-shrink: 0;
     user-select: none;
-    border-radius: 16px 16px 0 0;
+    border-radius: 0; /* Changed from 16px 16px 0 0 for sharp corners */
     /* FEATURE 1: Smooth hide transition */
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
                 opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
@@ -313,7 +313,7 @@ input, textarea {
     background: var(--primary);
     border-color: var(--primary);
     color: white;
-    box-shadow: var(--shadow-sm);
+    /* box-shadow: var(--shadow-sm); */ /* Removed for flat design */
 }
 
 .header-left {
@@ -409,7 +409,7 @@ input, textarea {
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius-full);
+    border-radius: 0; /* Changed from var(--radius-full) for sharp corners */
     color: var(--text-muted);
     transition: var(--transition-base);
 }
@@ -507,13 +507,13 @@ input, textarea {
 
 .message-container::-webkit-scrollbar-track {
     background: rgba(255, 255, 255, 0.02);
-    border-radius: var(--radius-md);
+    border-radius: 0; /* Changed from var(--radius-md) for sharp corners */
     margin: 8px 0;
 }
 
 .message-container::-webkit-scrollbar-thumb {
     background: linear-gradient(180deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
-    border-radius: var(--radius-md);
+    border-radius: 0; /* Changed from var(--radius-md) for sharp corners */
     border: 2px solid transparent;
     background-clip: padding-box;
     transition: var(--transition-base);
@@ -697,7 +697,7 @@ input, textarea {
     background: #4a4a4a;
     color: white;
     padding: 10px 14px;
-    border-radius: 16px;
+    border-radius: 0; /* Changed from 16px for sharp corners */
     font-size: 14px;
     line-height: 1.5;
     word-wrap: break-word;
@@ -712,6 +712,7 @@ input, textarea {
     background: linear-gradient(0deg, rgba(10, 12, 20, 0.95) 0%, transparent 100%);
     position: relative;
     flex-shrink: 0;
+    border-top: 1px solid var(--border-color); /* Added for visual separation */
 }
 
 .input-container::before {
@@ -731,15 +732,15 @@ input, textarea {
     gap: 12px;
     background: var(--bg-secondary);
     border: 2px solid var(--border-color);
-    border-radius: var(--radius-xl);
+    border-radius: 0; /* Changed from var(--radius-xl) for sharp corners */
     padding: 8px 12px;
     transition: var(--transition-base);
-    box-shadow: var(--shadow-sm);
+    /* box-shadow: var(--shadow-sm); */ /* Removed for flat design */
 }
 
 .input-wrapper:focus-within {
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1);
+    /* box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1); */ /* Removed for flat design */
 }
 
 input#chatInput {
@@ -771,14 +772,14 @@ button#btnSend {
     font-size: 14px;
     cursor: pointer;
     transition: var(--transition-base);
-    box-shadow: var(--shadow-sm);
+    /* box-shadow: var(--shadow-sm); */ /* Removed for flat design */
 }
 
 button#btnSend:hover:not(:disabled) {
     background: white;
     border-color: var(--primary);
     color: var(--primary);
-    box-shadow: var(--shadow-md);
+    /* box-shadow: var(--shadow-md); */ /* Removed for flat design */
 }
 
 button#btnSend:active {
@@ -877,7 +878,7 @@ button#btnSend:disabled {
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius-full);
+    border-radius: 0; /* Changed from var(--radius-full) for sharp corners */
     font-size: 12px;
     font-weight: 600;
     color: var(--text-muted);
@@ -895,7 +896,7 @@ button#btnSend:disabled {
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: var(--radius-lg);
+    border-radius: 0; /* Changed from var(--radius-lg) for sharp corners */
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
     display: flex;
     gap: 12px;
@@ -975,7 +976,7 @@ button#btnSend:disabled {
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius-full);
+    border-radius: 0; /* Changed from var(--radius-full) for sharp corners */
     display: flex;
     align-items: center;
     gap: 6px;
@@ -1007,13 +1008,13 @@ button#btnSend:disabled {
         rgba(255, 255, 255, 0.04) 100%);
     background-size: 200% 100%;
     animation: skeletonShimmer 1.5s ease-in-out infinite;
-    border-radius: var(--radius-md);
+    border-radius: 0; /* Changed from var(--radius-md) for sharp corners */
 }
 
 .skeleton-message {
     height: 80px;
     margin-bottom: 12px;
-    border-radius: var(--radius-xl);
+    border-radius: 0; /* Changed from var(--radius-xl) for sharp corners */
 }
 
 @keyframes skeletonShimmer {
@@ -1286,7 +1287,7 @@ select {
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius-md);
+    border-radius: 0 !important; /* Changed from var(--radius-md) for sharp corners */
     color: var(--text-primary);
     font-size: 14px;
     font-weight: 500;
@@ -1376,7 +1377,7 @@ input[type="checkbox"] {
     padding: 16px;
     background: linear-gradient(180deg, rgba(26, 29, 46, 0.8) 0%, rgba(15, 17, 23, 0.9) 100%);
     border-top: 1px solid rgba(102, 126, 234, 0.15);
-    border-radius: 0 0 16px 16px;
+    border-radius: 0; /* Changed from 0 0 16px 16px for sharp corners */
     background: linear-gradient(0deg, rgba(10, 12, 20, 0.95) 0%, transparent 100%);
     display: flex;
     align-items: center;
@@ -1395,7 +1396,7 @@ input[type="checkbox"] {
     backdrop-filter: blur(20px) saturate(180%);
     -webkit-backdrop-filter: blur(20px) saturate(180%);
     border: 2px solid rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius-xl);
+    border-radius: 0; /* Changed from var(--radius-xl) for sharp corners */
     color: var(--text-primary);
     font-size: 15px;
     font-weight: 500;
@@ -1454,7 +1455,7 @@ input[type="checkbox"] {
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-top: 1px solid var(--border-color); /* Changed from rgba(255, 255, 255, 0.05) to use theme variable */
     background: linear-gradient(180deg, rgba(15, 17, 23, 0.8) 0%, rgba(10, 12, 20, 0.95) 100%);
     flex-shrink: 0;
     /* FEATURE 2: Smooth hide transition */
@@ -1550,7 +1551,7 @@ input[type="checkbox"] {
 .modal-dialog {
     background: rgba(26, 29, 46, 0.95);
     border: 2px solid rgba(102, 126, 234, 0.3);
-    border-radius: var(--radius-lg);
+    border-radius: 0; /* Changed from var(--radius-lg) for sharp corners */
     padding: 24px;
     max-width: 420px;
     width: 90%;
@@ -1652,7 +1653,7 @@ input[type="checkbox"] {
     right: 20px;
     background: rgba(255, 199, 113, 0.2);
     border: 2px solid rgba(255, 199, 113, 0.4);
-    border-radius: 8px;
+    border-radius: 0; /* Changed from 8px for sharp corners */
     padding: 16px;
     color: #ffc371;
     font-size: 14px;
@@ -1714,13 +1715,13 @@ input[type="checkbox"] {
 
 .chat-messages::-webkit-scrollbar-track {
     background: rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
+    border-radius: 0; /* Changed from 10px for sharp corners */
     margin: 4px;
 }
 
 .chat-messages::-webkit-scrollbar-thumb {
     background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-    border-radius: 10px;
+    border-radius: 0; /* Changed from 10px for sharp corners */
     transition: all 0.3s ease;
 }
 
@@ -1759,7 +1760,7 @@ input[type="checkbox"] {
     padding: 8px 16px;
     background: linear-gradient(135deg, rgba(255, 99, 71, 0.15) 0%, rgba(255, 140, 0, 0.15) 100%);
     border: 2px solid rgba(255, 99, 71, 0.4);
-    border-radius: 8px;
+    border-radius: 0; /* Changed from 8px for sharp corners */
     margin: 8px 16px;
     text-align: center;
     font-size: 13px;
@@ -1864,7 +1865,7 @@ input[type="checkbox"] {
   right: 16px;
   background: rgba(102, 126, 234, 0.2);
   border: 1px solid rgba(102, 126, 234, 0.4);
-  border-radius: 8px 8px 0 0;
+  border-radius: 0; /* Changed from 8px 8px 0 0 for sharp corners */
   padding: 8px 16px;
   display: flex;
   justify-content: space-between;
@@ -1913,7 +1914,7 @@ input[type="checkbox"] {
 .delete-popup {
   background: rgba(26, 29, 46, 0.95);
   border: 2px solid rgba(254, 107, 139, 0.4);
-  border-radius: 12px;
+  border-radius: 0; /* Changed from 12px for sharp corners */
   padding: 24px;
   max-width: 400px;
   width: 90%;
@@ -1930,7 +1931,7 @@ input[type="checkbox"] {
 .delete-popup-message {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  border-radius: 0; /* Changed from 8px for sharp corners */
   padding: 12px;
   margin: 12px 0;
   color: var(--text-secondary);
@@ -1949,7 +1950,7 @@ input[type="checkbox"] {
   flex: 1;
   padding: 10px;
   border: none;
-  border-radius: 8px;
+  border-radius: 0; /* Changed from 8px for sharp corners */
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;

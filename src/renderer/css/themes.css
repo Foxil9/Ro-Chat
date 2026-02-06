@@ -57,9 +57,9 @@ body.theme-dark {
    LIGHT Theme
    ========================= */
 body.theme-light {
-    --bg-primary: #f9fafb;
-    --bg-secondary: #f3f4f6;
-    --bg-tertiary: #fef2f2;
+    --bg-primary: #ececf1;   /* Darkened from #f9fafb for better readability */
+    --bg-secondary: #e0e3eb; /* Darkened from #f3f4f6 for better contrast */
+    --bg-tertiary: #fce4e6;  /* Darkened from #fef2f2 for consistency */
 
     --primary: #fb7185;
     --primary-hover: #f43f5e;
@@ -73,6 +73,33 @@ body.theme-light {
     --text-muted: #6b7280;
 
     --border-color: #e5e7eb;
+}
+
+/* ============================================
+   LIGHT MODE INPUT GRADIENT FIX
+   Replaces dark gradient with light theme gradient
+   ============================================ */
+
+body.theme-light .input-container {
+    background: linear-gradient(
+        0deg,
+        rgba(236, 236, 241, 0.95) 0%,
+        transparent 100%
+    );
+    border-top: 1px solid var(--border-color); /* Ensure border visible in light mode */
+}
+
+body.theme-light .input-container::before {
+    background: linear-gradient(
+        to bottom,
+        transparent,
+        rgba(236, 236, 241, 0.5)
+    );
+}
+
+/* Chat footer light mode border */
+body.theme-light .chat-footer {
+    border-top: 1px solid var(--border-color); /* Theme-aware border */
 }
 
 /* Light Mode Button Hover Overrides */
@@ -112,6 +139,56 @@ body.theme-light .chat-tab.active {
     background: var(--primary);
     border-color: var(--primary);
     color: white;
+}
+
+/* ============================================
+   SETTINGS PAGE LIGHT MODE OVERRIDES
+   Forces theme colors over inline styles
+   ============================================ */
+
+/* Keybind Button - All States */
+body.theme-light #keybind-btn {
+    background: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+body.theme-light #keybind-btn:hover {
+    background: var(--bg-tertiary) !important;
+    border-color: var(--primary) !important;
+}
+
+body.theme-light #keybind-btn:active {
+    background: var(--bg-primary) !important;
+    transform: scale(0.98); /* Subtle press feedback */
+}
+
+body.theme-light #keybind-btn:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Coffee Link - All States */
+body.theme-light .coffee-link {
+    color: var(--primary) !important;
+    background: rgba(219, 39, 119, 0.08) !important;
+    border-color: rgba(219, 39, 119, 0.25) !important;
+}
+
+body.theme-light .coffee-link:hover {
+    background: rgba(219, 39, 119, 0.15) !important;
+    border-color: rgba(219, 39, 119, 0.4) !important;
+    box-shadow: 0 2px 8px rgba(219, 39, 119, 0.25) !important;
+}
+
+body.theme-light .coffee-link:active {
+    background: rgba(219, 39, 119, 0.2) !important;
+    transform: translateY(1px); /* Subtle press feedback */
+}
+
+body.theme-light .coffee-link:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
 }
 
 /* =========================

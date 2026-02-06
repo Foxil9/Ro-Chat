@@ -1055,7 +1055,7 @@ renderMessage(message) {
       right: 20px;
       background: rgba(254, 107, 139, 0.2);
       border: 2px solid rgba(254, 107, 139, 0.4);
-      border-radius: 8px;
+      border-radius: 0; /* Changed from 8px for sharp corners - UI consistency */
       padding: 12px;
       color: #fe6b8b;
       font-size: 14px;
@@ -1096,7 +1096,7 @@ showErrorMessage(errorText) {
     right: 20px;
     background: rgba(254, 107, 139, 0.95);
     border: 2px solid rgba(254, 107, 139, 0.6);
-    border-radius: 12px;
+    border-radius: 0; /* Changed from 12px for sharp corners - UI consistency */
     padding: 16px 20px;
     color: white;
     font-size: 14px;

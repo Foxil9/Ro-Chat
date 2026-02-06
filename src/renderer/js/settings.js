@@ -328,7 +328,7 @@ class SettingsManager {
 
     this.capturingKeybind = true;
     button.textContent = 'Press keys...';
-    button.style.borderColor = 'var(--accent-purple)';
+    button.style.borderColor = 'var(--primary)'; // Changed from --accent-purple to use theme's primary color
 
     const handleKeyDown = (e) => {
       e.preventDefault();
@@ -353,7 +353,7 @@ class SettingsManager {
         window.electronAPI.settings.registerKeybind(keybind);
       }
 
-      button.style.borderColor = 'rgba(102, 126, 234, 0.4)';
+      button.style.borderColor = 'var(--border-color)'; // Changed from hardcoded purple to theme border color
       this.capturingKeybind = false;
       document.removeEventListener('keydown', handleKeyDown);
     };

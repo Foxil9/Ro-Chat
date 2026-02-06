@@ -452,7 +452,7 @@ function handleMinimize(event) {
         x: currentBounds.x,
         y: currentBounds.y
       }, true);
-      mainWindow.setMinimumSize(320, 450);
+      mainWindow.setMinimumSize(320, 260);
       mainWindow.setMaximumSize(maxWidth, maxHeight);
       mainWindow.isMinimizedTab = false;
 

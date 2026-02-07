@@ -849,10 +849,16 @@ class ChatManager {
 
     // Only render if this is the active tab
     if (targetType === this.activeTab) {
+      // Wrapper ensures true centering via text-align: center
+      const wrapper = document.createElement("div");
+      wrapper.className = "system-msg-wrapper";
+
       const messageEl = document.createElement("div");
       messageEl.className = "system-msg";
       messageEl.textContent = text;
-      this.messagesContainer.appendChild(messageEl);
+
+      wrapper.appendChild(messageEl);
+      this.messagesContainer.appendChild(wrapper);
       this.scrollToBottom();
     }
   }

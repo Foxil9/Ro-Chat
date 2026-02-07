@@ -100,6 +100,7 @@ body.theme-light .input-container::before {
 /* Chat footer light mode border */
 body.theme-light .chat-footer {
     border-top: 1px solid var(--border-color); /* Theme-aware border */
+    background: var(--bg-secondary);
 }
 
 /* Light Mode Button Hover Overrides */

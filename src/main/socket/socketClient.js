@@ -1,6 +1,6 @@
-const { io } = require('socket.io-client');
-const logger = require('../logging/logger');
-const { sanitizeError } = require('../utils/sanitizer');
+const { io } = require("socket.io-client");
+const logger = require("../logging/logger");
+const { sanitizeError } = require("../utils/sanitizer");
 
 /**
  * Socket.io Client Manager
@@ -11,8 +11,11 @@ class SocketClient {
     this.socket = null;
     this.connected = false;
     this.currentRooms = new Set(); // Track joined rooms
-    this.BACKEND_URL = 'https://ro-chat-zqks.onrender.com';
+    this.BACKEND_URL =
+      process.env.SERVER_URL || "https://ro-chat-zqks.onrender.com";
     this.onConnectedCallback = null; // Callback to execute after socket connects
+    this.connectionAttempts = 0; // Track failed connection attempts
+    this.maxConnectionAttempts = 3; // Stop detector after 3 failures
   }
 
   /**
@@ -20,22 +23,23 @@ class SocketClient {
    */
   connect() {
     if (this.socket && this.connected) {
-      logger.info('Socket already connected');
+      logger.info("Socket already connected");
       return;
     }
 
-    logger.info('Connecting to Socket.io server', { url: this.BACKEND_URL });
+    logger.info("Connecting to Socket.io server", { url: this.BACKEND_URL });
 
     this.socket = io(this.BACKEND_URL, {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      reconnectionAttempts: Infinity
+      reconnectionAttempts: Infinity,
     });
 
-    this.socket.on('connect', () => {
+    this.socket.on("connect", () => {
       this.connected = true;
-      logger.info('Socket connected', { socketId: this.socket.id });
+      this.connectionAttempts = 0; // Reset counter on successful connection
+      logger.info("Socket connected", { socketId: this.socket.id });
 
       // Call the onConnected callback to set up event listeners
       if (this.onConnectedCallback) {
@@ -46,21 +50,33 @@ class SocketClient {
       this.rejoinRooms();
     });
 
-    this.socket.on('disconnect', (reason) => {
+    this.socket.on("disconnect", (reason) => {
       this.connected = false;
-      logger.info('Socket disconnected', { reason });
+      logger.info("Socket disconnected", { reason });
     });
 
-    this.socket.on('connect_error', (error) => {
-      logger.error('Socket connection error', sanitizeError({ error: error.message }));
+    this.socket.on("connect_error", (error) => {
+      this.connectionAttempts++;
+      logger.error(
+        "Socket connection error",
+        sanitizeError({
+          error: error.message,
+          attempt: this.connectionAttempts,
+        }),
+      );
+
+      if (this.connectionAttempts >= this.maxConnectionAttempts) {
+        logger.error("Max connection attempts reached, stopping detector");
+        this.handlePersistentFailure();
+      }
     });
 
-    this.socket.on('message', (data) => {
-      logger.info('Message received from server', { data });
+    this.socket.on("message", (data) => {
+      logger.info("Message received from server", { data });
     });
 
-    this.socket.on('typingIndicator', (data) => {
-      logger.info('Typing indicator received', { data });
+    this.socket.on("typingIndicator", (data) => {
+      logger.info("Typing indicator received", { data });
     });
   }
 
@@ -69,7 +85,7 @@ class SocketClient {
    */
   disconnect() {
     if (this.socket) {
-      logger.info('Disconnecting socket');
+      logger.info("Disconnecting socket");
       this.currentRooms.clear();
       this.socket.disconnect();
       this.socket = null;
@@ -82,7 +98,7 @@ class SocketClient {
    */
   joinRoom(jobId, placeId) {
     if (!this.socket || !this.connected) {
-      logger.warn('Cannot join room - socket not connected');
+      logger.warn("Cannot join room - socket not connected");
       return;
     }
 
@@ -93,13 +109,13 @@ class SocketClient {
     const serverRoom = `server:${jobId}`;
     const globalRoom = `global:${placeId}`;
 
-    this.socket.emit('join-room', serverRoom);
-    this.socket.emit('join-room', globalRoom);
+    this.socket.emit("join-room", serverRoom);
+    this.socket.emit("join-room", globalRoom);
 
     this.currentRooms.add(serverRoom);
     this.currentRooms.add(globalRoom);
 
-    logger.info('Joined rooms');
+    logger.info("Joined rooms");
   }
 
   /**
@@ -109,11 +125,11 @@ class SocketClient {
     if (!this.socket) return;
 
     for (const roomId of this.currentRooms) {
-      this.socket.emit('leave-room', roomId);
+      this.socket.emit("leave-room", roomId);
     }
 
     if (this.currentRooms.size > 0) {
-      logger.info('Left all rooms');
+      logger.info("Left all rooms");
     }
 
     this.currentRooms.clear();
@@ -128,10 +144,10 @@ class SocketClient {
     const rooms = Array.from(this.currentRooms);
     if (rooms.length === 0) return;
 
-    logger.info('Rejoining rooms after reconnection');
+    logger.info("Rejoining rooms after reconnection");
 
     for (const roomId of rooms) {
-      this.socket.emit('join-room', roomId);
+      this.socket.emit("join-room", roomId);
     }
   }
 
@@ -150,10 +166,10 @@ class SocketClient {
       return;
     }
 
-    this.socket.emit('notifyTyping', {
+    this.socket.emit("notifyTyping", {
       jobId,
       username,
-      isTyping
+      isTyping,
     });
   }
 
@@ -162,14 +178,14 @@ class SocketClient {
    */
   emitEditMessage(messageId, userId, newContent) {
     if (!this.socket || !this.connected) {
-      logger.warn('Cannot edit message - socket not connected');
+      logger.warn("Cannot edit message - socket not connected");
       return;
     }
 
-    this.socket.emit('editMessage', {
+    this.socket.emit("editMessage", {
       messageId,
       userId,
-      newContent
+      newContent,
     });
   }
 
@@ -178,13 +194,13 @@ class SocketClient {
    */
   emitDeleteMessage(messageId, userId) {
     if (!this.socket || !this.connected) {
-      logger.warn('Cannot delete message - socket not connected');
+      logger.warn("Cannot delete message - socket not connected");
       return;
     }
 
-    this.socket.emit('deleteMessage', {
+    this.socket.emit("deleteMessage", {
       messageId,
-      userId
+      userId,
     });
   }
 
@@ -194,6 +210,45 @@ class SocketClient {
    */
   setOnConnectedCallback(callback) {
     this.onConnectedCallback = callback;
+  }
+
+  /**
+   * Handle persistent connection failure (after max attempts)
+   * Stops detector and notifies renderer
+   */
+  handlePersistentFailure() {
+    const detector = require("../detection/detector");
+    if (detector.isRunning) {
+      detector.stop();
+      logger.info("Detector stopped due to socket connection failure");
+    }
+
+    // Notify renderer via IPC
+    const { BrowserWindow } = require("electron");
+    const mainWindow = BrowserWindow.getAllWindows()[0];
+    if (mainWindow) {
+      mainWindow.webContents.send("socket-connection-failed", {
+        error: "Could not connect to server after multiple attempts",
+        canRetry: true,
+      });
+    }
+  }
+
+  /**
+   * Manually retry connection (called from renderer)
+   * Resets attempt counter and restarts detector
+   */
+  retryConnection() {
+    this.connectionAttempts = 0;
+    if (!this.connected) {
+      logger.info("Retrying socket connection");
+      this.connect();
+
+      const detector = require("../detection/detector");
+      if (!detector.isRunning) {
+        detector.start();
+      }
+    }
   }
 
   // REMOVED GAME BROWSER FEATURE

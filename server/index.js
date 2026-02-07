@@ -46,11 +46,19 @@ const io = new Server(server, {
   }
 });
 
+const { LRUCache } = require('lru-cache');
+
 // Track typing users per room: Map<roomId, Set<username>>
 const typingUsers = new Map();
 
-// Socket rate limiting: track event counts per socket
-const socketRateLimits = new Map();
+// Socket rate limiting: LRU cache with max size to prevent memory leak
+const socketRateLimits = new LRUCache({
+  max: 10000, // Max 10,000 entries (supports ~2,500 sockets × 4 event types)
+  ttl: 30000, // Auto-expire entries after 30 seconds
+  updateAgeOnGet: false, // Don't reset TTL on reads
+  allowStale: false
+});
+
 const SOCKET_RATE_CONFIG = {
   typing: { maxPerWindow: 10, windowMs: 5000 },
   edit: { maxPerWindow: 5, windowMs: 10000 },
@@ -76,23 +84,17 @@ function checkSocketRateLimit(socketId, eventType) {
   }
 
   entry.count++;
+  socketRateLimits.set(key, entry); // Update entry in LRU cache
+
   if (entry.count > config.maxPerWindow) {
     return false;
   }
   return true;
 }
 
-// Clean up socket rate limits and empty typing rooms every 60 seconds
+// Clean empty typing rooms every 60 seconds
+// LRU cache auto-expires rate limit entries, no manual cleanup needed
 setInterval(() => {
-  const now = Date.now();
-
-  // Clean rate limit entries older than 30 seconds
-  for (const [key, entry] of socketRateLimits.entries()) {
-    if (now - entry.windowStart > 30000) {
-      socketRateLimits.delete(key);
-    }
-  }
-
   // Clean empty typing rooms
   for (const [roomId, typers] of typingUsers.entries()) {
     if (typers.size === 0) {
@@ -118,7 +120,19 @@ app.use('/api/chat', authMiddleware, chatRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: Date.now() });
+  const { getCircuitBreakerStatus } = require('./config/database');
+  const dbStatus = getCircuitBreakerStatus();
+
+  const status = dbStatus.isConnected ? 'ok' : 'degraded';
+
+  res.status(dbStatus.isConnected ? 200 : 503).json({
+    status,
+    timestamp: Date.now(),
+    database: {
+      connected: dbStatus.isConnected,
+      circuitBreaker: dbStatus.state
+    }
+  });
 });
 
 // REMOVED GAME BROWSER FEATURE

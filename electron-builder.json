@@ -6,7 +6,8 @@
   },
   "files": [
     "src/**/*",
-    "package.json"
+    "package.json",
+    ".env"
   ],
   "win": {
     "target": [

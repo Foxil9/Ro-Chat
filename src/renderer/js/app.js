@@ -23,7 +23,7 @@ class RoChatApp {
     try {
       // Ensure theme class is on body (html already has it from inline script)
       const htmlTheme = document.documentElement.className;
-      if (htmlTheme && !document.body.className.includes('theme-')) {
+      if (htmlTheme && !document.body.className.includes("theme-")) {
         document.body.className = htmlTheme;
       }
 
@@ -46,22 +46,22 @@ class RoChatApp {
 
       if (status.success && status.authenticated) {
         this.currentUser = status.user;
-        this.showView('chat');
+        this.showView("chat");
         await this.startDetection();
         // Start connection monitoring
         this.startConnectionMonitoring();
       } else {
-        this.showView('login');
+        this.showView("login");
       }
 
       // Setup event listeners
       this.setupEventListeners();
 
       this.isInitialized = true;
-      console.log('RoChat initialized');
+      console.log("RoChat initialized");
     } catch (error) {
-      console.error('Failed to initialize:', error);
-      this.showView('login');
+      console.error("Failed to initialize:", error);
+      this.showView("login");
     }
   }
 
@@ -100,7 +100,7 @@ class RoChatApp {
         this.socketConnected = false;
       }
     } catch (error) {
-      console.error('Failed to check socket connection:', error);
+      console.error("Failed to check socket connection:", error);
       this.socketConnected = false;
     }
   }
@@ -110,16 +110,21 @@ class RoChatApp {
    */
   async registerSavedKeybind() {
     try {
-      const saved = localStorage.getItem('rochat-settings');
+      const saved = localStorage.getItem("rochat-settings");
       if (saved) {
         const settings = JSON.parse(saved);
-        if (settings.chatKeybind && window.electronAPI?.settings?.registerKeybind) {
-          await window.electronAPI.settings.registerKeybind(settings.chatKeybind);
-          console.log('Registered saved keybind:', settings.chatKeybind);
+        if (
+          settings.chatKeybind &&
+          window.electronAPI?.settings?.registerKeybind
+        ) {
+          await window.electronAPI.settings.registerKeybind(
+            settings.chatKeybind,
+          );
+          console.log("Registered saved keybind:", settings.chatKeybind);
         }
       }
     } catch (error) {
-      console.error('Failed to register saved keybind:', error);
+      console.error("Failed to register saved keybind:", error);
       // Non-critical error, continue initialization
     }
   }
@@ -129,15 +134,15 @@ class RoChatApp {
    */
   loadSavedTheme() {
     try {
-      const saved = localStorage.getItem('rochat-settings');
+      const saved = localStorage.getItem("rochat-settings");
       if (saved) {
         const settings = JSON.parse(saved);
-        return settings.theme || 'dark';
+        return settings.theme || "dark";
       }
     } catch (error) {
-      console.error('Failed to load theme:', error);
+      console.error("Failed to load theme:", error);
     }
-    return 'dark';
+    return "dark";
   }
 
   /**
@@ -145,12 +150,12 @@ class RoChatApp {
    */
   loadSavedSettings() {
     try {
-      const saved = localStorage.getItem('rochat-settings');
+      const saved = localStorage.getItem("rochat-settings");
       if (saved) {
         return JSON.parse(saved);
       }
     } catch (error) {
-      console.error('Failed to load settings:', error);
+      console.error("Failed to load settings:", error);
     }
     return null;
   }
@@ -160,11 +165,11 @@ class RoChatApp {
    */
   setupEventListeners() {
     // Window controls (only in chat view)
-    const minimizeBtn = document.getElementById('minimize-btn');
-    const closeBtn = document.getElementById('close-btn');
+    const minimizeBtn = document.getElementById("minimize-btn");
+    const closeBtn = document.getElementById("close-btn");
 
     if (minimizeBtn) {
-      minimizeBtn.addEventListener('click', async () => {
+      minimizeBtn.addEventListener("click", async () => {
         const result = await window.electronAPI.window.minimize();
         if (result && result.isMinimized !== undefined) {
           this.toggleMinimizedView(result.isMinimized);
@@ -173,25 +178,27 @@ class RoChatApp {
     }
 
     if (closeBtn) {
-      closeBtn.addEventListener('click', () => {
+      closeBtn.addEventListener("click", () => {
         window.electronAPI.window.close();
       });
     }
 
     // Login button
-    document.getElementById('login-btn').addEventListener('click', () => this.handleLogin());
+    document
+      .getElementById("login-btn")
+      .addEventListener("click", () => this.handleLogin());
 
     // Settings button
-    const settingsBtn = document.getElementById('settings-btn');
+    const settingsBtn = document.getElementById("settings-btn");
     if (settingsBtn) {
-      settingsBtn.addEventListener('click', () => {
+      settingsBtn.addEventListener("click", () => {
         window.electronAPI.window.openSettings();
       });
     }
 
     // F11 fullscreen toggle
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'F11') {
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "F11") {
         e.preventDefault();
         window.electron.toggleFullscreen();
       }
@@ -215,7 +222,7 @@ class RoChatApp {
     // Listen for keybind to focus chat
     if (window.electronAPI?.onFocusChat) {
       window.electronAPI.onFocusChat(() => {
-        const input = document.getElementById('message-input');
+        const input = document.getElementById("message-input");
         if (input) input.focus();
       });
     }
@@ -237,21 +244,21 @@ class RoChatApp {
     // Listen for logout event
     if (window.electronAPI?.onLogout) {
       window.electronAPI.onLogout(() => {
-        console.log('Logout event received');
+        console.log("Logout event received");
         this.currentUser = null;
         this.stopConnectionMonitoring();
-        this.showView('login');
+        this.showView("login");
 
         // Reset login button state
-        const loginBtn = document.getElementById('login-btn');
-        const statusEl = document.getElementById('login-status');
+        const loginBtn = document.getElementById("login-btn");
+        const statusEl = document.getElementById("login-status");
         if (loginBtn) {
           loginBtn.disabled = false;
-          loginBtn.textContent = 'Login with Roblox';
+          loginBtn.textContent = "Login with Roblox";
         }
         if (statusEl) {
-          statusEl.textContent = '';
-          statusEl.className = 'status';
+          statusEl.textContent = "";
+          statusEl.className = "status";
         }
       });
     }
@@ -259,7 +266,7 @@ class RoChatApp {
     // Listen for token expired event - auto-logout
     if (window.electronAPI?.onTokenExpired) {
       window.electronAPI.onTokenExpired(async () => {
-        console.log('Token expired - auto logging out');
+        console.log("Token expired - auto logging out");
 
         // Trigger logout
         try {
@@ -267,24 +274,24 @@ class RoChatApp {
             await window.electron.logout();
           }
         } catch (error) {
-          console.error('Auto-logout failed:', error);
+          console.error("Auto-logout failed:", error);
         }
 
         // Show login view regardless of logout result
         this.currentUser = null;
         this.stopConnectionMonitoring();
-        this.showView('login');
+        this.showView("login");
 
         // Reset login button state
-        const loginBtn = document.getElementById('login-btn');
-        const statusEl = document.getElementById('login-status');
+        const loginBtn = document.getElementById("login-btn");
+        const statusEl = document.getElementById("login-status");
         if (loginBtn) {
           loginBtn.disabled = false;
-          loginBtn.textContent = 'Login with Roblox';
+          loginBtn.textContent = "Login with Roblox";
         }
         if (statusEl) {
-          statusEl.textContent = 'Session expired. Please log in again.';
-          statusEl.className = 'status error';
+          statusEl.textContent = "Session expired. Please log in again.";
+          statusEl.className = "status error";
         }
       });
     }
@@ -307,8 +314,8 @@ class RoChatApp {
     // Prevent duplicate listener attachment
     if (this.autoHideListeners) return;
 
-    const chatView = document.getElementById('chat-view');
-    const chatHeader = document.getElementById('chat-header');
+    const chatView = document.getElementById("chat-view");
+    const chatHeader = document.getElementById("chat-header");
 
     if (!chatView || !chatHeader) return;
 
@@ -341,14 +348,14 @@ class RoChatApp {
         if (this.autoHideHeaderEnabled) {
           this.showHeader();
         }
-      }
+      },
     };
 
     // Attach listeners
-    window.addEventListener('blur', this.autoHideListeners.blur);
-    window.addEventListener('focus', this.autoHideListeners.focus);
-    chatView.addEventListener('mouseleave', this.autoHideListeners.mouseleave);
-    chatView.addEventListener('mouseenter', this.autoHideListeners.mouseenter);
+    window.addEventListener("blur", this.autoHideListeners.blur);
+    window.addEventListener("focus", this.autoHideListeners.focus);
+    chatView.addEventListener("mouseleave", this.autoHideListeners.mouseleave);
+    chatView.addEventListener("mouseenter", this.autoHideListeners.mouseenter);
   }
 
   /**
@@ -357,14 +364,20 @@ class RoChatApp {
   teardownAutoHideHeader() {
     if (!this.autoHideListeners) return;
 
-    const chatView = document.getElementById('chat-view');
+    const chatView = document.getElementById("chat-view");
 
     // Remove all listeners
-    window.removeEventListener('blur', this.autoHideListeners.blur);
-    window.removeEventListener('focus', this.autoHideListeners.focus);
+    window.removeEventListener("blur", this.autoHideListeners.blur);
+    window.removeEventListener("focus", this.autoHideListeners.focus);
     if (chatView) {
-      chatView.removeEventListener('mouseleave', this.autoHideListeners.mouseleave);
-      chatView.removeEventListener('mouseenter', this.autoHideListeners.mouseenter);
+      chatView.removeEventListener(
+        "mouseleave",
+        this.autoHideListeners.mouseleave,
+      );
+      chatView.removeEventListener(
+        "mouseenter",
+        this.autoHideListeners.mouseenter,
+      );
     }
 
     // Clear timer if active
@@ -381,9 +394,9 @@ class RoChatApp {
    * Hide header
    */
   hideHeader() {
-    const chatHeader = document.getElementById('chat-header');
+    const chatHeader = document.getElementById("chat-header");
     if (chatHeader) {
-      chatHeader.classList.add('auto-hidden');
+      chatHeader.classList.add("auto-hidden");
     }
   }
 
@@ -391,9 +404,9 @@ class RoChatApp {
    * Show header
    */
   showHeader() {
-    const chatHeader = document.getElementById('chat-header');
+    const chatHeader = document.getElementById("chat-header");
     if (chatHeader) {
-      chatHeader.classList.remove('auto-hidden');
+      chatHeader.classList.remove("auto-hidden");
     }
   }
 
@@ -426,12 +439,12 @@ class RoChatApp {
   setAutoHideFooter(enabled) {
     this.autoHideFooterEnabled = enabled;
 
-    const chatFooter = document.querySelector('.chat-footer');
+    const chatFooter = document.querySelector(".chat-footer");
     if (chatFooter) {
       if (enabled) {
-        chatFooter.classList.add('auto-hidden');
+        chatFooter.classList.add("auto-hidden");
       } else {
-        chatFooter.classList.remove('auto-hidden');
+        chatFooter.classList.remove("auto-hidden");
       }
     }
   }
@@ -444,13 +457,15 @@ class RoChatApp {
     const html = document.documentElement;
 
     // Remove theme classes from both body and html
-    body.classList.remove('theme-light', 'theme-dark', 'theme-auto');
-    html.classList.remove('theme-light', 'theme-dark', 'theme-auto');
+    body.classList.remove("theme-light", "theme-dark", "theme-auto");
+    html.classList.remove("theme-light", "theme-dark", "theme-auto");
 
-    if (theme === 'auto') {
+    if (theme === "auto") {
       // Check system preference
-      const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const themeClass = isDark ? 'theme-dark' : 'theme-light';
+      const isDark =
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const themeClass = isDark ? "theme-dark" : "theme-light";
       body.classList.add(themeClass);
       html.classList.add(themeClass);
     } else {
@@ -465,21 +480,21 @@ class RoChatApp {
    */
   showView(viewName) {
     // Hide all views
-    document.querySelectorAll('.view').forEach(view => {
-      view.classList.add('hidden');
+    document.querySelectorAll(".view").forEach((view) => {
+      view.classList.add("hidden");
     });
 
     // Show requested view
     const view = document.getElementById(`${viewName}-view`);
     if (view) {
-      view.classList.remove('hidden');
+      view.classList.remove("hidden");
     }
 
     this.currentView = viewName;
-    console.log('View changed to:', viewName);
+    console.log("View changed to:", viewName);
 
     // Update user info if showing chat
-    if (viewName === 'chat' && this.currentUser) {
+    if (viewName === "chat" && this.currentUser) {
       this.updateUserDisplay();
     }
   }
@@ -490,25 +505,26 @@ class RoChatApp {
   updateUserDisplay() {
     if (!this.currentUser) return;
 
-    const avatarEl = document.getElementById('user-avatar');
-    const nameEl = document.getElementById('user-name');
+    const avatarEl = document.getElementById("user-avatar");
+    const nameEl = document.getElementById("user-name");
 
     if (avatarEl) {
       if (this.currentUser.picture) {
         avatarEl.src = this.currentUser.picture;
-        avatarEl.style.display = 'block';
+        avatarEl.style.display = "block";
         avatarEl.onerror = () => {
-          console.error('Failed to load avatar:', this.currentUser.picture);
-          avatarEl.style.display = 'none';
+          console.error("Failed to load avatar:", this.currentUser.picture);
+          avatarEl.style.display = "none";
         };
       } else {
-        avatarEl.style.display = 'none';
-        console.log('No picture URL for user:', this.currentUser);
+        avatarEl.style.display = "none";
+        console.log("No picture URL for user:", this.currentUser);
       }
     }
 
     if (nameEl) {
-      nameEl.textContent = this.currentUser.username || this.currentUser.displayName || 'User';
+      nameEl.textContent =
+        this.currentUser.username || this.currentUser.displayName || "User";
     }
   }
 
@@ -516,13 +532,13 @@ class RoChatApp {
    * Update draggable setting
    */
   updateDraggable() {
-    const draggable = localStorage.getItem('draggable') !== 'false';
-    const header = document.getElementById('chat-header');
+    const draggable = localStorage.getItem("draggable") !== "false";
+    const header = document.getElementById("chat-header");
     if (header) {
       if (draggable) {
-        header.classList.add('draggable');
+        header.classList.add("draggable");
       } else {
-        header.classList.remove('draggable');
+        header.classList.remove("draggable");
       }
     }
   }
@@ -531,16 +547,16 @@ class RoChatApp {
    * Toggle minimized view
    */
   toggleMinimizedView(isMinimized) {
-    const chatView = document.getElementById('chat-view');
-    const chatContainer = chatView?.querySelector('.chat-container');
+    const chatView = document.getElementById("chat-view");
+    const chatContainer = chatView?.querySelector(".chat-container");
 
     if (chatContainer) {
       if (isMinimized) {
-        chatContainer.classList.add('minimized');
-        document.body.classList.add('minimized');
+        chatContainer.classList.add("minimized");
+        document.body.classList.add("minimized");
       } else {
-        chatContainer.classList.remove('minimized');
-        document.body.classList.remove('minimized');
+        chatContainer.classList.remove("minimized");
+        document.body.classList.remove("minimized");
       }
     }
   }
@@ -549,45 +565,45 @@ class RoChatApp {
    * Handle login
    */
   async handleLogin() {
-    const loginBtn = document.getElementById('login-btn');
-    const statusEl = document.getElementById('login-status');
+    const loginBtn = document.getElementById("login-btn");
+    const statusEl = document.getElementById("login-status");
 
     if (!loginBtn || !statusEl) {
-      console.error('Login elements not found');
+      console.error("Login elements not found");
       return;
     }
 
     loginBtn.disabled = true;
-    loginBtn.textContent = 'Logging in...';
-    statusEl.textContent = '';
+    loginBtn.textContent = "Logging in...";
+    statusEl.textContent = "";
 
     try {
       const result = await window.electronAPI.auth.login();
 
       if (result.success) {
         this.currentUser = result.user;
-        console.log('Login successful');
-        statusEl.textContent = 'Login successful!';
-        statusEl.className = 'status success';
+        console.log("Login successful");
+        statusEl.textContent = "Login successful!";
+        statusEl.className = "status success";
 
         setTimeout(() => {
-          this.showView('chat');
+          this.showView("chat");
           this.startDetection();
           this.startConnectionMonitoring();
         }, 500);
       } else {
-        console.error('Login failed:', result.error);
-        statusEl.textContent = result.error || 'Login failed';
-        statusEl.className = 'status error';
+        console.error("Login failed:", result.error);
+        statusEl.textContent = result.error || "Login failed";
+        statusEl.className = "status error";
         loginBtn.disabled = false;
-        loginBtn.textContent = 'Login with Roblox';
+        loginBtn.textContent = "Login with Roblox";
       }
     } catch (error) {
-      console.error('Login error:', error);
-      statusEl.textContent = 'An error occurred';
-      statusEl.className = 'status error';
+      console.error("Login error:", error);
+      statusEl.textContent = "An error occurred";
+      statusEl.className = "status error";
       loginBtn.disabled = false;
-      loginBtn.textContent = 'Login with Roblox';
+      loginBtn.textContent = "Login with Roblox";
     }
   }
 
@@ -595,7 +611,7 @@ class RoChatApp {
    * Handle logout
    */
   async handleLogout() {
-    if (!confirm('Are you sure you want to logout?')) return;
+    if (!confirm("Are you sure you want to logout?")) return;
 
     try {
       const result = await window.electronAPI.auth.logout();
@@ -603,11 +619,11 @@ class RoChatApp {
       if (result.success) {
         this.currentUser = null;
         this.stopConnectionMonitoring();
-        this.showView('login');
+        this.showView("login");
       }
     } catch (error) {
-      console.error('Logout error:', error);
-      alert('Failed to logout');
+      console.error("Logout error:", error);
+      alert("Failed to logout");
     }
   }
 
@@ -617,9 +633,9 @@ class RoChatApp {
   async startDetection() {
     try {
       const result = await window.electronAPI.detection.start();
-      console.log('Detection started');
+      console.log("Detection started");
     } catch (error) {
-      console.error('Failed to start detection:', error);
+      console.error("Failed to start detection:", error);
       // Non-critical, user can still use chat
     }
   }
@@ -628,8 +644,8 @@ class RoChatApp {
    * Handle server changed event
    */
   handleServerChanged(serverInfo) {
-    const statusDot = document.getElementById('status-dot');
-    const serverText = document.getElementById('server-text');
+    const statusDot = document.getElementById("status-dot");
+    const serverText = document.getElementById("server-text");
 
     if (!statusDot || !serverText) return;
 
@@ -637,54 +653,55 @@ class RoChatApp {
       if (serverInfo && serverInfo.placeId && serverInfo.jobId) {
         // Check if actually connected to chat via socket
         this.checkSocketConnection();
-        
+
         if (this.socketConnected) {
           // Actually connected to chat socket
-          statusDot.className = 'status-dot connected';
-          serverText.textContent = 'Connected!';
-          console.log('Connected to server and chat');
+          statusDot.className = "status-dot connected";
+          serverText.textContent = "Connected!";
+          console.log("Connected to server and chat");
         } else {
           // Have game info but not connected to chat socket yet
-          statusDot.className = 'status-dot ingame';
-          serverText.textContent = 'In-game (connecting...)';
-          console.log('In-game but not connected to chat yet');
+          statusDot.className = "status-dot ingame";
+          serverText.textContent = "In-game (connecting...)";
+          console.log("In-game but not connected to chat yet");
         }
       } else if (serverInfo && serverInfo.placeId) {
         // In-game but no jobId yet
-        statusDot.className = 'status-dot ingame';
-        serverText.textContent = 'In-game';
-        console.log('In-game');
+        statusDot.className = "status-dot ingame";
+        serverText.textContent = "In-game";
+        console.log("In-game");
       } else {
         // Not connected
-        statusDot.className = 'status-dot';
-        serverText.textContent = 'Not connected';
-        console.log('Disconnected from server');
+        statusDot.className = "status-dot";
+        serverText.textContent = "Not connected";
+        console.log("Disconnected from server");
       }
     } catch (error) {
-      console.error('Error updating server status:', error);
+      console.error("Error updating server status:", error);
     }
   }
 }
 
 // Global error handler to prevent crashes
-window.addEventListener('error', (event) => {
-  console.error('Uncaught error:', event.error);
+window.addEventListener("error", (event) => {
+  console.error("Uncaught error:", event.error);
   event.preventDefault(); // Prevent default handling
 });
 
-window.addEventListener('unhandledrejection', (event) => {
-  console.error('Unhandled promise rejection:', event.reason);
+window.addEventListener("unhandledrejection", (event) => {
+  console.error("Unhandled promise rejection:", event.reason);
   event.preventDefault(); // Prevent default handling
 });
 
 // Initialize app when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
   try {
     window.app = new RoChatApp();
     window.app.init();
   } catch (error) {
-    console.error('Failed to initialize app:', error);
+    console.error("Failed to initialize app:", error);
     // Show error state in UI
-    document.body.innerHTML = '<div style="color: red; padding: 20px;">Failed to initialize RoChat. Please restart the application.</div>';
+    document.body.innerHTML =
+      '<div style="color: red; padding: 20px;">Failed to initialize RoChat. Please restart the application.</div>';
   }
 });

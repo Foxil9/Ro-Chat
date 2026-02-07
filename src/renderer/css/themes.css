@@ -3,8 +3,8 @@
 /* =========================
    PURPLE-BLUE (Default)
    ========================= */
-body,
-body.theme-purple-blue {
+html,
+html.theme-purple-blue {
     --accent-purple: #a78bfa;
     --accent-blue: #4facfe;
     --accent-cyan: #a8edea;
@@ -14,7 +14,7 @@ body.theme-purple-blue {
 /* =========================
    BLUE-CYAN Variant
    ========================= */
-body.theme-blue-cyan {
+html.theme-blue-cyan {
     --primary: #4facfe;
     --primary-hover: #00f2fe;
     --primary-dark: #3b8cd8;
@@ -29,7 +29,7 @@ body.theme-blue-cyan {
 /* =========================
    PINK-PURPLE Variant
    ========================= */
-body.theme-pink-purple {
+html.theme-pink-purple {
     --primary: #f093fb;
     --primary-hover: #f5576c;
     --primary-dark: #d879e0;
@@ -44,7 +44,7 @@ body.theme-pink-purple {
 /* =========================
    DARK Theme
    ========================= */
-body.theme-dark {
+html.theme-dark {
     --bg-dark-base: #0a0c14;
     --bg-dark-primary: #0f1117;
     --bg-dark-secondary: #1a1d2e;
@@ -57,7 +57,7 @@ body.theme-dark {
    LIGHT Theme - Warm Brutalism
    Gaming-friendly with bold orange + teal accents
    ========================= */
-body.theme-light {
+html.theme-light {
     /* Warm cream base - inviting, not sterile */
     --bg-primary: #FAF8F5;   /* Warm cream - main background */
     --bg-secondary: #F0EBE3; /* Soft tan - secondary surfaces */
@@ -86,7 +86,7 @@ body.theme-light {
    Warm cream gradient for new theme
    ============================================ */
 
-body.theme-light .input-container {
+html.theme-light .input-container {
     background: linear-gradient(
         0deg,
         rgba(250, 248, 245, 0.95) 0%,
@@ -95,7 +95,7 @@ body.theme-light .input-container {
     border-top: 1px solid var(--border-color); /* Warm taupe border */
 }
 
-body.theme-light .input-container::before {
+html.theme-light .input-container::before {
     background: linear-gradient(
         to bottom,
         transparent,
@@ -104,7 +104,7 @@ body.theme-light .input-container::before {
 }
 
 /* Chat footer light mode border */
-body.theme-light .chat-footer {
+html.theme-light .chat-footer {
     border-top: 1px solid var(--border-color); /* Theme-aware border */
     background: var(--bg-secondary);
 }
@@ -115,14 +115,14 @@ body.theme-light .chat-footer {
    ============================================ */
 
 /* Icon Buttons - Bold orange hover */
-body.theme-light .btn-icon:hover {
+html.theme-light .btn-icon:hover {
     background: var(--primary);
     border-color: var(--primary);
     border-width: 2px; /* Brutalist emphasis */
     color: white;
 }
 
-body.theme-light .btn-icon.close-btn:hover {
+html.theme-light .btn-icon.close-btn:hover {
     background: #E74C3C; /* Warm red */
     border-color: #E74C3C;
     border-width: 2px;
@@ -130,30 +130,30 @@ body.theme-light .btn-icon.close-btn:hover {
 }
 
 /* Primary Buttons - Inverted hover (flat design principle) */
-body.theme-light .btn-primary:hover,
-body.theme-light button#btnSend:hover:not(:disabled) {
+html.theme-light .btn-primary:hover,
+html.theme-light button#btnSend:hover:not(:disabled) {
     background: var(--bg-primary);
     border-color: var(--primary);
     border-width: 2px; /* Strong border */
     color: var(--primary);
 }
 
-body.theme-light .btn-primary:active,
-body.theme-light button#btnSend:active:not(:disabled) {
+html.theme-light .btn-primary:active,
+html.theme-light button#btnSend:active:not(:disabled) {
     background: var(--primary);
     color: white;
     transform: scale(0.98); /* Tactile feedback */
 }
 
 /* Message Action Buttons */
-body.theme-light .msg-action-btn:hover {
+html.theme-light .msg-action-btn:hover {
     background: var(--primary);
     border-color: var(--primary);
     border-width: 2px;
     color: white;
 }
 
-body.theme-light .msg-action-btn.delete-btn:hover {
+html.theme-light .msg-action-btn.delete-btn:hover {
     background: #E74C3C;
     border-color: #E74C3C;
     border-width: 2px;
@@ -161,18 +161,18 @@ body.theme-light .msg-action-btn.delete-btn:hover {
 }
 
 /* Chat Tabs - Solid color blocking */
-body.theme-light .chat-tab {
+html.theme-light .chat-tab {
     border-width: 2px; /* Geometric, defined edges */
 }
 
-body.theme-light .chat-tab:hover {
+html.theme-light .chat-tab:hover {
     background: var(--accent); /* Teal for variety */
     border-color: var(--accent);
     border-width: 2px;
     color: white;
 }
 
-body.theme-light .chat-tab.active {
+html.theme-light .chat-tab.active {
     background: var(--primary); /* Bold orange for active */
     border-color: var(--primary);
     border-width: 3px; /* Extra emphasis on active state */
@@ -184,56 +184,56 @@ body.theme-light .chat-tab.active {
    ============================================ */
 
 /* Status Indicators */
-body.theme-light .status-indicator,
-body.theme-light .status-dot.ingame,
-body.theme-light .status-dot.connected {
+html.theme-light .status-indicator,
+html.theme-light .status-dot.ingame,
+html.theme-light .status-dot.connected {
     box-shadow: none !important;
 }
 
 /* Badge Glows */
-body.theme-light .badge.online {
+html.theme-light .badge.online {
     box-shadow: none !important;
 }
 
 /* Buttons */
-body.theme-light .text-btn:hover,
-body.theme-light .text-btn.danger:hover,
-body.theme-light .btn-primary,
-body.theme-light .btn-primary:hover,
-body.theme-light button#btnSend,
-body.theme-light button#btnSend:hover,
-body.theme-light .btn-secondary:hover,
-body.theme-light .btn-danger:hover,
-body.theme-light .coffee-link:hover,
-body.theme-light .modal-btn-primary,
-body.theme-light .modal-btn-primary:hover {
+html.theme-light .text-btn:hover,
+html.theme-light .text-btn.danger:hover,
+html.theme-light .btn-primary,
+html.theme-light .btn-primary:hover,
+html.theme-light button#btnSend,
+html.theme-light button#btnSend:hover,
+html.theme-light .btn-secondary:hover,
+html.theme-light .btn-danger:hover,
+html.theme-light .coffee-link:hover,
+html.theme-light .modal-btn-primary,
+html.theme-light .modal-btn-primary:hover {
     box-shadow: none !important;
 }
 
 /* Modals, Toasts, Containers */
-body.theme-light .toast,
-body.theme-light .login-container,
-body.theme-light .settings-container,
-body.theme-light .modal-dialog {
+html.theme-light .toast,
+html.theme-light .login-container,
+html.theme-light .settings-container,
+html.theme-light .modal-dialog {
     box-shadow: none !important;
 }
 
 /* Input Focus States */
-body.theme-light .input-wrapper:focus-within,
-body.theme-light .chat-input input:focus,
-body.theme-light input#chatInput:focus,
-body.theme-light select:focus {
+html.theme-light .input-wrapper:focus-within,
+html.theme-light .chat-input input:focus,
+html.theme-light input#chatInput:focus,
+html.theme-light select:focus {
     box-shadow: none !important;
 }
 
 /* Scrollbars */
-body.theme-light .message-container::-webkit-scrollbar-thumb:hover,
-body.theme-light .chat-messages::-webkit-scrollbar-thumb:hover {
+html.theme-light .message-container::-webkit-scrollbar-thumb:hover,
+html.theme-light .chat-messages::-webkit-scrollbar-thumb:hover {
     box-shadow: none !important;
 }
 
 /* Minimized Header */
-body.theme-light .chat-container.minimized .chat-header {
+html.theme-light .chat-container.minimized .chat-header {
     box-shadow: none !important;
 }
 
@@ -243,110 +243,110 @@ body.theme-light .chat-container.minimized .chat-header {
    ============================================ */
 
 /* Status Indicators - Match warm palette */
-body.theme-light .status-dot.connected {
+html.theme-light .status-dot.connected {
     background: var(--accent); /* Teal for connected */
 }
 
-body.theme-light .status-dot.ingame {
+html.theme-light .status-dot.ingame {
     background: var(--primary); /* Orange for in-game */
 }
 
-body.theme-light .status-dot.offline {
+html.theme-light .status-dot.offline {
     background: var(--text-muted); /* Brown for offline */
 }
 
 /* Input Fields - Enhanced borders */
-body.theme-light .chat-input input {
+html.theme-light .chat-input input {
     border-width: 2px; /* Strong border definition */
     border-color: var(--border-color);
 }
 
-body.theme-light .chat-input input:focus {
+html.theme-light .chat-input input:focus {
     border-color: var(--primary);
     border-width: 2px;
     outline: none;
 }
 
-body.theme-light .chat-input input::placeholder {
+html.theme-light .chat-input input::placeholder {
     color: var(--text-muted);
     opacity: 0.8;
 }
 
 /* Scrollbar - Warm theme */
-body.theme-light .chat-messages::-webkit-scrollbar-thumb {
+html.theme-light .chat-messages::-webkit-scrollbar-thumb {
     background: var(--border-color);
     border: 2px solid var(--bg-primary);
 }
 
-body.theme-light .chat-messages::-webkit-scrollbar-thumb:hover {
+html.theme-light .chat-messages::-webkit-scrollbar-thumb:hover {
     background: var(--text-muted);
 }
 
-body.theme-light .chat-messages::-webkit-scrollbar-track {
+html.theme-light .chat-messages::-webkit-scrollbar-track {
     background: var(--bg-secondary);
 }
 
 /* Badges - Warm colors */
-body.theme-light .badge.online {
+html.theme-light .badge.online {
     background: var(--accent);
     color: white;
     border: 2px solid var(--accent-hover);
 }
 
 /* Links and Text Buttons */
-body.theme-light .text-btn {
+html.theme-light .text-btn {
     color: var(--primary);
     border-color: transparent;
 }
 
-body.theme-light .text-btn:hover {
+html.theme-light .text-btn:hover {
     border-color: var(--primary);
     border-width: 2px;
     background: rgba(255, 107, 53, 0.05); /* Subtle tint */
 }
 
-body.theme-light .text-btn.danger {
+html.theme-light .text-btn.danger {
     color: #E74C3C;
 }
 
-body.theme-light .text-btn.danger:hover {
+html.theme-light .text-btn.danger:hover {
     border-color: #E74C3C;
     border-width: 2px;
     background: rgba(231, 76, 60, 0.05);
 }
 
 /* Message Styling */
-body.theme-light .message {
+html.theme-light .message {
     border-left: 3px solid transparent; /* Geometric accent ready */
 }
 
-body.theme-light .message.user {
+html.theme-light .message.user {
     border-left-color: var(--primary); /* Orange for user messages */
 }
 
-body.theme-light .message.system {
+html.theme-light .message.system {
     border-left-color: var(--accent); /* Teal for system messages */
 }
 
 /* Header Styling */
-body.theme-light .chat-header {
+html.theme-light .chat-header {
     background: var(--bg-secondary);
     border-bottom: 3px solid var(--border-color); /* Strong definition */
 }
 
 /* Footer Styling Enhancement */
-body.theme-light .chat-footer {
+html.theme-light .chat-footer {
     border-top: 3px solid var(--border-color); /* Matches header */
 }
 
 /* Tabs Container */
-body.theme-light .chat-tabs {
+html.theme-light .chat-tabs {
     background: var(--bg-tertiary); /* Warm peach background */
     border-bottom: 3px solid var(--border-color);
 }
 
 /* Chat Messages - Remove dark gradient shadow background */
-body.theme-light .chat-messages {
+html.theme-light .chat-messages {
     background: var(--bg-primary) !important; /* Clean flat warm cream background */
 }
 
@@ -356,74 +356,74 @@ body.theme-light .chat-messages {
    ============================================ */
 
 /* Message Bubbles - Strong borders and backgrounds */
-body.theme-light .msg-bubble {
+html.theme-light .msg-bubble {
     background: var(--bg-secondary) !important; /* Soft tan background */
     color: var(--text-primary) !important;
     border: 2px solid var(--border-color) !important;
 }
 
 /* Remote (other users) message bubbles - Use accent color */
-body.theme-light .chat-msg.remote .msg-bubble {
+html.theme-light .chat-msg.remote .msg-bubble {
     background: var(--bg-tertiary) !important; /* Warm peach */
     border-color: rgba(255, 107, 53, 0.3) !important; /* Light orange tint */
 }
 
 /* Profile Pictures - Visible borders */
-body.theme-light .msg-profile-pic {
+html.theme-light .msg-profile-pic {
     border: 2px solid var(--border-color);
     background: var(--bg-tertiary);
 }
 
 /* Message Display Names */
-body.theme-light .msg-display-name {
+html.theme-light .msg-display-name {
     color: var(--text-primary) !important;
 }
 
 /* Message Usernames */
-body.theme-light .msg-username {
+html.theme-light .msg-username {
     color: var(--text-secondary) !important;
 }
 
 /* Message Timestamps */
-body.theme-light .msg-time {
+html.theme-light .msg-time {
     color: var(--text-muted) !important;
 }
 
 /* System Messages - Visible with border */
-body.theme-light .system-msg {
+html.theme-light .system-msg {
     background: rgba(255, 107, 53, 0.08) !important; /* Light orange tint */
     color: var(--text-secondary) !important;
     border: 2px solid rgba(255, 107, 53, 0.2) !important;
     border-radius: 8px;
 }
 
-body.theme-light .system-msg::before {
+html.theme-light .system-msg::before {
     color: var(--primary) !important;
 }
 
 /* Typing Indicator */
-body.theme-light .typing-indicator {
+html.theme-light .typing-indicator {
     background: var(--bg-secondary);
     border: 2px solid var(--border-color);
     border-radius: 8px;
     color: var(--text-secondary);
 }
 
-body.theme-light .typing-avatar {
+html.theme-light .typing-avatar {
     border: 2px solid var(--border-color);
 }
 
-body.theme-light .typing-bubbles span {
+html.theme-light .typing-bubbles span {
     background: var(--primary);
 }
 
 /* Message Dividers (Date Separators) */
-body.theme-light .msg-divider::before,
-body.theme-light .msg-divider::after {
+html.theme-light .msg-divider::before,
+html.theme-light .msg-divider::after {
     background: linear-gradient(to right, transparent, var(--border-color), transparent) !important;
 }
 
-body.theme-light .msg-divider span {
+html.theme-light .msg-divider span {
     background: var(--bg-secondary) !important;
     color: var(--text-secondary) !important;
     border: 2px solid var(--border-color);
@@ -431,55 +431,55 @@ body.theme-light .msg-divider span {
 }
 
 /* Message Reactions */
-body.theme-light .msg-reactions .reaction-item {
+html.theme-light .msg-reactions .reaction-item {
     background: var(--bg-secondary);
     border: 2px solid var(--border-color);
     color: var(--text-primary);
 }
 
-body.theme-light .msg-reactions .reaction-item:hover {
+html.theme-light .msg-reactions .reaction-item:hover {
     background: var(--bg-tertiary);
     border-color: var(--primary);
 }
 
 /* Message Action Buttons */
-body.theme-light .msg-action-btn {
+html.theme-light .msg-action-btn {
     background: var(--bg-secondary);
     border: 2px solid var(--border-color);
     color: var(--text-secondary);
 }
 
-body.theme-light .msg-action-btn:hover {
+html.theme-light .msg-action-btn:hover {
     background: var(--primary);
     border-color: var(--primary);
     color: white;
 }
 
-body.theme-light .msg-action-btn.delete-btn:hover {
+html.theme-light .msg-action-btn.delete-btn:hover {
     background: #E74C3C;
     border-color: #E74C3C;
     color: white;
 }
 
 /* Rejected/Moderated Messages */
-body.theme-light .msg-rejected-notice {
+html.theme-light .msg-rejected-notice {
     background: rgba(157, 139, 126, 0.15) !important; /* Warm brown tint */
     border: 2px solid rgba(157, 139, 126, 0.3) !important;
     color: var(--text-muted) !important;
 }
 
-body.theme-light .msg-bubble.rejected-bubble {
+html.theme-light .msg-bubble.rejected-bubble {
     background: rgba(157, 139, 126, 0.1) !important;
     border: 2px solid rgba(157, 139, 126, 0.25) !important;
     color: var(--text-muted) !important;
 }
 
-body.theme-light .msg-profile-pic.rejected-avatar {
+html.theme-light .msg-profile-pic.rejected-avatar {
     background: rgba(157, 139, 126, 0.2) !important;
     border: 2px solid rgba(157, 139, 126, 0.3) !important;
 }
 
-body.theme-light .msg-profile-pic.rejected-avatar i {
+html.theme-light .msg-profile-pic.rejected-avatar i {
     color: var(--text-muted);
 }
 
@@ -489,26 +489,26 @@ body.theme-light .msg-profile-pic.rejected-avatar i {
    ============================================ */
 
 /* Settings Container */
-body.theme-light .settings-container {
+html.theme-light .settings-container {
     background: rgba(250, 248, 245, 0.95) !important; /* Warm cream with transparency */
     border: 2px solid var(--border-color) !important;
 }
 
 /* Modal Dialog (if used) */
-body.theme-light .modal-dialog {
+html.theme-light .modal-dialog {
     background: var(--bg-primary) !important;
     border: 3px solid var(--border-color) !important;
 }
 
 /* Modal Header */
-body.theme-light .modal-header {
+html.theme-light .modal-header {
     background: var(--bg-secondary) !important;
     border-bottom: 2px solid var(--border-color) !important;
     color: var(--text-primary) !important;
 }
 
 /* Modal Content */
-body.theme-light .modal-content {
+html.theme-light .modal-content {
     background: var(--bg-primary) !important;
     color: var(--text-primary) !important;
 }
@@ -516,91 +516,91 @@ body.theme-light .modal-content {
 /* Settings Window Specific Overrides (from inline styles in settings.html) */
 
 /* Settings Header */
-body.theme-light .settings-header {
+html.theme-light .settings-header {
     background: var(--bg-secondary) !important;
     border-bottom: 2px solid var(--border-color) !important;
 }
 
-body.theme-light .settings-header h2 {
+html.theme-light .settings-header h2 {
     color: var(--text-primary) !important;
 }
 
 /* Settings Groups */
-body.theme-light .setting-group h3 {
+html.theme-light .setting-group h3 {
     color: var(--text-primary) !important;
     border-bottom: 2px solid var(--border-color) !important;
 }
 
 /* Setting Items */
-body.theme-light .setting-item label {
+html.theme-light .setting-item label {
     color: var(--text-secondary) !important;
 }
 
 /* Select Dropdowns */
-body.theme-light .setting-item select,
-body.theme-light select {
+html.theme-light .setting-item select,
+html.theme-light select {
     background: var(--bg-secondary) !important;
     border: 2px solid var(--border-color) !important;
     color: var(--text-primary) !important;
 }
 
-body.theme-light .setting-item select:focus,
-body.theme-light select:focus {
+html.theme-light .setting-item select:focus,
+html.theme-light select:focus {
     border-color: var(--primary) !important;
     outline: none;
 }
 
-body.theme-light .setting-item select:hover,
-body.theme-light select:hover {
+html.theme-light .setting-item select:hover,
+html.theme-light select:hover {
     background: var(--bg-tertiary) !important;
 }
 
 /* Range Sliders */
-body.theme-light input[type="range"] {
+html.theme-light input[type="range"] {
     background: var(--border-color) !important;
 }
 
-body.theme-light input[type="range"]::-webkit-slider-thumb {
+html.theme-light input[type="range"]::-webkit-slider-thumb {
     background: var(--primary) !important;
 }
 
-body.theme-light input[type="range"]::-webkit-slider-thumb:hover {
+html.theme-light input[type="range"]::-webkit-slider-thumb:hover {
     background: var(--primary-hover) !important;
 }
 
-body.theme-light .slider-value {
+html.theme-light .slider-value {
     color: var(--primary) !important;
 }
 
-body.theme-light .slider-label {
+html.theme-light .slider-label {
     color: var(--text-secondary) !important;
 }
 
 /* Checkboxes */
-body.theme-light input[type="checkbox"] {
+html.theme-light input[type="checkbox"] {
     accent-color: var(--primary);
     border: 2px solid var(--border-color);
 }
 
 /* Buttons in Settings */
-body.theme-light .btn-danger {
+html.theme-light .btn-danger {
     background: #E74C3C;
     border: 2px solid #E74C3C;
     color: white;
 }
 
-body.theme-light .btn-danger:hover {
+html.theme-light .btn-danger:hover {
     background: #C0392B;
     border-color: #C0392B;
 }
 
 /* Settings Content Background */
-body.theme-light .settings-content {
+html.theme-light .settings-content {
     background: var(--bg-primary) !important;
 }
 
 /* Settings Window Body Override */
-body.theme-light.settings-window-body {
+html.theme-light.settings-window-body {
     background: var(--bg-primary) !important;
 }
 
@@ -609,30 +609,30 @@ body.theme-light.settings-window-body {
    ============================================ */
 
 /* Toast Notifications */
-body.theme-light .toast {
+html.theme-light .toast {
     background: var(--bg-primary) !important;
     border: 2px solid var(--border-color) !important;
     color: var(--text-primary) !important;
 }
 
-body.theme-light .toast-success {
+html.theme-light .toast-success {
     border-left: 3px solid var(--accent) !important; /* Teal for success */
 }
 
-body.theme-light .toast-error {
+html.theme-light .toast-error {
     border-left: 3px solid #E74C3C !important; /* Warm red for error */
 }
 
-body.theme-light .toast-icon {
+html.theme-light .toast-icon {
     background: var(--bg-secondary);
     color: var(--primary);
 }
 
-body.theme-light .toast-title {
+html.theme-light .toast-title {
     color: var(--text-primary) !important;
 }
 
-body.theme-light .toast-message {
+html.theme-light .toast-message {
     color: var(--text-secondary) !important;
 }
 
@@ -640,20 +640,20 @@ body.theme-light .toast-message {
    LIGHT MODE LOGIN CONTAINER
    ============================================ */
 
-body.theme-light .login-container {
+html.theme-light .login-container {
     background: rgba(250, 248, 245, 0.95) !important;
     border: 3px solid var(--border-color) !important;
 }
 
-body.theme-light .login-container h1 {
+html.theme-light .login-container h1 {
     color: var(--text-primary) !important;
 }
 
-body.theme-light .login-container .subtitle {
+html.theme-light .login-container .subtitle {
     color: var(--text-secondary) !important;
 }
 
-body.theme-light .login-container .status {
+html.theme-light .login-container .status {
     color: var(--text-secondary) !important;
 }
 
@@ -661,33 +661,33 @@ body.theme-light .login-container .status {
    LIGHT MODE COOLDOWN WARNING
    ============================================ */
 
-body.theme-light .cooldown-warning {
+html.theme-light .cooldown-warning {
     background: rgba(255, 107, 53, 0.1) !important; /* Light orange background */
     border: 2px solid rgba(255, 107, 53, 0.4) !important;
     color: var(--text-primary) !important;
 }
 
-body.theme-light .cooldown-overlay {
+html.theme-light .cooldown-overlay {
     background: rgba(255, 107, 53, 0.95) !important;
     border-top: 3px solid var(--primary) !important;
     color: white !important;
 }
 
-body.theme-light .cooldown-progress {
+html.theme-light .cooldown-progress {
     background: rgba(255, 255, 255, 0.3) !important;
 }
 
-body.theme-light .cooldown-progress-bar {
+html.theme-light .cooldown-progress-bar {
     background: white !important;
 }
 
-body.theme-light #message-input.cooldown-disabled {
+html.theme-light #message-input.cooldown-disabled {
     background: rgba(255, 107, 53, 0.08) !important;
     border-color: rgba(255, 107, 53, 0.3) !important;
     color: var(--text-muted) !important;
 }
 
-body.theme-light #message-input.cooldown-disabled::placeholder {
+html.theme-light #message-input.cooldown-disabled::placeholder {
     color: var(--text-muted);
 }
 
@@ -697,46 +697,46 @@ body.theme-light #message-input.cooldown-disabled::placeholder {
    ============================================ */
 
 /* Keybind Button - All States */
-body.theme-light #keybind-btn {
+html.theme-light #keybind-btn {
     background: var(--bg-secondary) !important;
     border-color: var(--border-color) !important;
     color: var(--text-primary) !important;
 }
 
-body.theme-light #keybind-btn:hover {
+html.theme-light #keybind-btn:hover {
     background: var(--bg-tertiary) !important;
     border-color: var(--primary) !important;
 }
 
-body.theme-light #keybind-btn:active {
+html.theme-light #keybind-btn:active {
     background: var(--bg-primary) !important;
     transform: scale(0.98); /* Subtle press feedback */
 }
 
-body.theme-light #keybind-btn:focus {
+html.theme-light #keybind-btn:focus {
     outline: 2px solid var(--primary);
     outline-offset: 2px;
 }
 
 /* Coffee Link - All States (Warm Orange) */
-body.theme-light .coffee-link {
+html.theme-light .coffee-link {
     color: var(--primary) !important;
     background: rgba(255, 107, 53, 0.08) !important;  /* Light orange tint */
     border-color: rgba(255, 107, 53, 0.25) !important;
 }
 
-body.theme-light .coffee-link:hover {
+html.theme-light .coffee-link:hover {
     background: rgba(255, 107, 53, 0.15) !important;
     border-color: rgba(255, 107, 53, 0.4) !important;
     box-shadow: none !important; /* Flat design */
 }
 
-body.theme-light .coffee-link:active {
+html.theme-light .coffee-link:active {
     background: rgba(255, 107, 53, 0.2) !important;
     transform: translateY(1px); /* Subtle press feedback */
 }
 
-body.theme-light .coffee-link:focus {
+html.theme-light .coffee-link:focus {
     outline: 2px solid var(--primary);
     outline-offset: 2px;
 }
@@ -744,7 +744,7 @@ body.theme-light .coffee-link:focus {
 /* =========================
    AUTO Theme (System Preference)
    ========================= */
-body.theme-auto {
+html.theme-auto {
     /* Defaults to dark */
     --bg-primary: #111827;
     --bg-secondary: #1f2937;
@@ -756,7 +756,7 @@ body.theme-auto {
 
 /* Respect system light mode preference - Warm Brutalism */
 @media (prefers-color-scheme: light) {
-    body.theme-auto {
+    html.theme-auto {
         --bg-primary: #FAF8F5;
         --bg-secondary: #F0EBE3;
         --bg-tertiary: #FFE4D6;
@@ -776,61 +776,61 @@ body.theme-auto {
     }
 
     /* Light Mode Button Hover Overrides for Auto Theme - Warm Brutalism */
-    body.theme-auto .btn-icon:hover {
+    html.theme-auto .btn-icon:hover {
         background: var(--primary);
         border-color: var(--primary);
         border-width: 2px;
         color: white;
     }
 
-    body.theme-auto .btn-icon.close-btn:hover {
+    html.theme-auto .btn-icon.close-btn:hover {
         background: #E74C3C;
         border-color: #E74C3C;
         border-width: 2px;
         color: white;
     }
 
-    body.theme-auto .btn-primary:hover,
-    body.theme-auto button#btnSend:hover:not(:disabled) {
+    html.theme-auto .btn-primary:hover,
+    html.theme-auto button#btnSend:hover:not(:disabled) {
         background: var(--bg-primary);
         border-color: var(--primary);
         border-width: 2px;
         color: var(--primary);
     }
 
-    body.theme-auto .btn-primary:active,
-    body.theme-auto button#btnSend:active:not(:disabled) {
+    html.theme-auto .btn-primary:active,
+    html.theme-auto button#btnSend:active:not(:disabled) {
         background: var(--primary);
         color: white;
         transform: scale(0.98);
     }
 
-    body.theme-auto .msg-action-btn:hover {
+    html.theme-auto .msg-action-btn:hover {
         background: var(--primary);
         border-color: var(--primary);
         border-width: 2px;
         color: white;
     }
 
-    body.theme-auto .msg-action-btn.delete-btn:hover {
+    html.theme-auto .msg-action-btn.delete-btn:hover {
         background: #E74C3C;
         border-color: #E74C3C;
         border-width: 2px;
         color: white;
     }
 
-    body.theme-auto .chat-tab {
+    html.theme-auto .chat-tab {
         border-width: 2px;
     }
 
-    body.theme-auto .chat-tab:hover {
+    html.theme-auto .chat-tab:hover {
         background: var(--accent);
         border-color: var(--accent);
         border-width: 2px;
         color: white;
     }
 
-    body.theme-auto .chat-tab.active {
+    html.theme-auto .chat-tab.active {
         background: var(--primary);
         border-color: var(--primary);
         border-width: 3px;
@@ -838,85 +838,85 @@ body.theme-auto {
     }
 
     /* Remove dark gradient for auto theme light mode */
-    body.theme-auto .chat-messages {
+    html.theme-auto .chat-messages {
         background: var(--bg-primary) !important;
     }
 
     /* Chat Elements for Auto Theme Light Mode */
-    body.theme-auto .msg-bubble {
+    html.theme-auto .msg-bubble {
         background: var(--bg-secondary) !important;
         color: var(--text-primary) !important;
         border: 2px solid var(--border-color) !important;
     }
 
-    body.theme-auto .chat-msg.remote .msg-bubble {
+    html.theme-auto .chat-msg.remote .msg-bubble {
         background: var(--bg-tertiary) !important;
         border-color: rgba(255, 107, 53, 0.3) !important;
     }
 
-    body.theme-auto .msg-profile-pic {
+    html.theme-auto .msg-profile-pic {
         border: 2px solid var(--border-color);
         background: var(--bg-tertiary);
     }
 
-    body.theme-auto .msg-display-name {
+    html.theme-auto .msg-display-name {
         color: var(--text-primary) !important;
     }
 
-    body.theme-auto .msg-username {
+    html.theme-auto .msg-username {
         color: var(--text-secondary) !important;
     }
 
-    body.theme-auto .msg-time {
+    html.theme-auto .msg-time {
         color: var(--text-muted) !important;
     }
 
-    body.theme-auto .system-msg {
+    html.theme-auto .system-msg {
         background: rgba(255, 107, 53, 0.08) !important;
         color: var(--text-secondary) !important;
         border: 2px solid rgba(255, 107, 53, 0.2) !important;
     }
 
-    body.theme-auto .typing-indicator {
+    html.theme-auto .typing-indicator {
         background: var(--bg-secondary);
         border: 2px solid var(--border-color);
         color: var(--text-secondary);
     }
 
-    body.theme-auto .msg-divider span {
+    html.theme-auto .msg-divider span {
         background: var(--bg-secondary) !important;
         color: var(--text-secondary) !important;
         border: 2px solid var(--border-color);
     }
 
-    body.theme-auto .msg-action-btn {
+    html.theme-auto .msg-action-btn {
         background: var(--bg-secondary);
         border: 2px solid var(--border-color);
         color: var(--text-secondary);
     }
 
     /* Settings Page for Auto Theme Light Mode */
-    body.theme-auto .settings-container {
+    html.theme-auto .settings-container {
         background: rgba(250, 248, 245, 0.95) !important;
         border: 2px solid var(--border-color) !important;
     }
 
-    body.theme-auto .settings-header {
+    html.theme-auto .settings-header {
         background: var(--bg-secondary) !important;
         border-bottom: 2px solid var(--border-color) !important;
     }
 
-    body.theme-auto .setting-item select {
+    html.theme-auto .setting-item select {
         background: var(--bg-secondary) !important;
         border: 2px solid var(--border-color) !important;
         color: var(--text-primary) !important;
     }
 
-    body.theme-auto input[type="range"] {
+    html.theme-auto input[type="range"] {
         background: var(--border-color) !important;
     }
 
-    body.theme-auto input[type="range"]::-webkit-slider-thumb {
+    html.theme-auto input[type="range"]::-webkit-slider-thumb {
         background: var(--primary) !important;
     }
 }
@@ -926,34 +926,34 @@ body.theme-auto {
    ========================= */
 
 /* Ensure consistent theme colors across all themes */
-body[class*="theme-"] .msg-avatar {
+html[class*="theme-"] .msg-avatar {
     background: var(--primary);
 }
 
-body[class*="theme-"] .typing-avatar {
+html[class*="theme-"] .typing-avatar {
     background: var(--primary);
 }
 
-body[class*="theme-"] .text-btn:hover {
+html[class*="theme-"] .text-btn:hover {
     border-color: var(--primary);
 }
 
-body[class*="theme-"] .input-wrapper:focus-within {
+html[class*="theme-"] .input-wrapper:focus-within {
     border-color: var(--primary);
 }
 
-body[class*="theme-"] select:focus {
+html[class*="theme-"] select:focus {
     border-color: var(--primary);
 }
 
-body[class*="theme-"] .reaction-btn:hover {
+html[class*="theme-"] .reaction-btn:hover {
     border-color: var(--primary);
 }
 
-body[class*="theme-"] .system-msg::before {
+html[class*="theme-"] .system-msg::before {
     color: var(--primary);
 }
 
-body[class*="theme-"] .scrollbar-thumb:hover {
+html[class*="theme-"] .scrollbar-thumb:hover {
     box-shadow: 0 0 12px var(--primary);
 }

@@ -1,20 +1,25 @@
-const path = require('path');
-const fs = require('fs');
-require('dotenv').config({ path: path.join(__dirname, '../../.env') });
+const path = require("path");
+const fs = require("fs");
+require("dotenv").config({ path: path.join(__dirname, "../../.env") });
 
-const { app, BrowserWindow, nativeTheme } = require('electron');
-const logger = require('./logging/logger');
-const { registerHandlers, setMainWindow, setupDetectorEvents, setupSocketEvents } = require('./ipc/handlers');
-const detector = require('./detection/detector');
-const secureStore = require('./storage/secureStore');
-const { setupAutoUpdater } = require('./updater');
-const socketClient = require('./socket/socketClient');
+const { app, BrowserWindow, nativeTheme } = require("electron");
+const logger = require("./logging/logger");
+const {
+  registerHandlers,
+  setMainWindow,
+  setupDetectorEvents,
+  setupSocketEvents,
+} = require("./ipc/handlers");
+const detector = require("./detection/detector");
+const secureStore = require("./storage/secureStore");
+const { setupAutoUpdater } = require("./updater");
+const socketClient = require("./socket/socketClient");
 
 let mainWindow;
 
 // Configure app-wide command line switches before app is ready
 // These help with SSL/TLS connections and CORS
-app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors');
+app.commandLine.appendSwitch("disable-features", "OutOfBlinkCors");
 
 // Disable hardware acceleration if SSL issues persist
 // Uncomment the line below if you continue to experience SSL errors
@@ -27,34 +32,36 @@ app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors');
 function getBackgroundColor() {
   try {
     // Try to read settings from userData directory
-    const userDataPath = app.getPath('userData');
-    const settingsPath = path.join(userDataPath, 'rochat-settings.json');
+    const userDataPath = app.getPath("userData");
+    const settingsPath = path.join(userDataPath, "rochat-settings.json");
 
-    let theme = 'auto'; // Default
+    let theme = "auto"; // Default
 
     if (fs.existsSync(settingsPath)) {
-      const settingsData = fs.readFileSync(settingsPath, 'utf8');
+      const settingsData = fs.readFileSync(settingsPath, "utf8");
       const settings = JSON.parse(settingsData);
-      theme = settings.theme || 'auto';
+      theme = settings.theme || "auto";
     }
 
     // Determine if we should use light or dark
     let useLight = false;
 
-    if (theme === 'light') {
+    if (theme === "light") {
       useLight = true;
-    } else if (theme === 'dark') {
+    } else if (theme === "dark") {
       useLight = false;
-    } else if (theme === 'auto') {
+    } else if (theme === "auto") {
       // Use system preference
       useLight = !nativeTheme.shouldUseDarkColors;
     }
 
     // Return appropriate background color
-    return useLight ? '#FAF8F5' : '#0a0c14'; // Warm cream for light, dark for dark
+    return useLight ? "#FAF8F5" : "#0a0c14"; // Warm cream for light, dark for dark
   } catch (error) {
-    logger.warn('Failed to determine theme, defaulting to dark', { error: error.message });
-    return '#0a0c14'; // Fallback to dark
+    logger.warn("Failed to determine theme, defaulting to dark", {
+      error: error.message,
+    });
+    return "#0a0c14"; // Fallback to dark
   }
 }
 
@@ -62,18 +69,19 @@ function getBackgroundColor() {
  * Create main browser window
  */
 function createWindow() {
-  logger.info('Creating main window');
+  logger.info("Creating main window");
 
   // Get screen dimensions for dynamic max size
-  const { screen } = require('electron');
+  const { screen } = require("electron");
   const primaryDisplay = screen.getPrimaryDisplay();
-  const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+  const { width: screenWidth, height: screenHeight } =
+    primaryDisplay.workAreaSize;
   const maxWidth = Math.floor(screenWidth * 0.9);
   const maxHeight = Math.floor(screenHeight * 0.9);
 
   // Get theme-appropriate background color
   const bgColor = getBackgroundColor();
-  logger.info('Using background color', { color: bgColor });
+  logger.info("Using background color", { color: bgColor });
 
   mainWindow = new BrowserWindow({
     width: 380,
@@ -91,34 +99,37 @@ function createWindow() {
     roundedCorners: true,
     center: true,
     webPreferences: {
-      preload: path.join(__dirname, '../preload/preload.js'),
+      preload: path.join(__dirname, "../preload/preload.js"),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: true
-    }
+      sandbox: true,
+    },
   });
 
   // Load renderer index.html
-  mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+  mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
 
   // Show window when ready
-  mainWindow.once('ready-to-show', () => {
-    logger.info('Window ready to show');
+  mainWindow.once("ready-to-show", () => {
+    logger.info("Window ready to show");
     // Ensure window is centered on startup
     mainWindow.center();
     mainWindow.show();
   });
 
   // Handle window closed
-  mainWindow.on('closed', () => {
-    logger.info('Window closed');
+  mainWindow.on("closed", () => {
+    logger.info("Window closed");
     mainWindow = null;
   });
 
   // Handle navigation errors
-  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-    logger.error('Failed to load page', { errorCode, errorDescription });
-  });
+  mainWindow.webContents.on(
+    "did-fail-load",
+    (event, errorCode, errorDescription) => {
+      logger.error("Failed to load page", { errorCode, errorDescription });
+    },
+  );
 
   // Set window reference for IPC handlers
   setMainWindow(mainWindow);
@@ -130,8 +141,8 @@ function createWindow() {
 function validateEnvironment() {
   // MongoDB is required for server
   // The client doesn't need DB_URL, but server does
-  if (process.env.NODE_ENV !== 'production') {
-    logger.info('Running in development mode');
+  if (process.env.NODE_ENV !== "production") {
+    logger.info("Running in development mode");
   }
 }
 
@@ -141,23 +152,29 @@ function validateEnvironment() {
 app.whenReady().then(() => {
   // Validate environment variables
   validateEnvironment();
-  logger.info('App started');
+  logger.info("App started");
 
   // Handle certificate errors globally (for development/debugging)
-  app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
-    // Log the certificate error
-    logger.warn('Global certificate error', { url, error });
+  app.on(
+    "certificate-error",
+    (event, webContents, url, error, certificate, callback) => {
+      // Log the certificate error
+      logger.warn("Global certificate error", { url, error });
 
-    // For development, we'll allow self-signed certificates for localhost
-    if (url.startsWith('https://localhost') || url.startsWith('https://127.0.0.1')) {
-      event.preventDefault();
-      callback(true);
-    } else {
-      // For production sites like Roblox, use default behavior
-      // This will be handled by the BrowserWindow-specific handler
-      callback(false);
-    }
-  });
+      // For development, we'll allow self-signed certificates for localhost
+      if (
+        url.startsWith("https://localhost") ||
+        url.startsWith("https://127.0.0.1")
+      ) {
+        event.preventDefault();
+        callback(true);
+      } else {
+        // For production sites like Roblox, use default behavior
+        // This will be handled by the BrowserWindow-specific handler
+        callback(false);
+      }
+    },
+  );
 
   // Register IPC handlers
   registerHandlers();
@@ -180,43 +197,45 @@ app.whenReady().then(() => {
       // Try to get a valid access token (this will auto-refresh if needed)
       const auth = secureStore.getAuth();
       if (auth && auth.refreshToken) {
-        logger.info('Attempting to restore session with refresh token');
+        logger.info("Attempting to restore session with refresh token");
         try {
-          const robloxAuth = require('./auth/robloxAuth');
+          const robloxAuth = require("./auth/robloxAuth");
           await robloxAuth.getAccessToken(); // This will refresh if expired
-          logger.info('Session restored successfully, starting detector');
+          logger.info("Session restored successfully, starting detector");
 
           // Enable always-on-top for authenticated users with screen-saver level
           if (mainWindow) {
-            mainWindow.setAlwaysOnTop(true, 'screen-saver');
+            mainWindow.setAlwaysOnTop(true, "screen-saver");
           }
           detector.start();
           return;
         } catch (refreshError) {
-          logger.warn('Failed to refresh token on startup', { error: refreshError.message });
+          logger.warn("Failed to refresh token on startup", {
+            error: refreshError.message,
+          });
           secureStore.clearAuth();
         }
       } else if (secureStore.isAuthenticated()) {
-        logger.info('User is authenticated, starting detector');
+        logger.info("User is authenticated, starting detector");
         // Enable always-on-top for authenticated users with screen-saver level
         if (mainWindow) {
-          mainWindow.setAlwaysOnTop(true, 'screen-saver');
+          mainWindow.setAlwaysOnTop(true, "screen-saver");
         }
         detector.start();
         return;
       }
 
-      logger.info('User not authenticated, showing login view');
+      logger.info("User not authenticated, showing login view");
     } catch (error) {
-      logger.error('Error checking authentication', { error: error.message });
-      logger.info('Showing login view due to error');
+      logger.error("Error checking authentication", { error: error.message });
+      logger.info("Showing login view due to error");
     }
   };
 
   checkAuthAndStart();
 
   // Handle macOS dock icon click
-  app.on('activate', () => {
+  app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
@@ -226,11 +245,11 @@ app.whenReady().then(() => {
 /**
  * Handle all windows closed
  */
-app.on('window-all-closed', () => {
-  logger.info('All windows closed');
-  
+app.on("window-all-closed", () => {
+  logger.info("All windows closed");
+
   // On macOS, keep app running until explicitly quit
-  if (process.platform !== 'darwin') {
+  if (process.platform !== "darwin") {
     app.quit();
   }
 });
@@ -238,12 +257,12 @@ app.on('window-all-closed', () => {
 /**
  * Handle app quit
  */
-app.on('before-quit', () => {
-  logger.info('App quitting');
-  
+app.on("before-quit", () => {
+  logger.info("App quitting");
+
   // Stop detector
   if (detector.isActive()) {
-    logger.info('Stopping detector');
+    logger.info("Stopping detector");
     detector.stop();
   }
 });
@@ -251,20 +270,23 @@ app.on('before-quit', () => {
 /**
  * Handle app will quit
  */
-app.on('will-quit', (event) => {
-  logger.info('App will quit');
+app.on("will-quit", (event) => {
+  logger.info("App will quit");
 });
 
 /**
  * Handle uncaught exceptions
  */
-process.on('uncaughtException', (error) => {
-  logger.error('Uncaught exception', { error: error.message, stack: error.stack });
+process.on("uncaughtException", (error) => {
+  logger.error("Uncaught exception", {
+    error: error.message,
+    stack: error.stack,
+  });
 });
 
 /**
  * Handle unhandled promise rejections
  */
-process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled promise rejection', { reason });
+process.on("unhandledRejection", (reason, promise) => {
+  logger.error("Unhandled promise rejection", { reason });
 });

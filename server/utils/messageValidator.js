@@ -19,44 +19,45 @@ const profanityMatcher = new RegExpMatcher({
 
 // Additional custom regex patterns to catch spacing/special char bypasses
 // More aggressive to catch multiple asterisks and other bypass attempts
+// Limited quantifiers {0,5} to prevent ReDoS attacks
 const customPatterns = [
   // fuck variations: f u c k, f.u.c.k, f-u-c-k, f_u_c_k, f*k, f**k, f***k, phuck
-  /\bf+[\s.*\-_]*u*[\s.*\-_]*c+[\s.*\-_]*k+\b/gi,
-  /\bp+h+[\s.*\-_]*u+[\s.*\-_]*c+[\s.*\-_]*k+\b/gi,
+  /\bf+[\s.*\-_]{0,5}u*[\s.*\-_]{0,5}c+[\s.*\-_]{0,5}k+\b/gi,
+  /\bp+h+[\s.*\-_]{0,5}u+[\s.*\-_]{0,5}c+[\s.*\-_]{0,5}k+\b/gi,
 
   // More aggressive fuck patterns - catches f**k, f***k, fck, fuk, etc.
-  /\bf+[*\s._\-]*[*\s._\-]+[*\s._\-]*k+\b/gi,  // f + multiple special chars + k
+  /\bf+[*\s._\-]{0,5}[*\s._\-]+[*\s._\-]{0,5}k+\b/gi,  // f + multiple special chars + k
   /\bf+[u\*]{0,3}c*k+\b/gi,  // fk, fuk, f*k, f**k, fck
 
   // shit variations: s h i t, s.h.i.t, s-h-i-t, s_h_i_t, sh*t, sh**t, sht
-  /\bs+[\s.*\-_]*h+[\s.*\-_]*i*[\s.*\-_]*t+\b/gi,
-  /\bs+h+[*\s._\-]*[*\s._\-]*t+\b/gi,  // sht, sh*t, sh**t
+  /\bs+[\s.*\-_]{0,5}h+[\s.*\-_]{0,5}i*[\s.*\-_]{0,5}t+\b/gi,
+  /\bs+h+[*\s._\-]{0,5}[*\s._\-]{0,5}t+\b/gi,  // sht, sh*t, sh**t
 
   // bitch variations: b i t c h, b.i.t.c.h, b**ch, btch
-  /\bb+[\s.*\-_]*i*[\s.*\-_]*t+[\s.*\-_]*c+[\s.*\-_]*h+\b/gi,
-  /\bb+[*\s._\-]*t+c+h+\b/gi,
+  /\bb+[\s.*\-_]{0,5}i*[\s.*\-_]{0,5}t+[\s.*\-_]{0,5}c+[\s.*\-_]{0,5}h+\b/gi,
+  /\bb+[*\s._\-]{0,5}t+c+h+\b/gi,
 
   // ass variations: a s s, a.s.s, a**
-  /\ba+[\s.*\-_]*s+[\s.*\-_]*s+\b/gi,
-  /\ba+[*\s._\-]+s*\b/gi,
+  /\ba+[\s.*\-_]{0,5}s+[\s.*\-_]{0,5}s+\b/gi,
+  /\ba+[*\s._\-]{1,5}s*\b/gi,
 
   // damn variations: d a m n, d.a.m.n, d**n
-  /\bd+[\s.*\-_]*a*[\s.*\-_]*m+[\s.*\-_]*n+\b/gi,
+  /\bd+[\s.*\-_]{0,5}a*[\s.*\-_]{0,5}m+[\s.*\-_]{0,5}n+\b/gi,
 
   // hell variations: h e l l, h.e.l.l, h**l
-  /\bh+[\s.*\-_]*e*[\s.*\-_]*l+[\s.*\-_]*l+\b/gi,
+  /\bh+[\s.*\-_]{0,5}e*[\s.*\-_]{0,5}l+[\s.*\-_]{0,5}l+\b/gi,
 
   // crap variations: c r a p, c.r.a.p, cr*p
-  /\bc+[\s.*\-_]*r+[\s.*\-_]*a*[\s.*\-_]*p+\b/gi,
+  /\bc+[\s.*\-_]{0,5}r+[\s.*\-_]{0,5}a*[\s.*\-_]{0,5}p+\b/gi,
 
   // dick variations: d i c k, d.i.c.k, d**k
-  /\bd+[\s.*\-_]*i*[\s.*\-_]*c+[\s.*\-_]*k+\b/gi,
+  /\bd+[\s.*\-_]{0,5}i*[\s.*\-_]{0,5}c+[\s.*\-_]{0,5}k+\b/gi,
 
   // pussy variations: p u s s y, p.u.s.s.y
-  /\bp+[\s.*\-_]*u+[\s.*\-_]*s+[\s.*\-_]*s+[\s.*\-_]*y+\b/gi,
+  /\bp+[\s.*\-_]{0,5}u+[\s.*\-_]{0,5}s+[\s.*\-_]{0,5}s+[\s.*\-_]{0,5}y+\b/gi,
 
   // cock variations: c o c k, c.o.c.k
-  /\bc+[\s.*\-_]*o*[\s.*\-_]*c+[\s.*\-_]*k+\b/gi,
+  /\bc+[\s.*\-_]{0,5}o*[\s.*\-_]{0,5}c+[\s.*\-_]{0,5}k+\b/gi,
 ];
 
 // Initialize text censor for replacement (if needed later)

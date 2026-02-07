@@ -1,15 +1,15 @@
-const { ipcMain, shell } = require('electron');
-const axios = require('axios');
-const robloxAuth = require('../auth/robloxAuth');
-const tokenManager = require('../auth/tokenManager');
-const detector = require('../detection/detector');
-const secureStore = require('../storage/secureStore');
-const logger = require('../logging/logger');
-const { sanitizeError } = require('../utils/sanitizer');
-const socketClient = require('../socket/socketClient');
+const { ipcMain, shell } = require("electron");
+const axios = require("axios");
+const robloxAuth = require("../auth/robloxAuth");
+const tokenManager = require("../auth/tokenManager");
+const detector = require("../detection/detector");
+const secureStore = require("../storage/secureStore");
+const logger = require("../logging/logger");
+const { sanitizeError } = require("../utils/sanitizer");
+const socketClient = require("../socket/socketClient");
 
 // Backend server configuration
-const BACKEND_URL = 'https://ro-chat-zqks.onrender.com';
+const BACKEND_URL = "https://ro-chat-zqks.onrender.com";
 
 // Store reference to main window for sending events
 let mainWindow = null;
@@ -23,65 +23,68 @@ const socketListeners = {};
  */
 function setMainWindow(window) {
   mainWindow = window;
-  logger.info('Main window set for IPC handlers');
+  logger.info("Main window set for IPC handlers");
 }
 
 /**
  * Forward detector events to renderer
  */
 function setupDetectorEvents() {
-  detector.on('serverChanged', (serverInfo) => {
+  detector.on("serverChanged", (serverInfo) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('detection:serverChanged', serverInfo);
+      mainWindow.webContents.send("detection:serverChanged", serverInfo);
     }
   });
 }
 
 function setupSocketEvents() {
   if (!socketClient.socket) {
-    logger.warn('setupSocketEvents called but socket not initialized yet');
+    logger.warn("setupSocketEvents called but socket not initialized yet");
     return;
   }
 
   // Remove existing listeners first to prevent duplicates
   cleanupSocketEvents();
 
-  logger.info('Setting up socket event listeners');
+  logger.info("Setting up socket event listeners");
 
   socketListeners.typingIndicator = (data) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('socket:typingIndicator', data);
+      mainWindow.webContents.send("socket:typingIndicator", data);
     }
   };
-  socketClient.socket.on('typingIndicator', socketListeners.typingIndicator);
+  socketClient.socket.on("typingIndicator", socketListeners.typingIndicator);
 
   socketListeners.message = (data) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('socket:message', data);
+      mainWindow.webContents.send("socket:message", data);
     }
   };
-  socketClient.socket.on('message', socketListeners.message);
+  socketClient.socket.on("message", socketListeners.message);
 
   socketListeners.messageUpdated = (data) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('socket:messageUpdated', data);
+      mainWindow.webContents.send("socket:messageUpdated", data);
     }
   };
-  socketClient.socket.on('messageUpdated', socketListeners.messageUpdated);
+  socketClient.socket.on("messageUpdated", socketListeners.messageUpdated);
 
   socketListeners.messageEditError = (data) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('socket:messageEditError', data);
+      mainWindow.webContents.send("socket:messageEditError", data);
     }
   };
-  socketClient.socket.on('messageEditError', socketListeners.messageEditError);
+  socketClient.socket.on("messageEditError", socketListeners.messageEditError);
 
   socketListeners.messageDeleteError = (data) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('socket:messageDeleteError', data);
+      mainWindow.webContents.send("socket:messageDeleteError", data);
     }
   };
-  socketClient.socket.on('messageDeleteError', socketListeners.messageDeleteError);
+  socketClient.socket.on(
+    "messageDeleteError",
+    socketListeners.messageDeleteError,
+  );
 }
 
 /**
@@ -101,47 +104,50 @@ function cleanupSocketEvents() {
  * Register all IPC handlers
  */
 function registerHandlers() {
-  logger.info('Registering IPC handlers');
+  logger.info("Registering IPC handlers");
 
   // Auth handlers
-  ipcMain.handle('auth:login', handleLogin);
-  ipcMain.handle('auth:logout', handleLogout);
-  ipcMain.handle('auth:getStatus', handleGetStatus);
+  ipcMain.handle("auth:login", handleLogin);
+  ipcMain.handle("auth:logout", handleLogout);
+  ipcMain.handle("auth:getStatus", handleGetStatus);
 
   // Detection handlers
-  ipcMain.handle('detection:getServer', handleGetServer);
-  ipcMain.handle('detection:start', handleStartDetection);
-  ipcMain.handle('detection:stop', handleStopDetection);
+  ipcMain.handle("detection:getServer", handleGetServer);
+  ipcMain.handle("detection:start", handleStartDetection);
+  ipcMain.handle("detection:stop", handleStopDetection);
+
+  // Socket handlers
+  ipcMain.handle("socket:retry", handleRetryConnection);
 
   // Chat handlers
-  ipcMain.handle('chat:send', handleSendMessage);
-  ipcMain.handle('chat:history', handleLoadHistory);
-  ipcMain.handle('chat:emitTyping', handleEmitTyping);
-  ipcMain.handle('chat:editMessage', handleEditMessage);
-  ipcMain.handle('chat:deleteMessage', handleDeleteMessage);
+  ipcMain.handle("chat:send", handleSendMessage);
+  ipcMain.handle("chat:history", handleLoadHistory);
+  ipcMain.handle("chat:emitTyping", handleEmitTyping);
+  ipcMain.handle("chat:editMessage", handleEditMessage);
+  ipcMain.handle("chat:deleteMessage", handleDeleteMessage);
   // REMOVED GAME BROWSER FEATURE - chat:getGames handler removed
 
   // Window control handlers
-  ipcMain.handle('window:minimize', handleMinimize);
-  ipcMain.handle('window:maximize', handleMaximize);
-  ipcMain.handle('window:close', handleClose);
-  ipcMain.handle('window:fullscreen', handleFullscreen);
-  ipcMain.handle('window:setAlwaysOnTop', handleSetAlwaysOnTop);
-  ipcMain.handle('window:setOpacity', handleSetOpacity);
-  ipcMain.handle('window:openSettings', handleOpenSettings);
+  ipcMain.handle("window:minimize", handleMinimize);
+  ipcMain.handle("window:maximize", handleMaximize);
+  ipcMain.handle("window:close", handleClose);
+  ipcMain.handle("window:fullscreen", handleFullscreen);
+  ipcMain.handle("window:setAlwaysOnTop", handleSetAlwaysOnTop);
+  ipcMain.handle("window:setOpacity", handleSetOpacity);
+  ipcMain.handle("window:openSettings", handleOpenSettings);
 
   // Settings handlers
-  ipcMain.handle('settings:applyTheme', handleApplyTheme);
-  ipcMain.handle('settings:resetPosition', handleResetPosition);
-  ipcMain.handle('settings:registerKeybind', handleRegisterKeybind);
-  ipcMain.on('settings:setMessageOpacity', handleSetMessageOpacity);
-  ipcMain.handle('settings:setAutoHideHeader', handleSetAutoHideHeader);
-  ipcMain.handle('settings:setAutoHideFooter', handleSetAutoHideFooter);
+  ipcMain.handle("settings:applyTheme", handleApplyTheme);
+  ipcMain.handle("settings:resetPosition", handleResetPosition);
+  ipcMain.handle("settings:registerKeybind", handleRegisterKeybind);
+  ipcMain.on("settings:setMessageOpacity", handleSetMessageOpacity);
+  ipcMain.handle("settings:setAutoHideHeader", handleSetAutoHideHeader);
+  ipcMain.handle("settings:setAutoHideFooter", handleSetAutoHideFooter);
 
   // Shell handlers
-  ipcMain.handle('shell:openExternal', handleOpenExternal);
+  ipcMain.handle("shell:openExternal", handleOpenExternal);
 
-  logger.info('IPC handlers registered successfully');
+  logger.info("IPC handlers registered successfully");
 }
 
 // ==================== AUTH HANDLERS ====================
@@ -151,18 +157,18 @@ function registerHandlers() {
  */
 async function handleLogin(event) {
   try {
-    logger.info('Login requested');
+    logger.info("Login requested");
     const userInfo = await robloxAuth.initiateLogin();
 
     // Enable always-on-top after successful login with screen-saver level
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.setAlwaysOnTop(true, 'screen-saver');
-      logger.info('Always-on-top enabled after login');
+      mainWindow.setAlwaysOnTop(true, "screen-saver");
+      logger.info("Always-on-top enabled after login");
     }
 
     return { success: true, user: userInfo };
   } catch (error) {
-    logger.error('Login failed', sanitizeError({ error: error.message }));
+    logger.error("Login failed", sanitizeError({ error: error.message }));
     return { success: false, error: error.message };
   }
 }
@@ -172,12 +178,12 @@ async function handleLogin(event) {
  */
 async function handleLogout(event) {
   try {
-    logger.info('Logout requested');
+    logger.info("Logout requested");
 
     // Stop detector if running
     if (detector.isActive()) {
       detector.stop();
-      logger.info('Detector stopped');
+      logger.info("Detector stopped");
     }
 
     // Clear authentication
@@ -187,19 +193,19 @@ async function handleLogout(event) {
     if (mainWindow && !mainWindow.isDestroyed()) {
       // Disable always-on-top when logging out
       mainWindow.setAlwaysOnTop(false);
-      logger.info('Always-on-top disabled after logout');
+      logger.info("Always-on-top disabled after logout");
 
       // Reset window position to center
       mainWindow.center();
-      logger.info('Window position reset to center');
+      logger.info("Window position reset to center");
 
       // Notify main window to show login view
-      mainWindow.webContents.send('auth:logout');
+      mainWindow.webContents.send("auth:logout");
     }
 
     return { success: result };
   } catch (error) {
-    logger.error('Logout failed', sanitizeError({ error: error.message }));
+    logger.error("Logout failed", sanitizeError({ error: error.message }));
     return { success: false, error: error.message };
   }
 }
@@ -215,10 +221,13 @@ async function handleGetStatus(event) {
     return {
       success: true,
       authenticated: isAuthenticated,
-      user
+      user,
     };
   } catch (error) {
-    logger.error('Failed to get auth status', sanitizeError({ error: error.message }));
+    logger.error(
+      "Failed to get auth status",
+      sanitizeError({ error: error.message }),
+    );
     return { success: false, error: error.message };
   }
 }
@@ -233,7 +242,10 @@ async function handleGetServer(event) {
     const server = detector.getCurrentServer();
     return { success: true, server };
   } catch (error) {
-    logger.error('Failed to get server', sanitizeError({ error: error.message }));
+    logger.error(
+      "Failed to get server",
+      sanitizeError({ error: error.message }),
+    );
     return { success: false, error: error.message };
   }
 }
@@ -243,11 +255,14 @@ async function handleGetServer(event) {
  */
 async function handleStartDetection(event) {
   try {
-    logger.info('Start detection requested');
+    logger.info("Start detection requested");
     detector.start();
     return { success: true };
   } catch (error) {
-    logger.error('Failed to start detection', sanitizeError({ error: error.message }));
+    logger.error(
+      "Failed to start detection",
+      sanitizeError({ error: error.message }),
+    );
     return { success: false, error: error.message };
   }
 }
@@ -257,11 +272,14 @@ async function handleStartDetection(event) {
  */
 async function handleStopDetection(event) {
   try {
-    logger.info('Stop detection requested');
+    logger.info("Stop detection requested");
     detector.stop();
     return { success: true };
   } catch (error) {
-    logger.error('Failed to stop detection', sanitizeError({ error: error.message }));
+    logger.error(
+      "Failed to stop detection",
+      sanitizeError({ error: error.message }),
+    );
     return { success: false, error: error.message };
   }
 }
@@ -274,123 +292,150 @@ async function handleStopDetection(event) {
  */
 async function handleSendMessage(event, { jobId, placeId, chatType, message }) {
   try {
-    logger.info('Send message requested', { chatType, messageLength: message?.length });
+    logger.info("Send message requested", {
+      chatType,
+      messageLength: message?.length,
+    });
 
     // Get current user info
     const user = robloxAuth.getCurrentUser();
     if (!user) {
-      logger.error('User not authenticated - getCurrentUser returned null');
-      return { success: false, error: 'Not authenticated. Please log in again.' };
+      logger.error("User not authenticated - getCurrentUser returned null");
+      return {
+        success: false,
+        error: "Not authenticated. Please log in again.",
+      };
     }
 
     // Get auth token
     const token = tokenManager.getValidToken();
     if (!token) {
-      logger.error('No valid token - getValidToken returned null');
+      logger.error("No valid token - getValidToken returned null");
 
       // Emit token expired event to trigger auto-logout
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('auth:tokenExpired');
+        mainWindow.webContents.send("auth:tokenExpired");
       }
 
       return {
         success: false,
-        error: 'Session expired. Please log in again.',
+        error: "Session expired. Please log in again.",
         status: 401,
-        tokenExpired: true
+        tokenExpired: true,
       };
     }
 
     // Log token details for debugging (first 20 chars only for security)
     try {
-      const parts = token.split('.');
+      const parts = token.split(".");
       if (parts.length === 3) {
-        const header = JSON.parse(Buffer.from(parts[0].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString());
-        const payload = JSON.parse(Buffer.from(parts[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString());
-        logger.info('Token details', {
+        const header = JSON.parse(
+          Buffer.from(
+            parts[0].replace(/-/g, "+").replace(/_/g, "/"),
+            "base64",
+          ).toString(),
+        );
+        const payload = JSON.parse(
+          Buffer.from(
+            parts[1].replace(/-/g, "+").replace(/_/g, "/"),
+            "base64",
+          ).toString(),
+        );
+        logger.info("Token details", {
           alg: header.alg,
           kid: header.kid,
           iss: payload.iss,
           exp: payload.exp,
-          timeUntilExpiry: payload.exp ? Math.floor((payload.exp * 1000 - Date.now()) / 1000) : 'unknown',
-          tokenPrefix: token.substring(0, 20) + '...'
+          timeUntilExpiry: payload.exp
+            ? Math.floor((payload.exp * 1000 - Date.now()) / 1000)
+            : "unknown",
+          tokenPrefix: token.substring(0, 20) + "...",
         });
       }
     } catch (e) {
-      logger.warn('Could not parse token for logging', { error: e.message });
+      logger.warn("Could not parse token for logging", { error: e.message });
     }
 
-    logger.info('Sending message with auth', { hasToken: !!token });
+    logger.info("Sending message with auth", { hasToken: !!token });
 
     // Send to backend server
-    const response = await axios.post(`${BACKEND_URL}/api/chat/send`, {
-      jobId,
-      placeId,
-      chatType,
-      message,
-      userId: user.userId,
-      username: user.username
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+    const response = await axios.post(
+      `${BACKEND_URL}/api/chat/send`,
+      {
+        jobId,
+        placeId,
+        chatType,
+        message,
+        userId: user.userId,
+        username: user.username,
       },
-      timeout: 10000
-    });
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 10000,
+      },
+    );
 
-    logger.info('Message sent successfully', { chatType });
+    logger.info("Message sent successfully", { chatType });
     return { success: true };
   } catch (error) {
     // Handle 401 authentication errors
     if (error.response?.status === 401) {
-      logger.error('Authentication failed - token expired or invalid');
+      logger.error("Authentication failed - token expired or invalid");
 
       // Emit token expired event to trigger auto-logout
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('auth:tokenExpired');
+        mainWindow.webContents.send("auth:tokenExpired");
       }
 
       return {
         success: false,
-        error: 'Session expired. Please log in again.',
+        error: "Session expired. Please log in again.",
         status: 401,
-        tokenExpired: true
+        tokenExpired: true,
       };
     }
 
     // Extract error message from response
-    let errorMessage = 'Failed to send message';
-    let errorReason = 'Unknown error';
+    let errorMessage = "Failed to send message";
+    let errorReason = "Unknown error";
 
     if (error.response?.data?.error) {
       errorMessage = error.response.data.error;
       errorReason = `Server rejected: ${errorMessage}`;
     } else if (error.response?.status === 429) {
-      errorMessage = 'Slow down! Please wait before sending another message.';
+      errorMessage = "Slow down! Please wait before sending another message.";
       errorReason = `Rate limited (HTTP ${error.response?.status}): ${errorMessage}`;
     } else if (error.response?.status) {
-      errorReason = `HTTP ${error.response?.status}: ${error.response?.statusText || 'Server error'}`;
-    } else if (error.code === 'ECONNREFUSED') {
-      errorReason = 'Connection refused - server may be down';
-    } else if (error.code === 'ETIMEDOUT') {
-      errorReason = 'Connection timed out - check your network';
+      errorReason = `HTTP ${error.response?.status}: ${error.response?.statusText || "Server error"}`;
+    } else if (error.code === "ETIMEDOUT") {
+      errorMessage = "Connection timed out. Check your network and try again.";
+      errorReason = "Connection timed out - check your network";
+    } else if (error.code === "ECONNREFUSED") {
+      errorMessage = "Server is unavailable. Please try again later.";
+      errorReason = "Connection refused - server may be down";
     } else {
-      errorReason = error.message || 'Unknown error';
+      errorReason = error.message || "Unknown error";
     }
 
-    logger.error('Message NOT sent', sanitizeError({
-      error: error.message,
-      status: error.response?.status,
-      responseData: error.response?.data,
-      chatType,
-      backendUrl: BACKEND_URL,
-      reason: errorReason
-    }));
+    logger.error(
+      "Message NOT sent",
+      sanitizeError({
+        error: error.message,
+        status: error.response?.status,
+        responseData: error.response?.data,
+        chatType,
+        backendUrl: BACKEND_URL,
+        reason: errorReason,
+      }),
+    );
 
     return {
       success: false,
       error: errorMessage,
-      status: error.response?.status
+      status: error.response?.status,
     };
   }
 }
@@ -401,23 +446,23 @@ async function handleSendMessage(event, { jobId, placeId, chatType, message }) {
  */
 async function handleLoadHistory(event, { jobId, placeId, chatType }) {
   try {
-    logger.info('Load history requested', { chatType });
+    logger.info("Load history requested", { chatType });
 
     // Get auth token
     const token = tokenManager.getValidToken();
     if (!token) {
-      logger.error('No valid token for history - getValidToken returned null');
+      logger.error("No valid token for history - getValidToken returned null");
 
       // Emit token expired event to trigger auto-logout
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('auth:tokenExpired');
+        mainWindow.webContents.send("auth:tokenExpired");
       }
 
       return {
         success: false,
-        error: 'Session expired. Please log in again.',
+        error: "Session expired. Please log in again.",
         messages: [],
-        tokenExpired: true
+        tokenExpired: true,
       };
     }
 
@@ -425,48 +470,53 @@ async function handleLoadHistory(event, { jobId, placeId, chatType }) {
     const response = await axios.get(`${BACKEND_URL}/api/chat/history`, {
       params: { jobId, placeId, chatType, limit: 50 },
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
-      timeout: 10000
+      timeout: 10000,
     });
 
-    logger.info('History loaded successfully', {
+    logger.info("History loaded successfully", {
       chatType,
-      messageCount: response.data.messages?.length || 0
+      messageCount: response.data.messages?.length || 0,
     });
 
     return {
       success: true,
-      messages: response.data.messages || []
+      messages: response.data.messages || [],
     };
   } catch (error) {
     // Handle 401 authentication errors
     if (error.response?.status === 401) {
-      logger.error('Authentication failed while loading history - token expired or invalid');
+      logger.error(
+        "Authentication failed while loading history - token expired or invalid",
+      );
 
       // Emit token expired event to trigger auto-logout
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('auth:tokenExpired');
+        mainWindow.webContents.send("auth:tokenExpired");
       }
 
       return {
         success: false,
-        error: 'Session expired. Please log in again.',
+        error: "Session expired. Please log in again.",
         messages: [],
-        tokenExpired: true
+        tokenExpired: true,
       };
     }
 
-    logger.error('Failed to load history', sanitizeError({
-      error: error.message,
-      chatType,
-      backendUrl: BACKEND_URL
-    }));
+    logger.error(
+      "Failed to load history",
+      sanitizeError({
+        error: error.message,
+        chatType,
+        backendUrl: BACKEND_URL,
+      }),
+    );
     return {
       success: false,
-      error: error.response?.data?.error || 'Failed to load history',
-      messages: []
+      error: error.response?.data?.error || "Failed to load history",
+      messages: [],
     };
   }
 }
@@ -495,26 +545,30 @@ function handleMinimize(event) {
       const currentBounds = mainWindow.getBounds();
 
       // Recalculate max size based on current screen
-      const { screen } = require('electron');
+      const { screen } = require("electron");
       const primaryDisplay = screen.getPrimaryDisplay();
-      const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+      const { width: screenWidth, height: screenHeight } =
+        primaryDisplay.workAreaSize;
       const maxWidth = Math.floor(screenWidth * 0.9);
       const maxHeight = Math.floor(screenHeight * 0.9);
 
       // Restore height but keep current width
       mainWindow.setMinimumSize(320, 260);
       mainWindow.setMaximumSize(maxWidth, maxHeight);
-      mainWindow.setBounds({
-        width: currentBounds.width, // Keep current width (may have been resized)
-        height: mainWindow.originalHeight, // Restore original height
-        x: currentBounds.x,
-        y: currentBounds.y
-      }, true);
+      mainWindow.setBounds(
+        {
+          width: currentBounds.width, // Keep current width (may have been resized)
+          height: mainWindow.originalHeight, // Restore original height
+          x: currentBounds.x,
+          y: currentBounds.y,
+        },
+        true,
+      );
       mainWindow.isMinimizedTab = false;
 
       // Remove move listener
       if (mainWindow.moveListener) {
-        mainWindow.removeListener('move', mainWindow.moveListener);
+        mainWindow.removeListener("move", mainWindow.moveListener);
         mainWindow.moveListener = null;
       }
     } else {
@@ -522,7 +576,7 @@ function handleMinimize(event) {
       mainWindow.originalHeight = bounds.height;
 
       // Get screen width for max width constraint
-      const { screen } = require('electron');
+      const { screen } = require("electron");
       const primaryDisplay = screen.getPrimaryDisplay();
       const { width: screenWidth } = primaryDisplay.workAreaSize;
       const maxWidth = Math.floor(screenWidth * 0.9);
@@ -530,12 +584,15 @@ function handleMinimize(event) {
       // Minimize to small tab - allow width resize, lock height to 55
       mainWindow.setMinimumSize(320, 55);
       mainWindow.setMaximumSize(maxWidth, 55);
-      mainWindow.setBounds({
-        width: bounds.width,
-        height: 55,
-        x: bounds.x,
-        y: bounds.y
-      }, true);
+      mainWindow.setBounds(
+        {
+          width: bounds.width,
+          height: 55,
+          x: bounds.x,
+          y: bounds.y,
+        },
+        true,
+      );
       mainWindow.isMinimizedTab = true;
 
       // Track position changes while minimized
@@ -543,7 +600,7 @@ function handleMinimize(event) {
         // Position is automatically tracked by Electron
         // No action needed - we'll get current position on restore
       };
-      mainWindow.on('move', mainWindow.moveListener);
+      mainWindow.on("move", mainWindow.moveListener);
     }
   }
   return { success: true, isMinimized: mainWindow?.isMinimizedTab || false };
@@ -593,12 +650,12 @@ function handleSetAlwaysOnTop(event, flag) {
     const isAuth = secureStore.isAuthenticated();
     if (isAuth) {
       // Use 'screen-saver' level for more forceful always-on-top on Windows
-      mainWindow.setAlwaysOnTop(flag, 'screen-saver');
-      logger.info('Always-on-top set to', flag);
+      mainWindow.setAlwaysOnTop(flag, "screen-saver");
+      logger.info("Always-on-top set to", flag);
     } else {
       // For login screen, always keep it false
       mainWindow.setAlwaysOnTop(false);
-      logger.info('Always-on-top disabled (not authenticated)');
+      logger.info("Always-on-top disabled (not authenticated)");
     }
   }
   return { success: true };
@@ -618,9 +675,9 @@ function handleSetOpacity(event, opacity) {
  * Handle open settings window
  */
 function handleOpenSettings(event) {
-  const { BrowserWindow, app, nativeTheme } = require('electron');
-  const path = require('path');
-  const fs = require('fs');
+  const { BrowserWindow, app, nativeTheme } = require("electron");
+  const path = require("path");
+  const fs = require("fs");
 
   // If settings window already exists, focus it
   if (settingsWindow && !settingsWindow.isDestroyed()) {
@@ -629,30 +686,32 @@ function handleOpenSettings(event) {
   }
 
   // Get theme-appropriate background color (same logic as main window)
-  let bgColor = '#0a0c14'; // Default dark
+  let bgColor = "#0a0c14"; // Default dark
   try {
-    const userDataPath = app.getPath('userData');
-    const settingsPath = path.join(userDataPath, 'rochat-settings.json');
-    let theme = 'auto';
+    const userDataPath = app.getPath("userData");
+    const settingsPath = path.join(userDataPath, "rochat-settings.json");
+    let theme = "auto";
 
     if (fs.existsSync(settingsPath)) {
-      const settingsData = fs.readFileSync(settingsPath, 'utf8');
+      const settingsData = fs.readFileSync(settingsPath, "utf8");
       const settings = JSON.parse(settingsData);
-      theme = settings.theme || 'auto';
+      theme = settings.theme || "auto";
     }
 
     let useLight = false;
-    if (theme === 'light') {
+    if (theme === "light") {
       useLight = true;
-    } else if (theme === 'dark') {
+    } else if (theme === "dark") {
       useLight = false;
-    } else if (theme === 'auto') {
+    } else if (theme === "auto") {
       useLight = !nativeTheme.shouldUseDarkColors;
     }
 
-    bgColor = useLight ? '#FAF8F5' : '#0a0c14';
+    bgColor = useLight ? "#FAF8F5" : "#0a0c14";
   } catch (error) {
-    logger.warn('Failed to determine theme for settings window', { error: error.message });
+    logger.warn("Failed to determine theme for settings window", {
+      error: error.message,
+    });
   }
 
   // Create new settings window
@@ -666,20 +725,23 @@ function handleOpenSettings(event) {
     modal: false,
     show: false, // Don't show until positioned
     webPreferences: {
-      preload: path.join(__dirname, '../../preload/preload.js'),
+      preload: path.join(__dirname, "../../preload/preload.js"),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: true
-    }
+      sandbox: true,
+    },
   });
 
-  settingsWindow.loadFile(path.join(__dirname, '../../renderer/views/settings.html'));
+  settingsWindow.loadFile(
+    path.join(__dirname, "../../renderer/views/settings.html"),
+  );
 
   // Position window slightly to the left of center once ready to show
-  settingsWindow.once('ready-to-show', () => {
-    const { screen } = require('electron');
+  settingsWindow.once("ready-to-show", () => {
+    const { screen } = require("electron");
     const primaryDisplay = screen.getPrimaryDisplay();
-    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+    const { width: screenWidth, height: screenHeight } =
+      primaryDisplay.workAreaSize;
 
     const windowBounds = settingsWindow.getBounds();
 
@@ -692,7 +754,7 @@ function handleOpenSettings(event) {
     settingsWindow.show();
   });
 
-  settingsWindow.on('closed', () => {
+  settingsWindow.on("closed", () => {
     settingsWindow = null;
   });
 
@@ -709,7 +771,7 @@ function handleResetPosition(event) {
       width: 380,
       height: 600,
       x: undefined,
-      y: undefined
+      y: undefined,
     });
     mainWindow.center();
     mainWindow.originalBounds = null;
@@ -728,19 +790,19 @@ function handleResetPosition(event) {
  * Handle apply theme - sends theme to main window and saves to file
  */
 function handleApplyTheme(event, theme) {
-  const fs = require('fs');
-  const path = require('path');
-  const { app } = require('electron');
+  const fs = require("fs");
+  const path = require("path");
+  const { app } = require("electron");
 
   try {
     // Save theme to file for main process to read on next startup
-    const userDataPath = app.getPath('userData');
-    const settingsPath = path.join(userDataPath, 'rochat-settings.json');
+    const userDataPath = app.getPath("userData");
+    const settingsPath = path.join(userDataPath, "rochat-settings.json");
 
     // Read existing settings or create new object
     let settings = {};
     if (fs.existsSync(settingsPath)) {
-      const settingsData = fs.readFileSync(settingsPath, 'utf8');
+      const settingsData = fs.readFileSync(settingsPath, "utf8");
       settings = JSON.parse(settingsData);
     }
 
@@ -748,15 +810,15 @@ function handleApplyTheme(event, theme) {
     settings.theme = theme;
 
     // Write back to file
-    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
-    logger.info('Theme saved to file', { theme });
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), "utf8");
+    logger.info("Theme saved to file", { theme });
   } catch (error) {
-    logger.error('Failed to save theme to file', { error: error.message });
+    logger.error("Failed to save theme to file", { error: error.message });
   }
 
   // Send theme change to main window
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('theme:changed', theme);
+    mainWindow.webContents.send("theme:changed", theme);
   }
 
   return { success: true };
@@ -766,7 +828,7 @@ function handleApplyTheme(event, theme) {
  * Handle register keybind
  */
 function handleRegisterKeybind(event, keybind) {
-  const { globalShortcut } = require('electron');
+  const { globalShortcut } = require("electron");
 
   // Unregister previous shortcut
   globalShortcut.unregisterAll();
@@ -775,12 +837,12 @@ function handleRegisterKeybind(event, keybind) {
     try {
       globalShortcut.register(keybind, () => {
         if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('keybind:focus-chat');
+          mainWindow.webContents.send("keybind:focus-chat");
         }
       });
-      logger.info('Keybind registered', { keybind });
+      logger.info("Keybind registered", { keybind });
     } catch (error) {
-      logger.error('Failed to register keybind', { error: error.message });
+      logger.error("Failed to register keybind", { error: error.message });
     }
   }
 
@@ -793,7 +855,7 @@ function handleRegisterKeybind(event, keybind) {
 function handleSetMessageOpacity(event, opacity) {
   // Forward to main window
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('settings:messageOpacityChanged', opacity);
+    mainWindow.webContents.send("settings:messageOpacityChanged", opacity);
   }
 }
 
@@ -804,8 +866,8 @@ function handleSetMessageOpacity(event, opacity) {
 function handleSetAutoHideHeader(event, enabled) {
   // Forward to main window using IPC event system
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('settings:autoHideHeaderChanged', enabled);
-    logger.info('Auto-hide header setting applied', { enabled });
+    mainWindow.webContents.send("settings:autoHideHeaderChanged", enabled);
+    logger.info("Auto-hide header setting applied", { enabled });
   }
   return { success: true };
 }
@@ -817,8 +879,8 @@ function handleSetAutoHideHeader(event, enabled) {
 function handleSetAutoHideFooter(event, enabled) {
   // Forward to main window using IPC event system
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('settings:autoHideFooterChanged', enabled);
-    logger.info('Auto-hide footer setting applied', { enabled });
+    mainWindow.webContents.send("settings:autoHideFooterChanged", enabled);
+    logger.info("Auto-hide footer setting applied", { enabled });
   }
   return { success: true };
 }
@@ -831,11 +893,13 @@ async function handleEmitTyping(event, { jobId, username, isTyping }) {
     socketClient.emitTyping(jobId, username, isTyping);
     return { success: true };
   } catch (error) {
-    logger.error('Failed to emit typing', sanitizeError({ error: error.message }));
+    logger.error(
+      "Failed to emit typing",
+      sanitizeError({ error: error.message }),
+    );
     return { success: false, error: error.message };
   }
 }
-
 
 // ==================== SHELL HANDLERS ====================
 
@@ -845,28 +909,33 @@ async function handleEmitTyping(event, { jobId, username, isTyping }) {
  */
 async function handleOpenExternal(event, url) {
   try {
-    if (!url || typeof url !== 'string') {
-      return { success: false, error: 'Invalid URL' };
+    if (!url || typeof url !== "string") {
+      return { success: false, error: "Invalid URL" };
     }
 
     let parsed;
     try {
       parsed = new URL(url);
     } catch (e) {
-      return { success: false, error: 'Invalid URL format' };
+      return { success: false, error: "Invalid URL format" };
     }
 
     // Only allow http and https protocols
-    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-      logger.warn('Blocked non-HTTP URL protocol', { protocol: parsed.protocol });
-      return { success: false, error: 'Only HTTP/HTTPS URLs are allowed' };
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      logger.warn("Blocked non-HTTP URL protocol", {
+        protocol: parsed.protocol,
+      });
+      return { success: false, error: "Only HTTP/HTTPS URLs are allowed" };
     }
 
-    logger.info('Opening external URL');
+    logger.info("Opening external URL");
     await shell.openExternal(url);
     return { success: true };
   } catch (error) {
-    logger.error('Failed to open external URL', sanitizeError({ error: error.message }));
+    logger.error(
+      "Failed to open external URL",
+      sanitizeError({ error: error.message }),
+    );
     return { success: false, error: error.message };
   }
 }
@@ -877,13 +946,16 @@ async function handleEditMessage(event, { messageId, newMessage }) {
   try {
     const user = robloxAuth.getCurrentUser();
     if (!user) {
-      return { success: false, error: 'Not authenticated' };
+      return { success: false, error: "Not authenticated" };
     }
 
     socketClient.emitEditMessage(messageId, user.userId, newMessage);
     return { success: true };
   } catch (error) {
-    logger.error('Failed to edit message', sanitizeError({ error: error.message }));
+    logger.error(
+      "Failed to edit message",
+      sanitizeError({ error: error.message }),
+    );
     return { success: false, error: error.message };
   }
 }
@@ -895,13 +967,34 @@ async function handleDeleteMessage(event, { messageId }) {
   try {
     const user = robloxAuth.getCurrentUser();
     if (!user) {
-      return { success: false, error: 'Not authenticated' };
+      return { success: false, error: "Not authenticated" };
     }
 
     socketClient.emitDeleteMessage(messageId, user.userId);
     return { success: true };
   } catch (error) {
-    logger.error('Failed to delete message', sanitizeError({ error: error.message }));
+    logger.error(
+      "Failed to delete message",
+      sanitizeError({ error: error.message }),
+    );
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Handle socket retry request
+ * Manually retry socket connection after persistent failure
+ */
+async function handleRetryConnection(event) {
+  try {
+    logger.info("Socket retry requested");
+    socketClient.retryConnection();
+    return { success: true };
+  } catch (error) {
+    logger.error(
+      "Failed to retry socket connection",
+      sanitizeError({ error: error.message }),
+    );
     return { success: false, error: error.message };
   }
 }
@@ -910,5 +1003,5 @@ module.exports = {
   setMainWindow,
   registerHandlers,
   setupDetectorEvents,
-  setupSocketEvents
+  setupSocketEvents,
 };

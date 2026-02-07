@@ -18,13 +18,13 @@ class ExternalLinkHandler {
    */
   showWarning(url, callback) {
     // Create modal overlay
-    const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay';
-    overlay.id = 'external-link-modal';
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.id = "external-link-modal";
 
     // Create modal dialog
-    const dialog = document.createElement('div');
-    dialog.className = 'modal-dialog';
+    const dialog = document.createElement("div");
+    dialog.className = "modal-dialog";
 
     // Modal content
     dialog.innerHTML = `
@@ -44,20 +44,20 @@ class ExternalLinkHandler {
     document.body.appendChild(overlay);
 
     // Handle cancel
-    const cancelBtn = dialog.querySelector('#modal-cancel');
-    cancelBtn.addEventListener('click', () => {
+    const cancelBtn = dialog.querySelector("#modal-cancel");
+    cancelBtn.addEventListener("click", () => {
       this.closeModal();
     });
 
     // Handle continue
-    const continueBtn = dialog.querySelector('#modal-continue');
-    continueBtn.addEventListener('click', () => {
+    const continueBtn = dialog.querySelector("#modal-continue");
+    continueBtn.addEventListener("click", () => {
       this.closeModal();
       if (callback) callback(url);
     });
 
     // Close on overlay click
-    overlay.addEventListener('click', (e) => {
+    overlay.addEventListener("click", (e) => {
       if (e.target === overlay) {
         this.closeModal();
       }
@@ -65,19 +65,19 @@ class ExternalLinkHandler {
 
     // Close on escape key
     const handleEscape = (e) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         this.closeModal();
-        document.removeEventListener('keydown', handleEscape);
+        document.removeEventListener("keydown", handleEscape);
       }
     };
-    document.addEventListener('keydown', handleEscape);
+    document.addEventListener("keydown", handleEscape);
   }
 
   /**
    * Close modal
    */
   closeModal() {
-    const modal = document.getElementById('external-link-modal');
+    const modal = document.getElementById("external-link-modal");
     if (modal) {
       modal.remove();
     }
@@ -92,7 +92,7 @@ class ExternalLinkHandler {
     } else if (window.electronAPI?.shell?.openExternal) {
       window.electronAPI.shell.openExternal(url);
     } else {
-      console.warn('Cannot open external link - Electron API not available');
+      console.warn("Cannot open external link - Electron API not available");
     }
   }
 
@@ -103,7 +103,7 @@ class ExternalLinkHandler {
     e.preventDefault();
 
     if (!this.coffeeLink) {
-      console.error('Coffee link URL not set');
+      console.error("Coffee link URL not set");
       return;
     }
 
@@ -116,15 +116,19 @@ class ExternalLinkHandler {
    */
   initCoffeeLinks() {
     // Chat view coffee link
-    const coffeeLink = document.getElementById('coffee-link');
+    const coffeeLink = document.getElementById("coffee-link");
     if (coffeeLink) {
-      coffeeLink.addEventListener('click', (e) => this.handleCoffeeLinkClick(e));
+      coffeeLink.addEventListener("click", (e) =>
+        this.handleCoffeeLinkClick(e),
+      );
     }
 
     // Settings coffee link
-    const coffeeLinkSettings = document.getElementById('coffee-link-settings');
+    const coffeeLinkSettings = document.getElementById("coffee-link-settings");
     if (coffeeLinkSettings) {
-      coffeeLinkSettings.addEventListener('click', (e) => this.handleCoffeeLinkClick(e));
+      coffeeLinkSettings.addEventListener("click", (e) =>
+        this.handleCoffeeLinkClick(e),
+      );
     }
   }
 
@@ -132,7 +136,7 @@ class ExternalLinkHandler {
    * Escape HTML to prevent XSS
    */
   escapeHtml(text) {
-    const div = document.createElement('div');
+    const div = document.createElement("div");
     div.textContent = text;
     return div.innerHTML;
   }
@@ -142,8 +146,8 @@ class ExternalLinkHandler {
 window.externalLinkHandler = new ExternalLinkHandler();
 
 // Auto-initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => {
     window.externalLinkHandler.initCoffeeLinks();
   });
 } else {

@@ -1,20 +1,22 @@
-const { shell } = require('electron');
-const axios = require('axios');
-const crypto = require('crypto');
-const http = require('http');
-const url = require('url');
-const logger = require('../logging/logger');
-const secureStore = require('../storage/secureStore');
-const { sanitizeError } = require('../utils/sanitizer');
-
+const { shell } = require("electron");
+const axios = require("axios");
+const crypto = require("crypto");
+const http = require("http");
+const url = require("url");
+const logger = require("../logging/logger");
+const secureStore = require("../storage/secureStore");
+const { sanitizeError } = require("../utils/sanitizer");
 
 // OAuth2 Configuration
-const OAUTH_BASE_URL = 'https://apis.roblox.com/oauth';
-const CLIENT_ID = '7532859285329729546';
-const REDIRECT_URI = 'http://localhost:3333/callback';
-const CALLBACK_PORT = 3333;
-const SCOPES = 'openid profile';
-const SERVER_URL = 'https://ro-chat-zqks.onrender.com';
+const OAUTH_BASE_URL = "https://apis.roblox.com/oauth";
+const CLIENT_ID = process.env.ROBLOX_CLIENT_ID || "7532859285329729546";
+const REDIRECT_URI = "http://localhost:3333/callback";
+const CALLBACK_PORT = parseInt(process.env.OAUTH_CALLBACK_PORT || "3333", 10);
+const CALLBACK_PORT_START = CALLBACK_PORT;
+const CALLBACK_PORT_END = CALLBACK_PORT + 7;
+const SCOPES = "openid profile";
+const SERVER_URL =
+  process.env.SERVER_URL || "https://ro-chat-zqks.onrender.com";
 
 // Store PKCE verifier temporarily during auth flow
 let currentCodeVerifier = null;
@@ -24,7 +26,7 @@ let callbackServer = null;
  * Generate random string for PKCE
  */
 function generateRandomString(length) {
-  return crypto.randomBytes(length).toString('base64url');
+  return crypto.randomBytes(length).toString("base64url");
 }
 
 /**
@@ -33,38 +35,42 @@ function generateRandomString(length) {
 function generatePKCE() {
   const codeVerifier = generateRandomString(32); // 43-128 characters
   const codeChallenge = crypto
-    .createHash('sha256')
+    .createHash("sha256")
     .update(codeVerifier)
-    .digest('base64url');
+    .digest("base64url");
 
   return {
     codeVerifier,
     codeChallenge,
-    codeChallengeMethod: 'S256'
+    codeChallengeMethod: "S256",
   };
 }
 
 /**
- * Create local HTTP server to handle OAuth2 callback
+ * Create callback server on specific port
+ * Returns a promise that resolves with the auth code when callback is received
  */
-function createCallbackServer() {
+function createCallbackServerOnPort(port) {
   return new Promise((resolve, reject) => {
     const server = http.createServer((req, res) => {
       const parsedUrl = url.parse(req.url, true);
 
-      if (parsedUrl.pathname === '/callback') {
+      if (parsedUrl.pathname === "/callback") {
         const { code, error, error_description } = parsedUrl.query;
 
         if (error) {
-          logger.error('OAuth2 authorization error', { error, error_description });
-          res.writeHead(400, { 'Content-Type': 'text/html' });
+          logger.error("OAuth2 authorization error", {
+            error,
+            error_description,
+          });
+          res.writeHead(400, { "Content-Type": "text/html" });
           res.end(`
             <html>
               <head><title>Login Failed</title></head>
               <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
                 <h1>❌ Login Failed</h1>
                 <p>Error: ${error}</p>
-                <p>${error_description || ''}</p>
+                <p>${error_description || ""}</p>
                 <p>You can close this window and try again.</p>
               </body>
             </html>
@@ -75,8 +81,8 @@ function createCallbackServer() {
         }
 
         if (code) {
-          logger.info('OAuth2 authorization code received');
-          res.writeHead(200, { 'Content-Type': 'text/html' });
+          logger.info("OAuth2 authorization code received");
+          res.writeHead(200, { "Content-Type": "text/html" });
           res.end(`
             <html>
               <head><title>Login Successful</title></head>
@@ -91,7 +97,7 @@ function createCallbackServer() {
           // Close server after a short delay to ensure response is sent
           setTimeout(() => server.close(), 1000);
         } else {
-          res.writeHead(400, { 'Content-Type': 'text/html' });
+          res.writeHead(400, { "Content-Type": "text/html" });
           res.end(`
             <html>
               <head><title>Invalid Request</title></head>
@@ -101,26 +107,137 @@ function createCallbackServer() {
               </body>
             </html>
           `);
-          reject(new Error('No authorization code received'));
+          reject(new Error("No authorization code received"));
           server.close();
         }
       } else {
-        res.writeHead(404, { 'Content-Type': 'text/plain' });
-        res.end('Not Found');
+        res.writeHead(404, { "Content-Type": "text/plain" });
+        res.end("Not Found");
       }
     });
 
-    server.listen(CALLBACK_PORT, () => {
-      logger.info('OAuth2 callback server started', { port: CALLBACK_PORT });
+    server.listen(port, () => {
+      logger.info("OAuth2 callback server listening", { port });
+      resolve({ server, promise: null }); // Resolve immediately when server starts
     });
 
-    server.on('error', (error) => {
-      logger.error('Callback server error', { error: error.message });
+    server.on("error", (error) => {
+      logger.debug("Callback server error", { port, error: error.message });
       reject(error);
     });
-
-    callbackServer = server;
   });
+}
+
+/**
+ * Start callback server with port retry
+ * Tries ports 3333-3340 to handle port conflicts
+ * Returns { server, port, redirectUri, codePromise }
+ */
+async function startCallbackServerWithPortRetry() {
+  let lastError = null;
+
+  for (let port = CALLBACK_PORT_START; port <= CALLBACK_PORT_END; port++) {
+    try {
+      const redirectUri = `http://localhost:${port}/callback`;
+      logger.info("Trying OAuth callback port", { port });
+
+      // Create promise for auth code (resolves when callback is received)
+      let resolveCode, rejectCode;
+      const codePromise = new Promise((resolve, reject) => {
+        resolveCode = resolve;
+        rejectCode = reject;
+      });
+
+      const server = http.createServer((req, res) => {
+        const parsedUrl = url.parse(req.url, true);
+
+        if (parsedUrl.pathname === "/callback") {
+          const { code, error, error_description } = parsedUrl.query;
+
+          if (error) {
+            logger.error("OAuth2 authorization error", {
+              error,
+              error_description,
+            });
+            res.writeHead(400, { "Content-Type": "text/html" });
+            res.end(`
+              <html>
+                <head><title>Login Failed</title></head>
+                <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+                  <h1>❌ Login Failed</h1>
+                  <p>Error: ${error}</p>
+                  <p>${error_description || ""}</p>
+                  <p>You can close this window and try again.</p>
+                </body>
+              </html>
+            `);
+            rejectCode(new Error(error_description || error));
+            server.close();
+            return;
+          }
+
+          if (code) {
+            logger.info("OAuth2 authorization code received");
+            res.writeHead(200, { "Content-Type": "text/html" });
+            res.end(`
+              <html>
+                <head><title>Login Successful</title></head>
+                <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+                  <h1>✓ Login Successful!</h1>
+                  <p>You can now close this window and return to RoChat.</p>
+                  <script>window.close();</script>
+                </body>
+              </html>
+            `);
+            resolveCode(code);
+            setTimeout(() => server.close(), 1000);
+          } else {
+            res.writeHead(400, { "Content-Type": "text/html" });
+            res.end(`
+              <html>
+                <head><title>Invalid Request</title></head>
+                <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+                  <h1>Invalid Request</h1>
+                  <p>No authorization code received.</p>
+                </body>
+              </html>
+            `);
+            rejectCode(new Error("No authorization code received"));
+            server.close();
+          }
+        } else {
+          res.writeHead(404, { "Content-Type": "text/plain" });
+          res.end("Not Found");
+        }
+      });
+
+      // Try to start server on this port
+      await new Promise((resolve, reject) => {
+        server.listen(port, () => {
+          logger.info("OAuth callback server started", { port });
+          resolve();
+        });
+
+        server.on("error", (error) => {
+          logger.debug("Port unavailable", { port, error: error.code });
+          reject(error);
+        });
+      });
+
+      // Success! Server is listening
+      callbackServer = server;
+      return { server, port, redirectUri, codePromise };
+    } catch (error) {
+      lastError = error;
+      // Continue to next port
+    }
+  }
+
+  // All ports failed
+  throw new Error(
+    `Could not start OAuth callback server. Ports ${CALLBACK_PORT_START}-${CALLBACK_PORT_END} are in use. ` +
+      `Please close other applications and try again. Error: ${lastError?.message}`,
+  );
 }
 
 /**
@@ -129,39 +246,44 @@ function createCallbackServer() {
  */
 async function exchangeCodeForToken(authCode, codeVerifier) {
   try {
-    logger.info('Exchanging authorization code for token via server');
+    logger.info("Exchanging authorization code for token via server");
 
     const response = await axios.post(
       `${SERVER_URL}/api/oauth/exchange`,
       {
         code: authCode,
-        codeVerifier: codeVerifier
+        codeVerifier: codeVerifier,
       },
       {
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
-        timeout: 10000
-      }
+        timeout: 10000,
+      },
     );
 
     if (!response.data.success) {
-      throw new Error(response.data.error || 'Token exchange failed');
+      throw new Error(response.data.error || "Token exchange failed");
     }
 
-    logger.info('Token exchange successful');
+    logger.info("Token exchange successful");
     return response.data.tokens;
   } catch (error) {
-    logger.error('Token exchange failed', sanitizeError({
-      error: error.message,
-      status: error.response?.status,
-      data: error.response?.data
-    }));
+    logger.error(
+      "Token exchange failed",
+      sanitizeError({
+        error: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+      }),
+    );
 
     if (error.response?.status === 400) {
-      throw new Error('Invalid authorization code or PKCE verifier');
-    } else if (error.code === 'ECONNRESET' || error.code === 'ENOTFOUND') {
-      throw new Error('Network connection failed. Please check your internet connection.');
+      throw new Error("Invalid authorization code or PKCE verifier");
+    } else if (error.code === "ECONNRESET" || error.code === "ENOTFOUND") {
+      throw new Error(
+        "Network connection failed. Please check your internet connection.",
+      );
     } else {
       throw new Error(`Token exchange failed: ${error.message}`);
     }
@@ -173,32 +295,37 @@ async function exchangeCodeForToken(authCode, codeVerifier) {
  */
 async function getUserInfo(accessToken) {
   try {
-    logger.info('Fetching user information');
+    logger.info("Fetching user information");
 
     const response = await axios.get(`${OAUTH_BASE_URL}/v1/userinfo`, {
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
       },
-      timeout: 10000
+      timeout: 10000,
     });
 
-    logger.info('User info retrieved successfully', { userId: response.data.sub });
+    logger.info("User info retrieved successfully", {
+      userId: response.data.sub,
+    });
     return {
       id: response.data.sub,
       username: response.data.preferred_username,
       displayName: response.data.name || response.data.nickname,
       picture: response.data.picture,
-      createdAt: response.data.created_at
+      createdAt: response.data.created_at,
     };
   } catch (error) {
-    logger.error('Failed to get user info', sanitizeError({
-      error: error.message,
-      status: error.response?.status
-    }));
+    logger.error(
+      "Failed to get user info",
+      sanitizeError({
+        error: error.message,
+        status: error.response?.status,
+      }),
+    );
 
     if (error.response?.status === 401) {
-      throw new Error('Invalid or expired access token');
+      throw new Error("Invalid or expired access token");
     } else {
       throw new Error(`Failed to get user info: ${error.message}`);
     }
@@ -211,36 +338,39 @@ async function getUserInfo(accessToken) {
  */
 async function refreshAccessToken(refreshToken) {
   try {
-    logger.info('Refreshing access token via server');
+    logger.info("Refreshing access token via server");
 
     const response = await axios.post(
       `${SERVER_URL}/api/oauth/refresh`,
       {
-        refreshToken: refreshToken
+        refreshToken: refreshToken,
       },
       {
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
-        timeout: 10000
-      }
+        timeout: 10000,
+      },
     );
 
     if (!response.data.success) {
-      throw new Error(response.data.error || 'Token refresh failed');
+      throw new Error(response.data.error || "Token refresh failed");
     }
 
-    logger.info('Token refresh successful');
+    logger.info("Token refresh successful");
     return response.data.tokens;
   } catch (error) {
-    logger.error('Token refresh failed', sanitizeError({
-      error: error.message,
-      status: error.response?.status
-    }));
+    logger.error(
+      "Token refresh failed",
+      sanitizeError({
+        error: error.message,
+        status: error.response?.status,
+      }),
+    );
 
     // If refresh fails, user needs to log in again
     secureStore.clearAuth();
-    throw new Error('Session expired. Please log in again.');
+    throw new Error("Session expired. Please log in again.");
   }
 }
 
@@ -251,10 +381,12 @@ async function initiateLogin() {
   try {
     // Validate environment variables
     if (!CLIENT_ID) {
-      throw new Error('OAuth2 client ID not configured. Please set ROBLOX_CLIENT_ID in .env file');
+      throw new Error(
+        "OAuth2 client ID not configured. Please set ROBLOX_CLIENT_ID in .env file",
+      );
     }
 
-    logger.info('Initiating OAuth2 login with PKCE');
+    logger.info("Initiating OAuth2 login with PKCE");
 
     // Generate PKCE challenge
     const { codeVerifier, codeChallenge, codeChallengeMethod } = generatePKCE();
@@ -263,26 +395,27 @@ async function initiateLogin() {
     // Generate state for CSRF protection
     const state = generateRandomString(16);
 
-    // Build authorization URL
+    // Start local callback server with port retry (finds available port)
+    const { port, redirectUri, codePromise } =
+      await startCallbackServerWithPortRetry();
+
+    // Build authorization URL with dynamic redirect URI
     const authUrl = new URL(`${OAUTH_BASE_URL}/v1/authorize`);
-    authUrl.searchParams.append('client_id', CLIENT_ID);
-    authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
-    authUrl.searchParams.append('scope', SCOPES);
-    authUrl.searchParams.append('response_type', 'code');
-    authUrl.searchParams.append('state', state);
-    authUrl.searchParams.append('code_challenge', codeChallenge);
-    authUrl.searchParams.append('code_challenge_method', codeChallengeMethod);
+    authUrl.searchParams.append("client_id", CLIENT_ID);
+    authUrl.searchParams.append("redirect_uri", redirectUri);
+    authUrl.searchParams.append("scope", SCOPES);
+    authUrl.searchParams.append("response_type", "code");
+    authUrl.searchParams.append("state", state);
+    authUrl.searchParams.append("code_challenge", codeChallenge);
+    authUrl.searchParams.append("code_challenge_method", codeChallengeMethod);
 
-    logger.info('Opening authorization URL in browser', { url: authUrl.toString() });
-
-    // Start local callback server
-    const authCodePromise = createCallbackServer();
+    logger.info("Opening authorization URL in browser", { port });
 
     // Open authorization URL in default browser
     await shell.openExternal(authUrl.toString());
 
     // Wait for authorization code from callback
-    const authCode = await authCodePromise;
+    const authCode = await codePromise;
 
     // Exchange authorization code for tokens
     const tokens = await exchangeCodeForToken(authCode, codeVerifier);
@@ -300,11 +433,11 @@ async function initiateLogin() {
       username: userInfo.username,
       displayName: userInfo.displayName,
       picture: userInfo.picture,
-      expiresAt: Date.now() + (tokens.expiresIn * 1000)
+      expiresAt: Date.now() + tokens.expiresIn * 1000,
     };
 
     secureStore.saveAuth(authData);
-    logger.info('OAuth2 login successful', { username: userInfo.username });
+    logger.info("OAuth2 login successful", { username: userInfo.username });
 
     // Clear temporary data
     currentCodeVerifier = null;
@@ -317,12 +450,18 @@ async function initiateLogin() {
       try {
         callbackServer.close();
       } catch (closeError) {
-        logger.error('Failed to close callback server', sanitizeError({ error: closeError.message }));
+        logger.error(
+          "Failed to close callback server",
+          sanitizeError({ error: closeError.message }),
+        );
       }
       callbackServer = null;
     }
 
-    logger.error('OAuth2 login failed', sanitizeError({ error: error.message }));
+    logger.error(
+      "OAuth2 login failed",
+      sanitizeError({ error: error.message }),
+    );
     throw error;
   }
 }
@@ -338,8 +477,8 @@ function isAuthenticated() {
   }
 
   // Check if token is expired (with 1 minute buffer)
-  if (Date.now() >= (auth.expiresAt - 60000)) {
-    logger.info('Access token expired or about to expire');
+  if (Date.now() >= auth.expiresAt - 60000) {
+    logger.info("Access token expired or about to expire");
 
     // Try to refresh token if we have a refresh token
     if (auth.refreshToken) {
@@ -347,7 +486,7 @@ function isAuthenticated() {
       return true;
     }
 
-    logger.info('No refresh token available');
+    logger.info("No refresh token available");
     secureStore.clearAuth();
     return false;
   }
@@ -369,7 +508,7 @@ function getCurrentUser() {
     userId: auth.userId,
     username: auth.username,
     displayName: auth.displayName,
-    picture: auth.picture
+    picture: auth.picture,
   };
 }
 
@@ -381,15 +520,15 @@ async function getAccessToken() {
     const auth = secureStore.getAuth();
 
     if (!auth || !auth.accessToken) {
-      throw new Error('Not authenticated');
+      throw new Error("Not authenticated");
     }
 
     // Check if token is expired or about to expire (within 1 minute)
-    if (Date.now() >= (auth.expiresAt - 60000)) {
-      logger.info('Access token expired, refreshing');
+    if (Date.now() >= auth.expiresAt - 60000) {
+      logger.info("Access token expired, refreshing");
 
       if (!auth.refreshToken) {
-        throw new Error('No refresh token available');
+        throw new Error("No refresh token available");
       }
 
       // Refresh the token
@@ -400,7 +539,7 @@ async function getAccessToken() {
         ...auth,
         accessToken: newTokens.accessToken,
         refreshToken: newTokens.refreshToken,
-        expiresAt: Date.now() + (newTokens.expiresIn * 1000)
+        expiresAt: Date.now() + newTokens.expiresIn * 1000,
       };
 
       secureStore.saveAuth(updatedAuth);
@@ -409,7 +548,10 @@ async function getAccessToken() {
 
     return auth.accessToken;
   } catch (error) {
-    logger.error('Failed to get access token', sanitizeError({ error: error.message }));
+    logger.error(
+      "Failed to get access token",
+      sanitizeError({ error: error.message }),
+    );
     throw error;
   }
 }
@@ -419,5 +561,5 @@ module.exports = {
   isAuthenticated,
   getCurrentUser,
   getAccessToken,
-  refreshAccessToken
+  refreshAccessToken,
 };

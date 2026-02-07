@@ -1,12 +1,12 @@
-const { EventEmitter } = require('events');
-const { exec } = require('child_process');
-const { promisify } = require('util');
-const logger = require('../logging/logger');
+const { EventEmitter } = require("events");
+const { exec } = require("child_process");
+const { promisify } = require("util");
+const logger = require("../logging/logger");
 
 const execAsync = promisify(exec);
 
 // Process name to watch (Windows)
-const ROBLOX_PROCESS = 'RobloxPlayerBeta.exe';
+const ROBLOX_PROCESS = "RobloxPlayerBeta.exe";
 
 class ProcessWatcher extends EventEmitter {
   constructor() {
@@ -22,11 +22,11 @@ class ProcessWatcher extends EventEmitter {
    */
   startWatching() {
     if (this.isWatching) {
-      logger.warn('Process watcher already running');
+      logger.warn("Process watcher already running");
       return;
     }
 
-    logger.info('Starting process watcher');
+    logger.info("Starting process watcher");
     this.isWatching = true;
 
     // Initial check
@@ -43,11 +43,11 @@ class ProcessWatcher extends EventEmitter {
    */
   stopWatching() {
     if (!this.isWatching) {
-      logger.warn('Process watcher not running');
+      logger.warn("Process watcher not running");
       return;
     }
 
-    logger.info('Stopping process watcher');
+    logger.info("Stopping process watcher");
     this.isWatching = false;
 
     if (this.checkInterval) {
@@ -65,16 +65,16 @@ class ProcessWatcher extends EventEmitter {
 
       // Emit events only when state changes
       if (isRunning && !this.wasRunning) {
-        logger.info('Roblox process started');
-        this.emit('processStarted');
+        logger.info("Roblox process started");
+        this.emit("processStarted");
       } else if (!isRunning && this.wasRunning) {
-        logger.info('Roblox process stopped');
-        this.emit('processStopped');
+        logger.info("Roblox process stopped");
+        this.emit("processStopped");
       }
 
       this.wasRunning = isRunning;
     } catch (error) {
-      logger.error('Error checking Roblox process', { error: error.message });
+      logger.error("Error checking Roblox process", { error: error.message });
     }
   }
 
@@ -86,10 +86,10 @@ class ProcessWatcher extends EventEmitter {
       const platform = process.platform;
       let command;
 
-      if (platform === 'win32') {
+      if (platform === "win32") {
         // Windows: Use PowerShell Get-Process which is more reliable
         command = `powershell -Command "Get-Process -Name 'RobloxPlayerBeta' -ErrorAction SilentlyContinue | Select-Object -First 1"`;
-      } else if (platform === 'darwin') {
+      } else if (platform === "darwin") {
         // macOS: Use ps
         command = `ps aux | grep -i "${ROBLOX_PROCESS}" | grep -v grep`;
       } else {
@@ -101,10 +101,14 @@ class ProcessWatcher extends EventEmitter {
 
       // Check if process name appears in output
       // PowerShell will return process info if found, empty if not
-      return stdout.trim().length > 0 && stdout.toLowerCase().includes('roblox');
+      return (
+        stdout.trim().length > 0 && stdout.toLowerCase().includes("roblox")
+      );
     } catch (error) {
       // If command fails, assume process not running
-      logger.debug('Process check failed, assuming not running', { error: error.message });
+      logger.debug("Process check failed, assuming not running", {
+        error: error.message,
+      });
       return false;
     }
   }

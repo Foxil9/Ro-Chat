@@ -3,7 +3,7 @@
 class ChatManager {
   constructor() {
     this.editingMessageId = null;
-  this.editingOriginalMessage = null;
+    this.editingOriginalMessage = null;
     this.messages = { server: [], global: [] };
     this.messageInput = null;
     this.sendButton = null;
@@ -12,7 +12,7 @@ class ChatManager {
     this.gameNameDisplay = null;
     this.currentJobId = null;
     this.currentPlaceId = null;
-    this.activeTab = 'server'; // 'server' or 'global'
+    this.activeTab = "server"; // 'server' or 'global'
     this.isInitialized = false;
     this.MAX_MESSAGES = 50;
     this.serverWakeupWarningShown = false;
@@ -36,11 +36,11 @@ class ChatManager {
     if (this.isInitialized) return;
 
     // Get DOM elements (using correct IDs from index.html)
-    this.messageInput = document.getElementById('message-input');
-    this.sendButton = document.getElementById('send-btn');
-    this.messagesContainer = document.getElementById('chat-messages');
-    this.jobIdDisplay = document.getElementById('server-text');
-    this.gameNameDisplay = document.getElementById('user-name');
+    this.messageInput = document.getElementById("message-input");
+    this.sendButton = document.getElementById("send-btn");
+    this.messagesContainer = document.getElementById("chat-messages");
+    this.jobIdDisplay = document.getElementById("server-text");
+    this.gameNameDisplay = document.getElementById("user-name");
 
     // Get current user ID
     await this.loadCurrentUserId();
@@ -66,16 +66,16 @@ class ChatManager {
     // Register saved keybind
     this.registerSavedKeybind();
 
-    // Set Buy Me a Coffee link 
+    // Set Buy Me a Coffee link
     if (window.externalLinkHandler) {
-      window.externalLinkHandler.setCoffeeLink('https://ko-fi.com/foxil9');
+      window.externalLinkHandler.setCoffeeLink("https://ko-fi.com/foxil9");
     }
 
     this.isInitialized = true;
-    console.log('Chat manager initialized');
+    console.log("Chat manager initialized");
   }
 
- /**
+  /**
    * Load current user ID
    */
   async loadCurrentUserId() {
@@ -84,10 +84,16 @@ class ChatManager {
       if (user) {
         // CRITICAL: Convert to number to match server messages
         this.userId = parseInt(user.userId);
-        console.log('✅ User ID loaded:', this.userId, '(type:', typeof this.userId, ')');
+        console.log(
+          "✅ User ID loaded:",
+          this.userId,
+          "(type:",
+          typeof this.userId,
+          ")",
+        );
       }
     } catch (error) {
-      console.error('Failed to load user ID:', error);
+      console.error("Failed to load user ID:", error);
     }
   }
 
@@ -96,16 +102,21 @@ class ChatManager {
    */
   async registerSavedKeybind() {
     try {
-      const saved = localStorage.getItem('rochat-settings');
+      const saved = localStorage.getItem("rochat-settings");
       if (saved) {
         const settings = JSON.parse(saved);
-        if (settings.chatKeybind && window.electronAPI?.settings?.registerKeybind) {
-          await window.electronAPI.settings.registerKeybind(settings.chatKeybind);
-          console.log('Chat: Registered saved keybind:', settings.chatKeybind);
+        if (
+          settings.chatKeybind &&
+          window.electronAPI?.settings?.registerKeybind
+        ) {
+          await window.electronAPI.settings.registerKeybind(
+            settings.chatKeybind,
+          );
+          console.log("Chat: Registered saved keybind:", settings.chatKeybind);
         }
       }
     } catch (error) {
-      console.error('Chat: Failed to register saved keybind:', error);
+      console.error("Chat: Failed to register saved keybind:", error);
     }
   }
 
@@ -113,16 +124,16 @@ class ChatManager {
    * Apply message opacity from settings
    */
   applyMessageOpacity() {
-    const opacity = localStorage.getItem('message-opacity') || 100;
-    const style = document.createElement('style');
-    style.id = 'message-opacity-style';
+    const opacity = localStorage.getItem("message-opacity") || 100;
+    const style = document.createElement("style");
+    style.id = "message-opacity-style";
     style.textContent = `.chat-msg { opacity: ${opacity / 100} !important; }`;
     document.head.appendChild(style);
 
     // Listen for opacity changes
-    window.addEventListener('storage', (e) => {
-      if (e.key === 'message-opacity') {
-        const style = document.getElementById('message-opacity-style');
+    window.addEventListener("storage", (e) => {
+      if (e.key === "message-opacity") {
+        const style = document.getElementById("message-opacity-style");
         if (style) {
           style.textContent = `.chat-msg { opacity: ${e.newValue / 100} !important; }`;
         }
@@ -135,15 +146,15 @@ class ChatManager {
    */
   createTabUI() {
     // Tab HTML is already in index.html, just setup click handlers
-    const serverTab = document.getElementById('tab-server');
-    const globalTab = document.getElementById('tab-global');
+    const serverTab = document.getElementById("tab-server");
+    const globalTab = document.getElementById("tab-global");
 
     if (serverTab) {
-      serverTab.onclick = () => this.switchTab('server');
+      serverTab.onclick = () => this.switchTab("server");
     }
 
     if (globalTab) {
-      globalTab.onclick = () => this.switchTab('global');
+      globalTab.onclick = () => this.switchTab("global");
     }
   }
 
@@ -156,8 +167,10 @@ class ChatManager {
     this.activeTab = tab;
 
     // Update tab buttons
-    document.getElementById('tab-server').className = tab === 'server' ? 'chat-tab active' : 'chat-tab';
-    document.getElementById('tab-global').className = tab === 'global' ? 'chat-tab active' : 'chat-tab';
+    document.getElementById("tab-server").className =
+      tab === "server" ? "chat-tab active" : "chat-tab";
+    document.getElementById("tab-global").className =
+      tab === "global" ? "chat-tab active" : "chat-tab";
 
     // Clear typing indicators when switching tabs
     this.typingUsers.clear();
@@ -166,7 +179,7 @@ class ChatManager {
     // Render messages for active tab
     this.renderAllMessages();
 
-    console.log('Switched to tab:', tab);
+    console.log("Switched to tab:", tab);
   }
 
   /**
@@ -175,13 +188,13 @@ class ChatManager {
   setupEventListeners() {
     // Send button click
     if (this.sendButton) {
-      this.sendButton.addEventListener('click', () => this.sendMessage());
+      this.sendButton.addEventListener("click", () => this.sendMessage());
     }
 
     // Enter key to send
     if (this.messageInput) {
-      this.messageInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
+      this.messageInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault();
 
           // Block if in cooldown
@@ -194,21 +207,21 @@ class ChatManager {
       });
 
       // Typing indicator with 2-second debounce
-      this.messageInput.addEventListener('input', () => {
+      this.messageInput.addEventListener("input", () => {
         this.handleTyping();
       });
     }
 
     // Logout button
-    const btnLogout = document.getElementById('btnLogout');
+    const btnLogout = document.getElementById("btnLogout");
     if (btnLogout) {
-      btnLogout.addEventListener('click', () => this.handleLogout());
+      btnLogout.addEventListener("click", () => this.handleLogout());
     }
 
     // Settings button
-    const btnSettings = document.getElementById('btnSettings');
+    const btnSettings = document.getElementById("btnSettings");
     if (btnSettings) {
-      btnSettings.addEventListener('click', () => this.showSettings());
+      btnSettings.addEventListener("click", () => this.showSettings());
     }
 
     // History feature removed - users only see messages sent after they join
@@ -218,9 +231,9 @@ class ChatManager {
     // }
 
     // Connect button
-    this.connectButton = document.getElementById('connect-btn');
+    this.connectButton = document.getElementById("connect-btn");
     if (this.connectButton) {
-      this.connectButton.addEventListener('click', () => this.handleConnect());
+      this.connectButton.addEventListener("click", () => this.handleConnect());
     }
 
     // REMOVED GAME BROWSER FEATURE
@@ -232,8 +245,11 @@ class ChatManager {
    */
   async handleConnect() {
     // Check if button is on cooldown
-    if (this.connectCooldownEndTime && Date.now() < this.connectCooldownEndTime) {
-      console.log('Connect button is on cooldown');
+    if (
+      this.connectCooldownEndTime &&
+      Date.now() < this.connectCooldownEndTime
+    ) {
+      console.log("Connect button is on cooldown");
       return;
     }
 
@@ -242,37 +258,41 @@ class ChatManager {
 
       // Disable button and show restart in progress
       this.connectButton.disabled = true;
-      this.connectButton.textContent = 'Restarting...';
+      this.connectButton.textContent = "Restarting...";
 
-      if (window.electron && window.electron.stopDetection && window.electron.startDetection) {
+      if (
+        window.electron &&
+        window.electron.stopDetection &&
+        window.electron.startDetection
+      ) {
         // Stop detection first
         await window.electron.stopDetection();
-        console.log('Detection stopped');
+        console.log("Detection stopped");
 
         // Wait a brief moment before restarting
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
         // Start detection again
         const result = await window.electron.startDetection();
         if (result.success) {
-          this.addSystemMessage('Detection restarted!', 'server');
-          console.log('Detection restarted successfully');
+          this.addSystemMessage("Detection restarted!", "server");
+          console.log("Detection restarted successfully");
         } else {
-          this.addSystemMessage('Failed to restart detection', 'server');
-          console.error('Failed to restart detection:', result);
+          this.addSystemMessage("Failed to restart detection", "server");
+          console.error("Failed to restart detection:", result);
         }
       }
 
       // Start cooldown
       this.startConnectCooldown();
     } catch (error) {
-      console.error('Failed to restart detection:', error);
-      this.addSystemMessage('Error restarting detection', 'server');
+      console.error("Failed to restart detection:", error);
+      this.addSystemMessage("Error restarting detection", "server");
 
       // Re-enable button on error
       if (this.connectButton) {
         this.connectButton.disabled = false;
-        this.connectButton.textContent = 'Connect';
+        this.connectButton.textContent = "Connect";
       }
     }
   }
@@ -287,11 +307,14 @@ class ChatManager {
     }
 
     // Set cooldown end time
-    this.connectCooldownEndTime = Date.now() + (this.CONNECT_COOLDOWN_SECONDS * 1000);
+    this.connectCooldownEndTime =
+      Date.now() + this.CONNECT_COOLDOWN_SECONDS * 1000;
 
     // Update button every 100ms
     this.connectCooldownTimer = setInterval(() => {
-      const remaining = Math.ceil((this.connectCooldownEndTime - Date.now()) / 1000);
+      const remaining = Math.ceil(
+        (this.connectCooldownEndTime - Date.now()) / 1000,
+      );
 
       if (remaining <= 0) {
         this.endConnectCooldown();
@@ -318,10 +341,10 @@ class ChatManager {
     // Re-enable button
     if (this.connectButton) {
       this.connectButton.disabled = false;
-      this.connectButton.textContent = 'Connect';
+      this.connectButton.textContent = "Connect";
     }
 
-    console.log('Connect cooldown ended');
+    console.log("Connect cooldown ended");
   }
 
   /**
@@ -346,72 +369,73 @@ class ChatManager {
     }
   }
 
-/**
- * Setup message update listeners (edit/delete)
- */
-setupMessageUpdateListeners() {
-  if (window.electron && window.electron.onMessage) {
-    window.electron.onMessage((data) => {
-      this.handleIncomingMessage(data);
-    });
-  }
-  
-  // Add edit/delete listeners
-  if (window.electron && window.electron.onMessageEdited) {
-    window.electron.onMessageEdited((data) => {
-      this.handleMessageEdited(data);
-    });
-  }
-  
-  if (window.electron && window.electron.onMessageDeleted) {
-    window.electron.onMessageDeleted((data) => {
-      this.handleMessageDeleted(data);
-    });
-  }
-}
- 
-handleIncomingMessage(data) {
-  const chatType = data.chatType || this.activeTab;
+  /**
+   * Setup message update listeners (edit/delete)
+   */
+  setupMessageUpdateListeners() {
+    if (window.electron && window.electron.onMessage) {
+      window.electron.onMessage((data) => {
+        this.handleIncomingMessage(data);
+      });
+    }
 
-  // Check if this is our own message (deduplication)
-  if (parseInt(data.userId) === this.userId) {
-    const messages = this.messages[chatType];
+    // Add edit/delete listeners
+    if (window.electron && window.electron.onMessageEdited) {
+      window.electron.onMessageEdited((data) => {
+        this.handleMessageEdited(data);
+      });
+    }
 
-    // Find ANY pending optimistic message (no messageId yet) with matching content
-    // Normalize whitespace to match server sanitization
-    const normalizedIncoming = data.message.replace(/\s+/g, ' ').trim();
-
-    const pendingIndex = messages.findIndex(m =>
-      !m.messageId &&
-      m.userId === this.userId &&
-      m.message.replace(/\s+/g, ' ').trim() === normalizedIncoming
-    );
-
-    if (pendingIndex !== -1) {
-      console.log('📝 Updating optimistic message with server data');
-      messages[pendingIndex].messageId = data.messageId;
-      messages[pendingIndex].timestamp = new Date(data.timestamp).getTime();
-
-      if (chatType === this.activeTab) {
-        this.renderAllMessages();
-      }
-      return;
+    if (window.electron && window.electron.onMessageDeleted) {
+      window.electron.onMessageDeleted((data) => {
+        this.handleMessageDeleted(data);
+      });
     }
   }
 
-  // Not our message or no matching optimistic message - add normally
-  this.addMessage({
-    messageId: data.messageId,
-    userId: data.userId,
-    username: data.username,
-    displayName: data.displayName,
-    picture: data.picture,
-    message: data.message,
-    timestamp: new Date(data.timestamp).getTime(),
-    isLocal: false,
-    chatType: chatType
-  });
-}
+  handleIncomingMessage(data) {
+    const chatType = data.chatType || this.activeTab;
+
+    // Check if this is our own message (deduplication)
+    if (parseInt(data.userId) === this.userId) {
+      const messages = this.messages[chatType];
+
+      // Find ANY pending optimistic message (no messageId yet) with matching content
+      // Normalize whitespace to match server sanitization
+      const normalizedIncoming = data.message.replace(/\s+/g, " ").trim();
+
+      const pendingIndex = messages.findIndex(
+        (m) =>
+          !m.messageId &&
+          m.userId === this.userId &&
+          m.message.replace(/\s+/g, " ").trim() === normalizedIncoming,
+      );
+
+      if (pendingIndex !== -1) {
+        console.log("📝 Updating optimistic message with server data");
+        messages[pendingIndex].messageId = data.messageId;
+        messages[pendingIndex].timestamp = new Date(data.timestamp).getTime();
+
+        if (chatType === this.activeTab) {
+          this.renderAllMessages();
+        }
+        return;
+      }
+    }
+
+    // Not our message or no matching optimistic message - add normally
+    this.addMessage({
+      messageId: data.messageId,
+      userId: data.userId,
+      username: data.username,
+      displayName: data.displayName,
+      picture: data.picture,
+      message: data.message,
+      timestamp: new Date(data.timestamp).getTime(),
+      isLocal: false,
+      chatType: chatType,
+    });
+  }
 
   /**
    * Handle typing indicator from server
@@ -426,7 +450,7 @@ handleIncomingMessage(data) {
 
     // Filter out current user from typing list
     const currentUser = this.userId;
-    typingUsers.forEach(username => {
+    typingUsers.forEach((username) => {
       if (username !== currentUser) {
         this.typingUsers.add(username);
       }
@@ -465,17 +489,17 @@ handleIncomingMessage(data) {
       if (!currentUser) return;
 
       // Only emit typing for server tab (global tab not supported by server)
-      if (this.activeTab !== 'server' || !this.currentJobId) return;
+      if (this.activeTab !== "server" || !this.currentJobId) return;
 
       if (window.electron && window.electron.emitTyping) {
         await window.electron.emitTyping({
           jobId: this.currentJobId,
           username: currentUser.username,
-          isTyping
+          isTyping,
         });
       }
     } catch (error) {
-      console.error('Failed to emit typing status:', error);
+      console.error("Failed to emit typing status:", error);
     }
   }
 
@@ -483,7 +507,7 @@ handleIncomingMessage(data) {
    * Update typing indicator display
    */
   updateTypingIndicator() {
-    let typingIndicator = document.getElementById('typing-indicator');
+    let typingIndicator = document.getElementById("typing-indicator");
 
     if (this.typingUsers.size === 0) {
       if (typingIndicator) {
@@ -493,19 +517,22 @@ handleIncomingMessage(data) {
     }
 
     if (!typingIndicator) {
-      typingIndicator = document.createElement('div');
-      typingIndicator.id = 'typing-indicator';
-      typingIndicator.className = 'typing-indicator';
+      typingIndicator = document.createElement("div");
+      typingIndicator.id = "typing-indicator";
+      typingIndicator.className = "typing-indicator";
 
-      const chatContainer = document.querySelector('.chat-container');
-      const messagesContainer = document.getElementById('chat-messages');
+      const chatContainer = document.querySelector(".chat-container");
+      const messagesContainer = document.getElementById("chat-messages");
       if (chatContainer && messagesContainer) {
-        chatContainer.insertBefore(typingIndicator, messagesContainer.nextSibling);
+        chatContainer.insertBefore(
+          typingIndicator,
+          messagesContainer.nextSibling,
+        );
       }
     }
 
     const userArray = Array.from(this.typingUsers);
-    let text = '';
+    let text = "";
 
     if (userArray.length === 1) {
       text = `${userArray[0]} is typing...`;
@@ -526,10 +553,10 @@ handleIncomingMessage(data) {
       // No server detected
       this.currentJobId = null;
       this.currentPlaceId = null;
-      this.updateJobIdDisplay('Detecting...');
+      this.updateJobIdDisplay("Detecting...");
       this.clearMessages();
-      this.addSystemMessage('Waiting for Roblox game...', 'server');
-      this.addSystemMessage('Waiting for Roblox game...', 'global');
+      this.addSystemMessage("Waiting for Roblox game...", "server");
+      this.addSystemMessage("Waiting for Roblox game...", "global");
       return;
     }
 
@@ -550,16 +577,19 @@ handleIncomingMessage(data) {
 
     // Show server spinoff warning if switching servers
     if (isServerChange) {
-      this.addSystemMessage(`⚠️ Server changed. Loading messages may take a moment...`, 'server');
+      this.addSystemMessage(
+        `⚠️ Server changed. Loading messages may take a moment...`,
+        "server",
+      );
     } else {
-      this.addSystemMessage(`Connected to server!`, 'server');
+      this.addSystemMessage(`Connected to server!`, "server");
     }
 
-    this.addSystemMessage(`Connected to game!`, 'global');
+    this.addSystemMessage(`Connected to game!`, "global");
 
     // No history loading - users only see messages sent after they join
 
-    console.log('Server changed:', { placeId, jobId, isServerChange });
+    console.log("Server changed:", { placeId, jobId, isServerChange });
   }
 
   /**
@@ -567,14 +597,14 @@ handleIncomingMessage(data) {
    */
   updateJobIdDisplay(jobId) {
     if (this.jobIdDisplay) {
-      const statusDot = document.getElementById('status-dot');
+      const statusDot = document.getElementById("status-dot");
 
-      if (jobId === 'Detecting...') {
-        this.jobIdDisplay.textContent = 'Not connected';
-        if (statusDot) statusDot.className = 'status-dot';
+      if (jobId === "Detecting...") {
+        this.jobIdDisplay.textContent = "Not connected";
+        if (statusDot) statusDot.className = "status-dot";
       } else {
-        this.jobIdDisplay.textContent = 'Connected';
-        if (statusDot) statusDot.className = 'status-dot connected';
+        this.jobIdDisplay.textContent = "Connected";
+        if (statusDot) statusDot.className = "status-dot connected";
       }
     }
   }
@@ -603,13 +633,19 @@ handleIncomingMessage(data) {
     }
 
     // Check if connected
-    if (this.activeTab === 'server' && !this.currentJobId) {
-      this.addSystemMessage('No game server connected. Please join a Roblox game.', 'server');
+    if (this.activeTab === "server" && !this.currentJobId) {
+      this.addSystemMessage(
+        "No game server connected. Please join a Roblox game.",
+        "server",
+      );
       return;
     }
 
-    if (this.activeTab === 'global' && !this.currentPlaceId) {
-      this.addSystemMessage('No game connected. Please join a Roblox game.', 'global');
+    if (this.activeTab === "global" && !this.currentPlaceId) {
+      this.addSystemMessage(
+        "No game connected. Please join a Roblox game.",
+        "global",
+      );
       return;
     }
 
@@ -618,7 +654,7 @@ handleIncomingMessage(data) {
 
     // Clear input BEFORE sending (better UX)
     const sentMessage = message;
-    this.messageInput.value = '';
+    this.messageInput.value = "";
 
     // Stop typing indicator
     if (this.typingTimeout) {
@@ -643,10 +679,10 @@ handleIncomingMessage(data) {
         }
 
         const result = await window.electron.sendMessage({
-          jobId: this.activeTab === 'server' ? this.currentJobId : undefined,
+          jobId: this.activeTab === "server" ? this.currentJobId : undefined,
           placeId: this.currentPlaceId,
           chatType: this.activeTab,
-          message: sentMessage
+          message: sentMessage,
         });
 
         // Clear warning timeout
@@ -665,32 +701,42 @@ handleIncomingMessage(data) {
         if (result.success) {
           // SUCCESS: Add message to UI (will be updated when server broadcasts back)
           this.addMessage({
-            userId: currentUser?.userId ? parseInt(currentUser.userId) : 'local',
-            username: currentUser?.username || 'You',
+            userId: currentUser?.userId
+              ? parseInt(currentUser.userId)
+              : "local",
+            username: currentUser?.username || "You",
             displayName: currentUser?.displayName,
             picture: currentUser?.picture,
             message: sentMessage,
             timestamp: Date.now(),
             isLocal: true,
-            chatType: this.activeTab
+            chatType: this.activeTab,
           });
         } else {
           // FAILURE: Server rejected the message
-          console.log('Server rejected message:', result);
+          console.log("Server rejected message:", result);
 
           // Check if it's an authentication error (401)
           if (result.status === 401 || result.tokenExpired) {
-            this.addSystemMessage('⚠️ Session expired. Returning to login...', this.activeTab);
+            this.addSystemMessage(
+              "⚠️ Session expired. Returning to login...",
+              this.activeTab,
+            );
             return;
           }
 
           // Check if it's a rate limit error (429)
-          if (result.status === 429 ||
-              (result.error && (
-                result.error.includes('Wait') && result.error.includes('seconds') ||
-                result.error.includes('seconds') && (result.error.includes('slow') || result.error.includes('spam') || result.error.includes('fast')) ||
-                result.error.includes('CHILL OUT')
-              ))) {
+          if (
+            result.status === 429 ||
+            (result.error &&
+              ((result.error.includes("Wait") &&
+                result.error.includes("seconds")) ||
+                (result.error.includes("seconds") &&
+                  (result.error.includes("slow") ||
+                    result.error.includes("spam") ||
+                    result.error.includes("fast"))) ||
+                result.error.includes("CHILL OUT")))
+          ) {
             // Extract wait time and start cooldown
             const match = result.error.match(/(\d+)\s*seconds?/i);
             const waitSeconds = match ? parseInt(match[1]) : 10;
@@ -706,11 +752,14 @@ handleIncomingMessage(data) {
         }
       }
     } catch (error) {
-      console.error('Failed to send message:', error);
+      console.error("Failed to send message:", error);
 
       // Put the message back in input on network error
       this.messageInput.value = sentMessage;
-      this.addSystemMessage('⚠️ Failed to send message. Please try again.', this.activeTab);
+      this.addSystemMessage(
+        "⚠️ Failed to send message. Please try again.",
+        this.activeTab,
+      );
     }
   }
 
@@ -731,20 +780,20 @@ handleIncomingMessage(data) {
       if (window.electron && window.electron.editMessage) {
         const result = await window.electron.editMessage({
           messageId: this.editingMessageId,
-          newMessage
+          newMessage,
         });
 
         if (!result.success) {
-          alert(result.error || 'Failed to edit message');
+          alert(result.error || "Failed to edit message");
           return;
         }
-        
+
         // Success - cancel edit mode
         this.cancelEdit();
       }
     } catch (error) {
-      console.error('Failed to edit message:', error);
-      alert('Failed to edit message');
+      console.error("Failed to edit message:", error);
+      alert("Failed to edit message");
     }
   }
 
@@ -758,7 +807,7 @@ handleIncomingMessage(data) {
         return status.user;
       }
     } catch (error) {
-      console.error('Failed to get user:', error);
+      console.error("Failed to get user:", error);
     }
     return null;
   }
@@ -766,31 +815,31 @@ handleIncomingMessage(data) {
   /**
    * Add a message to the chat
    */
-addMessage(messageData) {
-  const chatType = messageData.chatType || this.activeTab;
-  const message = {
-    messageId: messageData.messageId || null,
-    userId: messageData.userId,
-    username: messageData.username,
-    displayName: messageData.displayName || messageData.username,
-    picture: messageData.picture || null,
-    message: messageData.message,
-    timestamp: messageData.timestamp || Date.now(),
-    isLocal: messageData.isLocal || false,
-    chatType
-  };
+  addMessage(messageData) {
+    const chatType = messageData.chatType || this.activeTab;
+    const message = {
+      messageId: messageData.messageId || null,
+      userId: messageData.userId,
+      username: messageData.username,
+      displayName: messageData.displayName || messageData.username,
+      picture: messageData.picture || null,
+      message: messageData.message,
+      timestamp: messageData.timestamp || Date.now(),
+      isLocal: messageData.isLocal || false,
+      chatType,
+    };
 
-  this.messages[chatType].push(message);
+    this.messages[chatType].push(message);
 
-  if (this.messages[chatType].length > this.MAX_MESSAGES) {
-    this.messages[chatType].shift();
+    if (this.messages[chatType].length > this.MAX_MESSAGES) {
+      this.messages[chatType].shift();
+    }
+
+    if (chatType === this.activeTab) {
+      this.renderMessage(message);
+      this.scrollToBottom();
+    }
   }
-
-  if (chatType === this.activeTab) {
-    this.renderMessage(message);
-    this.scrollToBottom();
-  }
-}
 
   /**
    * Add system message
@@ -800,117 +849,123 @@ addMessage(messageData) {
 
     // Only render if this is the active tab
     if (targetType === this.activeTab) {
-      const messageEl = document.createElement('div');
-      messageEl.className = 'system-msg';
+      const messageEl = document.createElement("div");
+      messageEl.className = "system-msg";
       messageEl.textContent = text;
       this.messagesContainer.appendChild(messageEl);
       this.scrollToBottom();
     }
   }
 
-renderMessage(message) {
-  const messageEl = document.createElement('div');
-  messageEl.className = `chat-msg ${message.isLocal ? 'local' : 'remote'}`;
-  if (message.messageId) {
-    messageEl.setAttribute('data-message-id', message.messageId);
+  renderMessage(message) {
+    const messageEl = document.createElement("div");
+    messageEl.className = `chat-msg ${message.isLocal ? "local" : "remote"}`;
+    if (message.messageId) {
+      messageEl.setAttribute("data-message-id", message.messageId);
+    }
+
+    const timestamp = new Date(message.timestamp).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    const displayName =
+      message.displayName && message.displayName.trim()
+        ? message.displayName
+        : message.username;
+    const username = message.username;
+    const picture = message.picture;
+
+    const profilePicEl = document.createElement("div");
+    profilePicEl.className = "msg-profile-pic";
+
+    if (picture && picture.trim()) {
+      const imgEl = document.createElement("img");
+      imgEl.src = picture;
+      imgEl.alt = displayName;
+      imgEl.onerror = () => {
+        profilePicEl.innerHTML = "";
+        profilePicEl.textContent = this.escapeHtml(
+          displayName.charAt(0).toUpperCase(),
+        );
+      };
+      profilePicEl.appendChild(imgEl);
+    } else {
+      profilePicEl.textContent = this.escapeHtml(
+        displayName.charAt(0).toUpperCase(),
+      );
+    }
+
+    const contentColumnEl = document.createElement("div");
+    contentColumnEl.className = "msg-content-column";
+
+    const headerEl = document.createElement("div");
+    headerEl.className = "msg-header";
+
+    const displayNameEl = document.createElement("span");
+    displayNameEl.className = "msg-display-name";
+    displayNameEl.textContent = this.escapeHtml(displayName);
+
+    const usernameEl = document.createElement("span");
+    usernameEl.className = "msg-username";
+    usernameEl.textContent = `(${this.escapeHtml(username)})`;
+
+    const timeEl = document.createElement("span");
+    timeEl.className = "msg-time";
+    timeEl.textContent = timestamp;
+
+    headerEl.appendChild(displayNameEl);
+    headerEl.appendChild(usernameEl);
+    headerEl.appendChild(timeEl);
+
+    const bubbleEl = document.createElement("div");
+    bubbleEl.className = "msg-bubble";
+    bubbleEl.textContent = this.escapeHtml(message.message);
+
+    contentColumnEl.appendChild(headerEl);
+    contentColumnEl.appendChild(bubbleEl);
+
+    // Add edit/delete buttons AFTER the bubble, not inside it
+    if (message.isLocal && message.messageId) {
+      const actionsEl = document.createElement("div");
+      actionsEl.className = "msg-actions";
+
+      const editBtn = document.createElement("button");
+      editBtn.className = "msg-action-btn edit-btn";
+      editBtn.title = "Edit message";
+      editBtn.onclick = () =>
+        this.handleEditMessage(message.messageId, message.message);
+      const editIcon = document.createElement("i");
+      editIcon.className = "fas fa-edit";
+      editBtn.appendChild(editIcon);
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "msg-action-btn delete-btn";
+      deleteBtn.title = "Delete message";
+      deleteBtn.onclick = () => this.handleDeleteMessage(message.messageId);
+      const deleteIcon = document.createElement("i");
+      deleteIcon.className = "fas fa-trash";
+      deleteBtn.appendChild(deleteIcon);
+
+      actionsEl.appendChild(editBtn);
+      actionsEl.appendChild(deleteBtn);
+      contentColumnEl.appendChild(actionsEl); // Append to column, not bubble
+    }
+
+    messageEl.appendChild(profilePicEl);
+    messageEl.appendChild(contentColumnEl);
+
+    this.messagesContainer.appendChild(messageEl);
   }
-
-  const timestamp = new Date(message.timestamp).toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-
-  const displayName = message.displayName && message.displayName.trim()
-    ? message.displayName
-    : message.username;
-  const username = message.username;
-  const picture = message.picture;
-
-  const profilePicEl = document.createElement('div');
-  profilePicEl.className = 'msg-profile-pic';
-
-  if (picture && picture.trim()) {
-    const imgEl = document.createElement('img');
-    imgEl.src = picture;
-    imgEl.alt = displayName;
-    imgEl.onerror = () => {
-      profilePicEl.innerHTML = '';
-      profilePicEl.textContent = this.escapeHtml(displayName.charAt(0).toUpperCase());
-    };
-    profilePicEl.appendChild(imgEl);
-  } else {
-    profilePicEl.textContent = this.escapeHtml(displayName.charAt(0).toUpperCase());
-  }
-
-  const contentColumnEl = document.createElement('div');
-  contentColumnEl.className = 'msg-content-column';
-
-  const headerEl = document.createElement('div');
-  headerEl.className = 'msg-header';
-
-  const displayNameEl = document.createElement('span');
-  displayNameEl.className = 'msg-display-name';
-  displayNameEl.textContent = this.escapeHtml(displayName);
-
-  const usernameEl = document.createElement('span');
-  usernameEl.className = 'msg-username';
-  usernameEl.textContent = `(${this.escapeHtml(username)})`;
-
-  const timeEl = document.createElement('span');
-  timeEl.className = 'msg-time';
-  timeEl.textContent = timestamp;
-
-  headerEl.appendChild(displayNameEl);
-  headerEl.appendChild(usernameEl);
-  headerEl.appendChild(timeEl);
-
-  const bubbleEl = document.createElement('div');
-  bubbleEl.className = 'msg-bubble';
-  bubbleEl.textContent = this.escapeHtml(message.message);
-
-  contentColumnEl.appendChild(headerEl);
-  contentColumnEl.appendChild(bubbleEl);
-
-  // Add edit/delete buttons AFTER the bubble, not inside it
-  if (message.isLocal && message.messageId) {
-    const actionsEl = document.createElement('div');
-    actionsEl.className = 'msg-actions';
-
-    const editBtn = document.createElement('button');
-    editBtn.className = 'msg-action-btn edit-btn';
-    editBtn.title = 'Edit message';
-    editBtn.onclick = () => this.handleEditMessage(message.messageId, message.message);
-    const editIcon = document.createElement('i');
-    editIcon.className = 'fas fa-edit';
-    editBtn.appendChild(editIcon);
-
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'msg-action-btn delete-btn';
-    deleteBtn.title = 'Delete message';
-    deleteBtn.onclick = () => this.handleDeleteMessage(message.messageId);
-    const deleteIcon = document.createElement('i');
-    deleteIcon.className = 'fas fa-trash';
-    deleteBtn.appendChild(deleteIcon);
-
-    actionsEl.appendChild(editBtn);
-    actionsEl.appendChild(deleteBtn);
-    contentColumnEl.appendChild(actionsEl); // Append to column, not bubble
-  }
-
-  messageEl.appendChild(profilePicEl);
-  messageEl.appendChild(contentColumnEl);
-
-  this.messagesContainer.appendChild(messageEl);
-}
 
   /**
    * Render all messages for active tab
    */
   renderAllMessages() {
-    this.messagesContainer.innerHTML = '';
+    this.messagesContainer.innerHTML = "";
 
     const messagesForTab = this.messages[this.activeTab] || [];
-    messagesForTab.forEach(msg => {
+    messagesForTab.forEach((msg) => {
       if (msg.isRejected) {
         const rejectedEl = this.renderRejectedMessage(msg);
         if (rejectedEl) {
@@ -924,13 +979,12 @@ renderMessage(message) {
     this.scrollToBottom();
   }
 
-
   /**
    * Clear all messages
    */
   clearMessages() {
     this.messages = { server: [], global: [] };
-    this.messagesContainer.innerHTML = '';
+    this.messagesContainer.innerHTML = "";
   }
 
   /**
@@ -940,11 +994,11 @@ renderMessage(message) {
     try {
       // Load both server and global history
       await Promise.all([
-        this.loadHistoryForTab('server'),
-        this.loadHistoryForTab('global')
+        this.loadHistoryForTab("server"),
+        this.loadHistoryForTab("global"),
       ]);
     } catch (error) {
-      console.error('Failed to load history:', error);
+      console.error("Failed to load history:", error);
     }
   }
 
@@ -954,31 +1008,31 @@ renderMessage(message) {
   async loadHistoryForTab(chatType) {
     const isCurrentTab = chatType === this.activeTab;
 
-    if (chatType === 'server' && !this.currentJobId) {
+    if (chatType === "server" && !this.currentJobId) {
       if (isCurrentTab) {
-        this.addSystemMessage('No server connected.', chatType);
+        this.addSystemMessage("No server connected.", chatType);
       }
       return;
     }
 
-    if (chatType === 'global' && !this.currentPlaceId) {
+    if (chatType === "global" && !this.currentPlaceId) {
       if (isCurrentTab) {
-        this.addSystemMessage('No game connected.', chatType);
+        this.addSystemMessage("No game connected.", chatType);
       }
       return;
     }
 
     try {
       if (isCurrentTab) {
-        this.messagesContainer.innerHTML = '';
-        this.addSystemMessage('Loading chat history...', chatType);
+        this.messagesContainer.innerHTML = "";
+        this.addSystemMessage("Loading chat history...", chatType);
       }
 
       if (window.electron && window.electron.loadHistory) {
         const result = await window.electron.loadHistory({
           jobId: this.currentJobId,
           placeId: this.currentPlaceId,
-          chatType
+          chatType,
         });
 
         if (result.success && result.messages) {
@@ -986,7 +1040,7 @@ renderMessage(message) {
           this.messages[chatType] = [];
 
           // Add all messages
-          result.messages.forEach(msg => {
+          result.messages.forEach((msg) => {
             this.messages[chatType].push({
               messageId: msg.messageId,
               userId: msg.userId,
@@ -998,7 +1052,7 @@ renderMessage(message) {
               isLocal: false,
               chatType,
               editedAt: msg.editedAt,
-              deletedAt: msg.deletedAt
+              deletedAt: msg.deletedAt,
             });
           });
 
@@ -1007,7 +1061,7 @@ renderMessage(message) {
             this.renderAllMessages();
 
             if (result.messages.length === 0) {
-              this.addSystemMessage('No previous messages.', chatType);
+              this.addSystemMessage("No previous messages.", chatType);
             }
           }
         }
@@ -1015,8 +1069,8 @@ renderMessage(message) {
     } catch (error) {
       console.error(`Failed to load ${chatType} history:`, error);
       if (isCurrentTab) {
-        this.messagesContainer.innerHTML = '';
-        this.addSystemMessage('Failed to load chat history.', chatType);
+        this.messagesContainer.innerHTML = "";
+        this.addSystemMessage("Failed to load chat history.", chatType);
       }
     }
   }
@@ -1034,7 +1088,7 @@ renderMessage(message) {
    * Escape HTML to prevent XSS
    */
   escapeHtml(text) {
-    const div = document.createElement('div');
+    const div = document.createElement("div");
     div.textContent = text;
     return div.innerHTML;
   }
@@ -1044,8 +1098,8 @@ renderMessage(message) {
    */
   showValidationError(error, highlightWord) {
     // Show error message
-    const errorEl = document.createElement('div');
-    errorEl.className = 'validation-error';
+    const errorEl = document.createElement("div");
+    errorEl.className = "validation-error";
     errorEl.textContent = error;
     errorEl.style.cssText = `
       position: absolute;
@@ -1064,32 +1118,33 @@ renderMessage(message) {
     `;
 
     // Add to chat area
-    const chatArea = document.querySelector('.chat-area');
+    const chatArea = document.querySelector(".chat-area");
     if (chatArea) {
       chatArea.appendChild(errorEl);
 
       // Highlight problematic word in input if applicable
       if (highlightWord) {
-        this.messageInput.style.borderColor = '#fe6b8b';
-        this.messageInput.style.boxShadow = '0 0 0 2px rgba(254, 107, 139, 0.2)';
+        this.messageInput.style.borderColor = "#fe6b8b";
+        this.messageInput.style.boxShadow =
+          "0 0 0 2px rgba(254, 107, 139, 0.2)";
       }
 
       // Remove error after 4 seconds
       setTimeout(() => {
         errorEl.remove();
-        this.messageInput.style.borderColor = '';
-        this.messageInput.style.boxShadow = '';
+        this.messageInput.style.borderColor = "";
+        this.messageInput.style.boxShadow = "";
       }, 4000);
     }
   }
   /**
- * Show error message to user
- */
-showErrorMessage(errorText) {
-  const errorEl = document.createElement('div');
-  errorEl.className = 'error-message';
-  errorEl.textContent = errorText;
-  errorEl.style.cssText = `
+   * Show error message to user
+   */
+  showErrorMessage(errorText) {
+    const errorEl = document.createElement("div");
+    errorEl.className = "error-message";
+    errorEl.textContent = errorText;
+    errorEl.style.cssText = `
     position: fixed;
     top: 20px;
     right: 20px;
@@ -1105,25 +1160,25 @@ showErrorMessage(errorText) {
     animation: slideIn 0.3s ease;
   `;
 
-  document.body.appendChild(errorEl);
+    document.body.appendChild(errorEl);
 
-  setTimeout(() => {
-    errorEl.style.animation = 'slideOut 0.3s ease';
-    setTimeout(() => errorEl.remove(), 300);
-  }, 3000);
-}
+    setTimeout(() => {
+      errorEl.style.animation = "slideOut 0.3s ease";
+      setTimeout(() => errorEl.remove(), 300);
+    }, 3000);
+  }
 
   /**
    * Show server wakeup warning (Render free tier cold start)
    */
   showServerWakeupWarning() {
     // Remove any existing warning
-    const existing = document.getElementById('server-wakeup-warning');
+    const existing = document.getElementById("server-wakeup-warning");
     if (existing) return;
 
-    const warningEl = document.createElement('div');
-    warningEl.id = 'server-wakeup-warning';
-    warningEl.className = 'server-wakeup-warning';
+    const warningEl = document.createElement("div");
+    warningEl.id = "server-wakeup-warning";
+    warningEl.className = "server-wakeup-warning";
     warningEl.innerHTML = `
       <div class="spinner"></div>
       <div>
@@ -1132,7 +1187,7 @@ showErrorMessage(errorText) {
       </div>
     `;
 
-    const chatArea = document.querySelector('.chat-area');
+    const chatArea = document.querySelector(".chat-area");
     if (chatArea) {
       chatArea.appendChild(warningEl);
     }
@@ -1142,15 +1197,15 @@ showErrorMessage(errorText) {
    * Hide server wakeup warning
    */
   hideServerWakeupWarning() {
-    const warningEl = document.getElementById('server-wakeup-warning');
+    const warningEl = document.getElementById("server-wakeup-warning");
     if (warningEl) {
       // Add success message briefly before removing
       warningEl.innerHTML = `
         <div style="color: #4ade80;">✓</div>
         <div style="font-weight: 700;">Server is ready!</div>
       `;
-      warningEl.style.background = 'rgba(74, 222, 128, 0.2)';
-      warningEl.style.borderColor = 'rgba(74, 222, 128, 0.4)';
+      warningEl.style.background = "rgba(74, 222, 128, 0.2)";
+      warningEl.style.borderColor = "rgba(74, 222, 128, 0.4)";
 
       setTimeout(() => {
         warningEl.remove();
@@ -1162,18 +1217,18 @@ showErrorMessage(errorText) {
    * Handle logout
    */
   async handleLogout() {
-    if (!confirm('Are you sure you want to logout?')) return;
+    if (!confirm("Are you sure you want to logout?")) return;
 
     try {
       if (window.electron && window.electron.logout) {
         const result = await window.electron.logout();
         if (result.success) {
-          window.location.href = 'login.html';
+          window.location.href = "login.html";
         }
       }
     } catch (error) {
-      console.error('Logout error:', error);
-      alert('Failed to logout');
+      console.error("Logout error:", error);
+      alert("Failed to logout");
     }
   }
 
@@ -1181,7 +1236,7 @@ showErrorMessage(errorText) {
    * Show settings
    */
   showSettings() {
-    window.location.href = 'settings.html';
+    window.location.href = "settings.html";
   }
 
   /**
@@ -1197,28 +1252,28 @@ showErrorMessage(errorText) {
     console.log(`Starting ${seconds} second cooldown`);
 
     // Set cooldown end time
-    this.cooldownEndTime = Date.now() + (seconds * 1000);
+    this.cooldownEndTime = Date.now() + seconds * 1000;
 
     // Get or create cooldown overlay
-    let cooldownOverlay = document.getElementById('cooldown-overlay');
+    let cooldownOverlay = document.getElementById("cooldown-overlay");
     if (!cooldownOverlay) {
       cooldownOverlay = this.createCooldownOverlay();
     }
 
-    const countdownEl = document.getElementById('cooldown-countdown');
-    const progressBar = document.getElementById('cooldown-progress-bar');
+    const countdownEl = document.getElementById("cooldown-countdown");
+    const progressBar = document.getElementById("cooldown-progress-bar");
 
     // Show overlay
-    cooldownOverlay.classList.add('active');
+    cooldownOverlay.classList.add("active");
 
     // Disable input and send button
     if (this.messageInput) {
       this.messageInput.disabled = true;
-      this.messageInput.classList.add('cooldown-disabled');
+      this.messageInput.classList.add("cooldown-disabled");
     }
     if (this.sendButton) {
       this.sendButton.disabled = true;
-      this.sendButton.classList.add('cooldown-disabled');
+      this.sendButton.classList.add("cooldown-disabled");
     }
 
     // Update countdown every 100ms for smooth animation
@@ -1257,37 +1312,37 @@ showErrorMessage(errorText) {
     this.cooldownEndTime = null;
 
     // Hide overlay with animation
-    const cooldownOverlay = document.getElementById('cooldown-overlay');
+    const cooldownOverlay = document.getElementById("cooldown-overlay");
     if (cooldownOverlay) {
-      cooldownOverlay.classList.remove('active');
-      cooldownOverlay.classList.add('ending');
+      cooldownOverlay.classList.remove("active");
+      cooldownOverlay.classList.add("ending");
 
       setTimeout(() => {
-        cooldownOverlay.classList.remove('ending');
+        cooldownOverlay.classList.remove("ending");
       }, 300);
     }
 
     // Re-enable input and send button
     if (this.messageInput) {
       this.messageInput.disabled = false;
-      this.messageInput.classList.remove('cooldown-disabled');
+      this.messageInput.classList.remove("cooldown-disabled");
       this.messageInput.focus();
     }
     if (this.sendButton) {
       this.sendButton.disabled = false;
-      this.sendButton.classList.remove('cooldown-disabled');
+      this.sendButton.classList.remove("cooldown-disabled");
     }
 
-    console.log('Cooldown ended - you can send messages again');
+    console.log("Cooldown ended - you can send messages again");
   }
 
   /**
    * Create cooldown overlay element
    */
   createCooldownOverlay() {
-    const overlay = document.createElement('div');
-    overlay.id = 'cooldown-overlay';
-    overlay.className = 'cooldown-overlay';
+    const overlay = document.createElement("div");
+    overlay.id = "cooldown-overlay";
+    overlay.className = "cooldown-overlay";
     overlay.innerHTML = `
       <div class="cooldown-content">
         <div class="cooldown-icon">
@@ -1306,8 +1361,8 @@ showErrorMessage(errorText) {
     `;
 
     // Insert before the chat input
-    const chatContainer = document.querySelector('.chat-container');
-    const chatInput = document.querySelector('.chat-input');
+    const chatContainer = document.querySelector(".chat-container");
+    const chatInput = document.querySelector(".chat-input");
     if (chatContainer && chatInput) {
       chatContainer.insertBefore(overlay, chatInput);
     } else if (chatContainer) {
@@ -1322,17 +1377,17 @@ showErrorMessage(errorText) {
    * Displayed in a gray box with rejection reason
    */
   showRejectedMessage(messageText, reason) {
-    const messageEl = document.createElement('div');
-    messageEl.className = 'chat-msg local rejected';
+    const messageEl = document.createElement("div");
+    messageEl.className = "chat-msg local rejected";
 
     const timestamp = new Date().toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit'
+      hour: "2-digit",
+      minute: "2-digit",
     });
 
     // Create rejection notice
-    const rejectionEl = document.createElement('div');
-    rejectionEl.className = 'msg-rejected-notice';
+    const rejectionEl = document.createElement("div");
+    rejectionEl.className = "msg-rejected-notice";
     rejectionEl.innerHTML = `
       <div class="rejected-header">
         <i class="fas fa-ban"></i>
@@ -1342,19 +1397,19 @@ showErrorMessage(errorText) {
     `;
 
     // Create content column with the original message shown muted
-    const contentColumnEl = document.createElement('div');
-    contentColumnEl.className = 'msg-content-column';
+    const contentColumnEl = document.createElement("div");
+    contentColumnEl.className = "msg-content-column";
 
-    const bubbleEl = document.createElement('div');
-    bubbleEl.className = 'msg-bubble rejected-bubble';
+    const bubbleEl = document.createElement("div");
+    bubbleEl.className = "msg-bubble rejected-bubble";
     bubbleEl.textContent = messageText;
 
     contentColumnEl.appendChild(rejectionEl);
     contentColumnEl.appendChild(bubbleEl);
 
     // Minimal profile area (just for alignment)
-    const profilePicEl = document.createElement('div');
-    profilePicEl.className = 'msg-profile-pic rejected-avatar';
+    const profilePicEl = document.createElement("div");
+    profilePicEl.className = "msg-profile-pic rejected-avatar";
     profilePicEl.innerHTML = '<i class="fas fa-times"></i>';
 
     messageEl.appendChild(profilePicEl);
@@ -1366,14 +1421,14 @@ showErrorMessage(errorText) {
     // Store in messages array so it persists during tab switches (but only for sender)
     this.messages[this.activeTab].push({
       id: `rejected-${Date.now()}`,
-      userId: 'system',
-      username: 'System',
+      userId: "system",
+      username: "System",
       message: messageText,
       timestamp: Date.now(),
       isLocal: true,
       isRejected: true,
       rejectionReason: reason,
-      chatType: this.activeTab
+      chatType: this.activeTab,
     });
   }
 
@@ -1381,12 +1436,12 @@ showErrorMessage(errorText) {
    * Render a previously rejected message (for tab switch persistence)
    */
   renderRejectedMessage(message) {
-    const messageEl = document.createElement('div');
-    messageEl.className = 'chat-msg local rejected';
-    messageEl.setAttribute('data-message-id', message.id);
+    const messageEl = document.createElement("div");
+    messageEl.className = "chat-msg local rejected";
+    messageEl.setAttribute("data-message-id", message.id);
 
-    const rejectionEl = document.createElement('div');
-    rejectionEl.className = 'msg-rejected-notice';
+    const rejectionEl = document.createElement("div");
+    rejectionEl.className = "msg-rejected-notice";
     rejectionEl.innerHTML = `
       <div class="rejected-header">
         <i class="fas fa-ban"></i>
@@ -1395,18 +1450,18 @@ showErrorMessage(errorText) {
       <div class="rejected-reason">${this.escapeHtml(message.rejectionReason)}</div>
     `;
 
-    const contentColumnEl = document.createElement('div');
-    contentColumnEl.className = 'msg-content-column';
+    const contentColumnEl = document.createElement("div");
+    contentColumnEl.className = "msg-content-column";
 
-    const bubbleEl = document.createElement('div');
-    bubbleEl.className = 'msg-bubble rejected-bubble';
+    const bubbleEl = document.createElement("div");
+    bubbleEl.className = "msg-bubble rejected-bubble";
     bubbleEl.textContent = message.message;
 
     contentColumnEl.appendChild(rejectionEl);
     contentColumnEl.appendChild(bubbleEl);
 
-    const profilePicEl = document.createElement('div');
-    profilePicEl.className = 'msg-profile-pic rejected-avatar';
+    const profilePicEl = document.createElement("div");
+    profilePicEl.className = "msg-profile-pic rejected-avatar";
     profilePicEl.innerHTML = '<i class="fas fa-times"></i>';
 
     messageEl.appendChild(profilePicEl);
@@ -1415,105 +1470,107 @@ showErrorMessage(errorText) {
     return messageEl;
   }
 
-/**
- * Handle edit message click
- */
-/**
- * Handle edit message click
- */
-async handleEditMessage(messageId, currentMessage) {
-  // Set edit mode
-  this.editingMessageId = messageId;
-  this.editingOriginalMessage = currentMessage;
-  
-  // Populate input with current message
-  this.messageInput.value = currentMessage;
-  this.messageInput.focus();
-  
-  // Show edit banner
-  this.showEditBanner();
-  
-  // Change send button to "Save"
-  this.sendButton.textContent = 'Save';
-}
+  /**
+   * Handle edit message click
+   */
+  /**
+   * Handle edit message click
+   */
+  async handleEditMessage(messageId, currentMessage) {
+    // Set edit mode
+    this.editingMessageId = messageId;
+    this.editingOriginalMessage = currentMessage;
 
-/**
- * Show edit message banner
- */
-showEditBanner() {
-  // Remove existing banner if any
-  const existing = document.querySelector('.edit-message-banner');
-  if (existing) existing.remove();
+    // Populate input with current message
+    this.messageInput.value = currentMessage;
+    this.messageInput.focus();
 
-  const banner = document.createElement('div');
-  banner.className = 'edit-message-banner';
+    // Show edit banner
+    this.showEditBanner();
 
-  const bannerText = document.createElement('span');
-  bannerText.className = 'edit-banner-text';
-  bannerText.textContent = 'Editing message';
-
-  const cancelBtn = document.createElement('button');
-  cancelBtn.className = 'edit-banner-cancel';
-  const cancelIcon = document.createElement('i');
-  cancelIcon.className = 'fas fa-times';
-  cancelBtn.appendChild(cancelIcon);
-  cancelBtn.onclick = () => {
-    this.cancelEdit();
-  };
-
-  banner.appendChild(bannerText);
-  banner.appendChild(cancelBtn);
-
-  // Insert before chat input
-  const chatContainer = document.querySelector('.chat-container');
-  const chatInput = document.querySelector('.chat-input');
-  if (chatContainer && chatInput) {
-    chatContainer.insertBefore(banner, chatInput);
+    // Change send button to "Save"
+    this.sendButton.textContent = "Save";
   }
-}
 
-/**
- * Cancel edit mode
- */
-cancelEdit() {
-  this.editingMessageId = null;
-  this.editingOriginalMessage = null;
-  this.messageInput.value = '';
-  this.sendButton.textContent = 'Send';
-  
-  const banner = document.querySelector('.edit-message-banner');
-  if (banner) banner.remove();
-}
+  /**
+   * Show edit message banner
+   */
+  showEditBanner() {
+    // Remove existing banner if any
+    const existing = document.querySelector(".edit-message-banner");
+    if (existing) existing.remove();
 
-/**
- * Handle delete message click
- */
-async handleDeleteMessage(messageId) {
-  // Find the message to show in popup
-  const message = this.findMessageById(messageId);
-  const messageText = message ? message.message : 'this message';
-  
-  this.showDeleteConfirmation(messageId, messageText);
-}
+    const banner = document.createElement("div");
+    banner.className = "edit-message-banner";
 
-/**
- * Find message by ID in current messages
- */
-findMessageById(messageId) {
-  for (const chatType of ['server', 'global']) {
-    const found = this.messages[chatType].find(m => m.messageId === messageId);
-    if (found) return found;
+    const bannerText = document.createElement("span");
+    bannerText.className = "edit-banner-text";
+    bannerText.textContent = "Editing message";
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "edit-banner-cancel";
+    const cancelIcon = document.createElement("i");
+    cancelIcon.className = "fas fa-times";
+    cancelBtn.appendChild(cancelIcon);
+    cancelBtn.onclick = () => {
+      this.cancelEdit();
+    };
+
+    banner.appendChild(bannerText);
+    banner.appendChild(cancelBtn);
+
+    // Insert before chat input
+    const chatContainer = document.querySelector(".chat-container");
+    const chatInput = document.querySelector(".chat-input");
+    if (chatContainer && chatInput) {
+      chatContainer.insertBefore(banner, chatInput);
+    }
   }
-  return null;
-}
 
-/**
- * Show delete confirmation popup
- */
-showDeleteConfirmation(messageId, messageText) {
-  const popup = document.createElement('div');
-  popup.className = 'delete-confirmation';
-  popup.innerHTML = `
+  /**
+   * Cancel edit mode
+   */
+  cancelEdit() {
+    this.editingMessageId = null;
+    this.editingOriginalMessage = null;
+    this.messageInput.value = "";
+    this.sendButton.textContent = "Send";
+
+    const banner = document.querySelector(".edit-message-banner");
+    if (banner) banner.remove();
+  }
+
+  /**
+   * Handle delete message click
+   */
+  async handleDeleteMessage(messageId) {
+    // Find the message to show in popup
+    const message = this.findMessageById(messageId);
+    const messageText = message ? message.message : "this message";
+
+    this.showDeleteConfirmation(messageId, messageText);
+  }
+
+  /**
+   * Find message by ID in current messages
+   */
+  findMessageById(messageId) {
+    for (const chatType of ["server", "global"]) {
+      const found = this.messages[chatType].find(
+        (m) => m.messageId === messageId,
+      );
+      if (found) return found;
+    }
+    return null;
+  }
+
+  /**
+   * Show delete confirmation popup
+   */
+  showDeleteConfirmation(messageId, messageText) {
+    const popup = document.createElement("div");
+    popup.className = "delete-confirmation";
+    popup.innerHTML = `
     <div class="delete-popup">
       <div class="delete-popup-title">Delete Message</div>
       <div class="delete-popup-message">${this.escapeHtml(messageText)}</div>
@@ -1526,94 +1583,94 @@ showDeleteConfirmation(messageId, messageText) {
       </div>
     </div>
   `;
-  
-  document.body.appendChild(popup);
-  
-  // Cancel button
-  popup.querySelector('.delete-popup-cancel').onclick = () => {
-    popup.remove();
-  };
-  
-  // Confirm button
-  popup.querySelector('.delete-popup-confirm').onclick = async () => {
-    popup.remove();
-    await this.confirmDelete(messageId);
-  };
-  
-  // Click outside to close
-  popup.onclick = (e) => {
-    if (e.target === popup) {
+
+    document.body.appendChild(popup);
+
+    // Cancel button
+    popup.querySelector(".delete-popup-cancel").onclick = () => {
       popup.remove();
-    }
-  };
-}
+    };
 
-/**
- * Confirm and execute delete
- */
-async confirmDelete(messageId) {
-  try {
-    if (window.electron && window.electron.deleteMessage) {
-      const result = await window.electron.deleteMessage({ messageId });
+    // Confirm button
+    popup.querySelector(".delete-popup-confirm").onclick = async () => {
+      popup.remove();
+      await this.confirmDelete(messageId);
+    };
 
-      if (!result.success) {
-        alert(result.error || 'Failed to delete message');
+    // Click outside to close
+    popup.onclick = (e) => {
+      if (e.target === popup) {
+        popup.remove();
       }
-    }
-  } catch (error) {
-    console.error('Failed to delete message:', error);
-    alert('Failed to delete message');
+    };
   }
-}
 
-/**
- * Handle message edited event from server
- */
-handleMessageEdited(data) {
-  const { messageId, newContent } = data;
-  
-  // Find message in both tabs
-  for (const chatType of ['server', 'global']) {
-    const messages = this.messages[chatType];
-    const messageIndex = messages.findIndex(m => m.messageId === messageId);
-    
-    if (messageIndex !== -1) {
-      messages[messageIndex].message = newContent;
-      messages[messageIndex].editedAt = Date.now();
-      
-      // Re-render if this is the active tab
-      if (chatType === this.activeTab) {
-        this.renderAllMessages();
+  /**
+   * Confirm and execute delete
+   */
+  async confirmDelete(messageId) {
+    try {
+      if (window.electron && window.electron.deleteMessage) {
+        const result = await window.electron.deleteMessage({ messageId });
+
+        if (!result.success) {
+          alert(result.error || "Failed to delete message");
+        }
       }
+    } catch (error) {
+      console.error("Failed to delete message:", error);
+      alert("Failed to delete message");
     }
   }
-}
 
-/**
- * Handle message deleted event from server
- */
-handleMessageDeleted(data) {
-  const { messageId } = data;
-  
-  // Remove message from both tabs
-  for (const chatType of ['server', 'global']) {
-    const messages = this.messages[chatType];
-    const messageIndex = messages.findIndex(m => m.messageId === messageId);
-    
-    if (messageIndex !== -1) {
-      messages.splice(messageIndex, 1);
-      
-      // Re-render if this is the active tab
-      if (chatType === this.activeTab) {
-        this.renderAllMessages();
+  /**
+   * Handle message edited event from server
+   */
+  handleMessageEdited(data) {
+    const { messageId, newContent } = data;
+
+    // Find message in both tabs
+    for (const chatType of ["server", "global"]) {
+      const messages = this.messages[chatType];
+      const messageIndex = messages.findIndex((m) => m.messageId === messageId);
+
+      if (messageIndex !== -1) {
+        messages[messageIndex].message = newContent;
+        messages[messageIndex].editedAt = Date.now();
+
+        // Re-render if this is the active tab
+        if (chatType === this.activeTab) {
+          this.renderAllMessages();
+        }
       }
     }
   }
-}
+
+  /**
+   * Handle message deleted event from server
+   */
+  handleMessageDeleted(data) {
+    const { messageId } = data;
+
+    // Remove message from both tabs
+    for (const chatType of ["server", "global"]) {
+      const messages = this.messages[chatType];
+      const messageIndex = messages.findIndex((m) => m.messageId === messageId);
+
+      if (messageIndex !== -1) {
+        messages.splice(messageIndex, 1);
+
+        // Re-render if this is the active tab
+        if (chatType === this.activeTab) {
+          this.renderAllMessages();
+        }
+      }
+    }
+  }
 }
 
 // Initialize chat manager when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
   window.chatManager = new ChatManager();
 
   // Wait for app to initialize

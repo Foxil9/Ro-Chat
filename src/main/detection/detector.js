@@ -1,10 +1,10 @@
-const { EventEmitter } = require('events');
-const processWatcher = require('./processWatcher');
-const logMonitor = require('./logMonitor');
+const { EventEmitter } = require("events");
+const processWatcher = require("./processWatcher");
+const logMonitor = require("./logMonitor");
 // REMOVED UNSAFE MEMORY READER
-const logger = require('../logging/logger');
-const socketClient = require('../socket/socketClient');
-const { sanitizeError } = require('../utils/sanitizer');
+const logger = require("../logging/logger");
+const socketClient = require("../socket/socketClient");
+const { sanitizeError } = require("../utils/sanitizer");
 
 class Detector extends EventEmitter {
   constructor() {
@@ -22,11 +22,11 @@ class Detector extends EventEmitter {
    */
   start() {
     if (this.isRunning) {
-      logger.warn('Detector already running');
+      logger.warn("Detector already running");
       return;
     }
 
-    logger.info('Starting detector');
+    logger.info("Starting detector");
     this.isRunning = true;
 
     // Connect to Socket.io server
@@ -36,23 +36,23 @@ class Detector extends EventEmitter {
     processWatcher.startWatching();
 
     // Listen for process events
-    processWatcher.on('processStarted', () => {
-      logger.info('Roblox process started, starting log monitor');
+    processWatcher.on("processStarted", () => {
+      logger.info("Roblox process started, starting log monitor");
       this.handleProcessStarted();
     });
 
-    processWatcher.on('processStopped', () => {
-      logger.info('Roblox process stopped');
+    processWatcher.on("processStopped", () => {
+      logger.info("Roblox process stopped");
       this.handleProcessStopped();
     });
 
     // Listen for log monitor events
-    logMonitor.on('serverDetected', (serverInfo) => {
-      this.handleServerDetected(serverInfo, 'log');
+    logMonitor.on("serverDetected", (serverInfo) => {
+      this.handleServerDetected(serverInfo, "log");
     });
 
     // Listen for disconnect events from logs
-    logMonitor.on('disconnected', () => {
+    logMonitor.on("disconnected", () => {
       this.handleDisconnected();
     });
   }
@@ -62,20 +62,20 @@ class Detector extends EventEmitter {
    */
   stop() {
     if (!this.isRunning) {
-      logger.warn('Detector not running');
+      logger.warn("Detector not running");
       return;
     }
 
-    logger.info('Stopping detector');
+    logger.info("Stopping detector");
     this.isRunning = false;
 
     // Disconnect from Socket.io server
     socketClient.disconnect();
 
-    processWatcher.removeAllListeners('processStarted');
-    processWatcher.removeAllListeners('processStopped');
-    logMonitor.removeAllListeners('serverDetected');
-    logMonitor.removeAllListeners('disconnected');
+    processWatcher.removeAllListeners("processStarted");
+    processWatcher.removeAllListeners("processStopped");
+    logMonitor.removeAllListeners("serverDetected");
+    logMonitor.removeAllListeners("disconnected");
 
     // Stop all watchers
     processWatcher.stopWatching();
@@ -98,7 +98,7 @@ class Detector extends EventEmitter {
     // REMOVED UNSAFE MEMORY READER - Rely 100% on logs
 
     // Emit server changed with null
-    this.emit('serverChanged', null);
+    this.emit("serverChanged", null);
   }
 
   /**
@@ -120,7 +120,7 @@ class Detector extends EventEmitter {
 
     // Emit server changed with null
     if (previousServer) {
-      this.emit('serverChanged', null);
+      this.emit("serverChanged", null);
     }
   }
 
@@ -132,7 +132,7 @@ class Detector extends EventEmitter {
       return; // Not in a server, nothing to disconnect from
     }
 
-    logger.info('User disconnected from game');
+    logger.info("User disconnected from game");
     const previousServer = this.currentServer;
     this.currentServer = null;
     this.lastLogUpdate = null;
@@ -140,7 +140,7 @@ class Detector extends EventEmitter {
     // Leave all Socket.io rooms
     socketClient.leaveAllRooms();
 
-    this.emit('serverChanged', null);
+    this.emit("serverChanged", null);
   }
 
   /**
@@ -150,26 +150,33 @@ class Detector extends EventEmitter {
     // REMOVED UNSAFE MEMORY READER
 
     // Update last log update time
-    if (source === 'log') {
+    if (source === "log") {
       this.lastLogUpdate = Date.now();
     }
 
     // Check if server changed
-    if (!this.currentServer ||
-        this.currentServer.placeId !== serverInfo.placeId ||
-        this.currentServer.jobId !== serverInfo.jobId) {
-
+    if (
+      !this.currentServer ||
+      this.currentServer.placeId !== serverInfo.placeId ||
+      this.currentServer.jobId !== serverInfo.jobId
+    ) {
       const now = Date.now();
       const timeSinceLastChange = now - this.lastStateChangeTime;
       // Only debounce if both old and new states are "in-game" (prevent server hopping spam)
-      if (this.currentServer && this.currentServer.placeId && serverInfo.placeId &&
-          timeSinceLastChange < 2000) {
-        logger.debug('Server change debounced, too soon since last server switch');
+      if (
+        this.currentServer &&
+        this.currentServer.placeId &&
+        serverInfo.placeId &&
+        timeSinceLastChange < 2000
+      ) {
+        logger.debug(
+          "Server change debounced, too soon since last server switch",
+        );
         return;
       }
       this.lastStateChangeTime = now;
 
-      logger.info('Server changed', { source });
+      logger.info("Server changed", { source });
 
       this.currentServer = serverInfo;
 
@@ -177,10 +184,13 @@ class Detector extends EventEmitter {
       try {
         socketClient.joinRoom(serverInfo.jobId, serverInfo.placeId);
       } catch (error) {
-        logger.error('Failed to join socket room', sanitizeError({ error: error.message }));
+        logger.error(
+          "Failed to join socket room",
+          sanitizeError({ error: error.message }),
+        );
       }
 
-      this.emit('serverChanged', serverInfo);
+      this.emit("serverChanged", serverInfo);
     }
   }
 

@@ -483,15 +483,15 @@ function handleMinimize(event) {
   if (mainWindow) {
     const bounds = mainWindow.getBounds();
 
-    // Store original bounds and resizable state
-    if (!mainWindow.originalBounds) {
-      mainWindow.originalBounds = { ...bounds };
+    // Store original height only (width is shared between states)
+    if (!mainWindow.originalHeight) {
+      mainWindow.originalHeight = bounds.height;
       mainWindow.isMinimizedTab = false;
     }
 
     // Toggle between minimized tab and normal
     if (mainWindow.isMinimizedTab) {
-      // Get current position (in case tab was moved)
+      // Get current bounds (width may have been resized while minimized)
       const currentBounds = mainWindow.getBounds();
 
       // Recalculate max size based on current screen
@@ -501,16 +501,15 @@ function handleMinimize(event) {
       const maxWidth = Math.floor(screenWidth * 0.9);
       const maxHeight = Math.floor(screenHeight * 0.9);
 
-      // Restore to original size but at current position
-      mainWindow.setResizable(true);
+      // Restore height but keep current width
+      mainWindow.setMinimumSize(320, 260);
+      mainWindow.setMaximumSize(maxWidth, maxHeight);
       mainWindow.setBounds({
-        width: mainWindow.originalBounds.width,
-        height: mainWindow.originalBounds.height,
+        width: currentBounds.width, // Keep current width (may have been resized)
+        height: mainWindow.originalHeight, // Restore original height
         x: currentBounds.x,
         y: currentBounds.y
       }, true);
-      mainWindow.setMinimumSize(320, 260);
-      mainWindow.setMaximumSize(maxWidth, maxHeight);
       mainWindow.isMinimizedTab = false;
 
       // Remove move listener
@@ -519,13 +518,18 @@ function handleMinimize(event) {
         mainWindow.moveListener = null;
       }
     } else {
-      // Save current bounds before minimizing
-      mainWindow.originalBounds = { ...bounds };
+      // Save current height before minimizing (width is shared)
+      mainWindow.originalHeight = bounds.height;
 
-      // Minimize to small tab - keep width, only change height
-      mainWindow.setResizable(false);
-      mainWindow.setMinimumSize(bounds.width, 55);
-      mainWindow.setMaximumSize(bounds.width, 55);
+      // Get screen width for max width constraint
+      const { screen } = require('electron');
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width: screenWidth } = primaryDisplay.workAreaSize;
+      const maxWidth = Math.floor(screenWidth * 0.9);
+
+      // Minimize to small tab - allow width resize, lock height to 55
+      mainWindow.setMinimumSize(320, 55);
+      mainWindow.setMaximumSize(maxWidth, 55);
       mainWindow.setBounds({
         width: bounds.width,
         height: 55,

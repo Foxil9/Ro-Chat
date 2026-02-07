@@ -21,7 +21,13 @@ class RoChatApp {
     if (this.isInitialized) return;
 
     try {
-      // Load and apply saved theme
+      // Ensure theme class is on body (html already has it from inline script)
+      const htmlTheme = document.documentElement.className;
+      if (htmlTheme && !document.body.className.includes('theme-')) {
+        document.body.className = htmlTheme;
+      }
+
+      // Load and apply saved theme (this will sync with html)
       const savedTheme = this.loadSavedTheme();
       this.applyTheme(savedTheme);
 
@@ -435,17 +441,22 @@ class RoChatApp {
    */
   applyTheme(theme) {
     const body = document.body;
+    const html = document.documentElement;
+
+    // Remove theme classes from both body and html
     body.classList.remove('theme-light', 'theme-dark', 'theme-auto');
+    html.classList.remove('theme-light', 'theme-dark', 'theme-auto');
 
     if (theme === 'auto') {
       // Check system preference
-      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        body.classList.add('theme-dark');
-      } else {
-        body.classList.add('theme-light');
-      }
+      const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const themeClass = isDark ? 'theme-dark' : 'theme-light';
+      body.classList.add(themeClass);
+      html.classList.add(themeClass);
     } else {
-      body.classList.add(`theme-${theme}`);
+      const themeClass = `theme-${theme}`;
+      body.classList.add(themeClass);
+      html.classList.add(themeClass);
     }
   }
 

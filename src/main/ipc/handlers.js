@@ -618,13 +618,41 @@ function handleSetOpacity(event, opacity) {
  * Handle open settings window
  */
 function handleOpenSettings(event) {
-  const { BrowserWindow } = require('electron');
+  const { BrowserWindow, app, nativeTheme } = require('electron');
   const path = require('path');
+  const fs = require('fs');
 
   // If settings window already exists, focus it
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     settingsWindow.focus();
     return { success: true };
+  }
+
+  // Get theme-appropriate background color (same logic as main window)
+  let bgColor = '#0a0c14'; // Default dark
+  try {
+    const userDataPath = app.getPath('userData');
+    const settingsPath = path.join(userDataPath, 'rochat-settings.json');
+    let theme = 'auto';
+
+    if (fs.existsSync(settingsPath)) {
+      const settingsData = fs.readFileSync(settingsPath, 'utf8');
+      const settings = JSON.parse(settingsData);
+      theme = settings.theme || 'auto';
+    }
+
+    let useLight = false;
+    if (theme === 'light') {
+      useLight = true;
+    } else if (theme === 'dark') {
+      useLight = false;
+    } else if (theme === 'auto') {
+      useLight = !nativeTheme.shouldUseDarkColors;
+    }
+
+    bgColor = useLight ? '#FAF8F5' : '#0a0c14';
+  } catch (error) {
+    logger.warn('Failed to determine theme for settings window', { error: error.message });
   }
 
   // Create new settings window
@@ -633,7 +661,7 @@ function handleOpenSettings(event) {
     height: 600,
     resizable: false,
     frame: false,
-    backgroundColor: '#0a0c14',
+    backgroundColor: bgColor, // Dynamic based on saved theme
     parent: mainWindow,
     modal: false,
     show: false, // Don't show until positioned
@@ -697,12 +725,40 @@ function handleResetPosition(event) {
 }
 
 /**
- * Handle apply theme - sends theme to main window
+ * Handle apply theme - sends theme to main window and saves to file
  */
 function handleApplyTheme(event, theme) {
+  const fs = require('fs');
+  const path = require('path');
+  const { app } = require('electron');
+
+  try {
+    // Save theme to file for main process to read on next startup
+    const userDataPath = app.getPath('userData');
+    const settingsPath = path.join(userDataPath, 'rochat-settings.json');
+
+    // Read existing settings or create new object
+    let settings = {};
+    if (fs.existsSync(settingsPath)) {
+      const settingsData = fs.readFileSync(settingsPath, 'utf8');
+      settings = JSON.parse(settingsData);
+    }
+
+    // Update theme
+    settings.theme = theme;
+
+    // Write back to file
+    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+    logger.info('Theme saved to file', { theme });
+  } catch (error) {
+    logger.error('Failed to save theme to file', { error: error.message });
+  }
+
+  // Send theme change to main window
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('theme:changed', theme);
   }
+
   return { success: true };
 }
 

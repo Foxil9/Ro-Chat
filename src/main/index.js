@@ -1,7 +1,8 @@
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, nativeTheme } = require('electron');
 const logger = require('./logging/logger');
 const { registerHandlers, setMainWindow, setupDetectorEvents, setupSocketEvents } = require('./ipc/handlers');
 const detector = require('./detection/detector');
@@ -20,6 +21,44 @@ app.commandLine.appendSwitch('disable-features', 'OutOfBlinkCors');
 // app.disableHardwareAcceleration();
 
 /**
+ * Get theme-appropriate background color
+ * Reads from stored settings or falls back to system preference
+ */
+function getBackgroundColor() {
+  try {
+    // Try to read settings from userData directory
+    const userDataPath = app.getPath('userData');
+    const settingsPath = path.join(userDataPath, 'rochat-settings.json');
+
+    let theme = 'auto'; // Default
+
+    if (fs.existsSync(settingsPath)) {
+      const settingsData = fs.readFileSync(settingsPath, 'utf8');
+      const settings = JSON.parse(settingsData);
+      theme = settings.theme || 'auto';
+    }
+
+    // Determine if we should use light or dark
+    let useLight = false;
+
+    if (theme === 'light') {
+      useLight = true;
+    } else if (theme === 'dark') {
+      useLight = false;
+    } else if (theme === 'auto') {
+      // Use system preference
+      useLight = !nativeTheme.shouldUseDarkColors;
+    }
+
+    // Return appropriate background color
+    return useLight ? '#FAF8F5' : '#0a0c14'; // Warm cream for light, dark for dark
+  } catch (error) {
+    logger.warn('Failed to determine theme, defaulting to dark', { error: error.message });
+    return '#0a0c14'; // Fallback to dark
+  }
+}
+
+/**
  * Create main browser window
  */
 function createWindow() {
@@ -31,6 +70,10 @@ function createWindow() {
   const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
   const maxWidth = Math.floor(screenWidth * 0.9);
   const maxHeight = Math.floor(screenHeight * 0.9);
+
+  // Get theme-appropriate background color
+  const bgColor = getBackgroundColor();
+  logger.info('Using background color', { color: bgColor });
 
   mainWindow = new BrowserWindow({
     width: 380,
@@ -44,7 +87,7 @@ function createWindow() {
     transparent: false,
     alwaysOnTop: false, // Start disabled, enable after login
     resizable: true,
-    backgroundColor: '#0a0c14',
+    backgroundColor: bgColor, // Dynamic based on saved theme
     roundedCorners: true,
     center: true,
     webPreferences: {

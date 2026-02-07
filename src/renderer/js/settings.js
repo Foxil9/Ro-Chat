@@ -26,6 +26,12 @@ class SettingsManager {
     // Load settings from localStorage
     this.loadSettings();
 
+    // Ensure theme class is on body (html already has it from inline script)
+    const htmlTheme = document.documentElement.className;
+    if (htmlTheme && !document.body.className.includes('theme-')) {
+      document.body.className = htmlTheme;
+    }
+
     // Apply settings
     this.applySettings();
 
@@ -52,12 +58,17 @@ class SettingsManager {
   }
 
   /**
-   * Save settings to localStorage
+   * Save settings to localStorage and file
    */
   saveSettings() {
     try {
       localStorage.setItem('rochat-settings', JSON.stringify(this.settings));
       console.log('Settings saved:', this.settings);
+
+      // Also save theme to file via IPC for main process to read on startup
+      if (window.electronAPI?.settings?.applyTheme) {
+        window.electronAPI.settings.applyTheme(this.settings.theme);
+      }
     } catch (error) {
       console.error('Failed to save settings:', error);
     }
@@ -151,24 +162,32 @@ class SettingsManager {
    */
   applyTheme(theme) {
     const body = document.body;
+    const html = document.documentElement;
+
+    // Remove theme classes from both body and html
     body.classList.remove('theme-light', 'theme-dark', 'theme-auto');
+    html.classList.remove('theme-light', 'theme-dark', 'theme-auto');
 
     if (theme === 'auto') {
       // Check system preference
-      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        body.classList.add('theme-dark');
-      } else {
-        body.classList.add('theme-light');
-      }
+      const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const themeClass = isDark ? 'theme-dark' : 'theme-light';
+      body.classList.add(themeClass);
+      html.classList.add(themeClass);
     } else {
-      body.classList.add(`theme-${theme}`);
+      const themeClass = `theme-${theme}`;
+      body.classList.add(themeClass);
+      html.classList.add(themeClass);
     }
 
     // Listen for system theme changes if in auto mode
     if (theme === 'auto' && window.matchMedia) {
       window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
         body.classList.remove('theme-light', 'theme-dark');
-        body.classList.add(e.matches ? 'theme-dark' : 'theme-light');
+        html.classList.remove('theme-light', 'theme-dark');
+        const themeClass = e.matches ? 'theme-dark' : 'theme-light';
+        body.classList.add(themeClass);
+        html.classList.add(themeClass);
       });
     }
   }

@@ -345,6 +345,352 @@ body.theme-light .chat-tabs {
     border-bottom: 3px solid var(--border-color);
 }
 
+/* Chat Messages - Remove dark gradient shadow background */
+body.theme-light .chat-messages {
+    background: var(--bg-primary) !important; /* Clean flat warm cream background */
+}
+
+/* ============================================
+   LIGHT MODE CHAT ELEMENTS
+   Make all elements visible with borders and backgrounds
+   ============================================ */
+
+/* Message Bubbles - Strong borders and backgrounds */
+body.theme-light .msg-bubble {
+    background: var(--bg-secondary) !important; /* Soft tan background */
+    color: var(--text-primary) !important;
+    border: 2px solid var(--border-color) !important;
+}
+
+/* Remote (other users) message bubbles - Use accent color */
+body.theme-light .chat-msg.remote .msg-bubble {
+    background: var(--bg-tertiary) !important; /* Warm peach */
+    border-color: rgba(255, 107, 53, 0.3) !important; /* Light orange tint */
+}
+
+/* Profile Pictures - Visible borders */
+body.theme-light .msg-profile-pic {
+    border: 2px solid var(--border-color);
+    background: var(--bg-tertiary);
+}
+
+/* Message Display Names */
+body.theme-light .msg-display-name {
+    color: var(--text-primary) !important;
+}
+
+/* Message Usernames */
+body.theme-light .msg-username {
+    color: var(--text-secondary) !important;
+}
+
+/* Message Timestamps */
+body.theme-light .msg-time {
+    color: var(--text-muted) !important;
+}
+
+/* System Messages - Visible with border */
+body.theme-light .system-msg {
+    background: rgba(255, 107, 53, 0.08) !important; /* Light orange tint */
+    color: var(--text-secondary) !important;
+    border: 2px solid rgba(255, 107, 53, 0.2) !important;
+    border-radius: 8px;
+}
+
+body.theme-light .system-msg::before {
+    color: var(--primary) !important;
+}
+
+/* Typing Indicator */
+body.theme-light .typing-indicator {
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-secondary);
+}
+
+body.theme-light .typing-avatar {
+    border: 2px solid var(--border-color);
+}
+
+body.theme-light .typing-bubbles span {
+    background: var(--primary);
+}
+
+/* Message Dividers (Date Separators) */
+body.theme-light .msg-divider::before,
+body.theme-light .msg-divider::after {
+    background: linear-gradient(to right, transparent, var(--border-color), transparent) !important;
+}
+
+body.theme-light .msg-divider span {
+    background: var(--bg-secondary) !important;
+    color: var(--text-secondary) !important;
+    border: 2px solid var(--border-color);
+    border-radius: 16px;
+}
+
+/* Message Reactions */
+body.theme-light .msg-reactions .reaction-item {
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+body.theme-light .msg-reactions .reaction-item:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--primary);
+}
+
+/* Message Action Buttons */
+body.theme-light .msg-action-btn {
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    color: var(--text-secondary);
+}
+
+body.theme-light .msg-action-btn:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+body.theme-light .msg-action-btn.delete-btn:hover {
+    background: #E74C3C;
+    border-color: #E74C3C;
+    color: white;
+}
+
+/* Rejected/Moderated Messages */
+body.theme-light .msg-rejected-notice {
+    background: rgba(157, 139, 126, 0.15) !important; /* Warm brown tint */
+    border: 2px solid rgba(157, 139, 126, 0.3) !important;
+    color: var(--text-muted) !important;
+}
+
+body.theme-light .msg-bubble.rejected-bubble {
+    background: rgba(157, 139, 126, 0.1) !important;
+    border: 2px solid rgba(157, 139, 126, 0.25) !important;
+    color: var(--text-muted) !important;
+}
+
+body.theme-light .msg-profile-pic.rejected-avatar {
+    background: rgba(157, 139, 126, 0.2) !important;
+    border: 2px solid rgba(157, 139, 126, 0.3) !important;
+}
+
+body.theme-light .msg-profile-pic.rejected-avatar i {
+    color: var(--text-muted);
+}
+
+/* ============================================
+   LIGHT MODE SETTINGS PAGE
+   Complete theme adaptation for settings window
+   ============================================ */
+
+/* Settings Container */
+body.theme-light .settings-container {
+    background: rgba(250, 248, 245, 0.95) !important; /* Warm cream with transparency */
+    border: 2px solid var(--border-color) !important;
+}
+
+/* Modal Dialog (if used) */
+body.theme-light .modal-dialog {
+    background: var(--bg-primary) !important;
+    border: 3px solid var(--border-color) !important;
+}
+
+/* Modal Header */
+body.theme-light .modal-header {
+    background: var(--bg-secondary) !important;
+    border-bottom: 2px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Modal Content */
+body.theme-light .modal-content {
+    background: var(--bg-primary) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Settings Window Specific Overrides (from inline styles in settings.html) */
+
+/* Settings Header */
+body.theme-light .settings-header {
+    background: var(--bg-secondary) !important;
+    border-bottom: 2px solid var(--border-color) !important;
+}
+
+body.theme-light .settings-header h2 {
+    color: var(--text-primary) !important;
+}
+
+/* Settings Groups */
+body.theme-light .setting-group h3 {
+    color: var(--text-primary) !important;
+    border-bottom: 2px solid var(--border-color) !important;
+}
+
+/* Setting Items */
+body.theme-light .setting-item label {
+    color: var(--text-secondary) !important;
+}
+
+/* Select Dropdowns */
+body.theme-light .setting-item select,
+body.theme-light select {
+    background: var(--bg-secondary) !important;
+    border: 2px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+body.theme-light .setting-item select:focus,
+body.theme-light select:focus {
+    border-color: var(--primary) !important;
+    outline: none;
+}
+
+body.theme-light .setting-item select:hover,
+body.theme-light select:hover {
+    background: var(--bg-tertiary) !important;
+}
+
+/* Range Sliders */
+body.theme-light input[type="range"] {
+    background: var(--border-color) !important;
+}
+
+body.theme-light input[type="range"]::-webkit-slider-thumb {
+    background: var(--primary) !important;
+}
+
+body.theme-light input[type="range"]::-webkit-slider-thumb:hover {
+    background: var(--primary-hover) !important;
+}
+
+body.theme-light .slider-value {
+    color: var(--primary) !important;
+}
+
+body.theme-light .slider-label {
+    color: var(--text-secondary) !important;
+}
+
+/* Checkboxes */
+body.theme-light input[type="checkbox"] {
+    accent-color: var(--primary);
+    border: 2px solid var(--border-color);
+}
+
+/* Buttons in Settings */
+body.theme-light .btn-danger {
+    background: #E74C3C;
+    border: 2px solid #E74C3C;
+    color: white;
+}
+
+body.theme-light .btn-danger:hover {
+    background: #C0392B;
+    border-color: #C0392B;
+}
+
+/* Settings Content Background */
+body.theme-light .settings-content {
+    background: var(--bg-primary) !important;
+}
+
+/* Settings Window Body Override */
+body.theme-light.settings-window-body {
+    background: var(--bg-primary) !important;
+}
+
+/* ============================================
+   LIGHT MODE TOASTS & NOTIFICATIONS
+   ============================================ */
+
+/* Toast Notifications */
+body.theme-light .toast {
+    background: var(--bg-primary) !important;
+    border: 2px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+body.theme-light .toast-success {
+    border-left: 3px solid var(--accent) !important; /* Teal for success */
+}
+
+body.theme-light .toast-error {
+    border-left: 3px solid #E74C3C !important; /* Warm red for error */
+}
+
+body.theme-light .toast-icon {
+    background: var(--bg-secondary);
+    color: var(--primary);
+}
+
+body.theme-light .toast-title {
+    color: var(--text-primary) !important;
+}
+
+body.theme-light .toast-message {
+    color: var(--text-secondary) !important;
+}
+
+/* ============================================
+   LIGHT MODE LOGIN CONTAINER
+   ============================================ */
+
+body.theme-light .login-container {
+    background: rgba(250, 248, 245, 0.95) !important;
+    border: 3px solid var(--border-color) !important;
+}
+
+body.theme-light .login-container h1 {
+    color: var(--text-primary) !important;
+}
+
+body.theme-light .login-container .subtitle {
+    color: var(--text-secondary) !important;
+}
+
+body.theme-light .login-container .status {
+    color: var(--text-secondary) !important;
+}
+
+/* ============================================
+   LIGHT MODE COOLDOWN WARNING
+   ============================================ */
+
+body.theme-light .cooldown-warning {
+    background: rgba(255, 107, 53, 0.1) !important; /* Light orange background */
+    border: 2px solid rgba(255, 107, 53, 0.4) !important;
+    color: var(--text-primary) !important;
+}
+
+body.theme-light .cooldown-overlay {
+    background: rgba(255, 107, 53, 0.95) !important;
+    border-top: 3px solid var(--primary) !important;
+    color: white !important;
+}
+
+body.theme-light .cooldown-progress {
+    background: rgba(255, 255, 255, 0.3) !important;
+}
+
+body.theme-light .cooldown-progress-bar {
+    background: white !important;
+}
+
+body.theme-light #message-input.cooldown-disabled {
+    background: rgba(255, 107, 53, 0.08) !important;
+    border-color: rgba(255, 107, 53, 0.3) !important;
+    color: var(--text-muted) !important;
+}
+
+body.theme-light #message-input.cooldown-disabled::placeholder {
+    color: var(--text-muted);
+}
+
 /* ============================================
    SETTINGS PAGE LIGHT MODE OVERRIDES
    Forces theme colors over inline styles
@@ -489,6 +835,89 @@ body.theme-auto {
         border-color: var(--primary);
         border-width: 3px;
         color: white;
+    }
+
+    /* Remove dark gradient for auto theme light mode */
+    body.theme-auto .chat-messages {
+        background: var(--bg-primary) !important;
+    }
+
+    /* Chat Elements for Auto Theme Light Mode */
+    body.theme-auto .msg-bubble {
+        background: var(--bg-secondary) !important;
+        color: var(--text-primary) !important;
+        border: 2px solid var(--border-color) !important;
+    }
+
+    body.theme-auto .chat-msg.remote .msg-bubble {
+        background: var(--bg-tertiary) !important;
+        border-color: rgba(255, 107, 53, 0.3) !important;
+    }
+
+    body.theme-auto .msg-profile-pic {
+        border: 2px solid var(--border-color);
+        background: var(--bg-tertiary);
+    }
+
+    body.theme-auto .msg-display-name {
+        color: var(--text-primary) !important;
+    }
+
+    body.theme-auto .msg-username {
+        color: var(--text-secondary) !important;
+    }
+
+    body.theme-auto .msg-time {
+        color: var(--text-muted) !important;
+    }
+
+    body.theme-auto .system-msg {
+        background: rgba(255, 107, 53, 0.08) !important;
+        color: var(--text-secondary) !important;
+        border: 2px solid rgba(255, 107, 53, 0.2) !important;
+    }
+
+    body.theme-auto .typing-indicator {
+        background: var(--bg-secondary);
+        border: 2px solid var(--border-color);
+        color: var(--text-secondary);
+    }
+
+    body.theme-auto .msg-divider span {
+        background: var(--bg-secondary) !important;
+        color: var(--text-secondary) !important;
+        border: 2px solid var(--border-color);
+    }
+
+    body.theme-auto .msg-action-btn {
+        background: var(--bg-secondary);
+        border: 2px solid var(--border-color);
+        color: var(--text-secondary);
+    }
+
+    /* Settings Page for Auto Theme Light Mode */
+    body.theme-auto .settings-container {
+        background: rgba(250, 248, 245, 0.95) !important;
+        border: 2px solid var(--border-color) !important;
+    }
+
+    body.theme-auto .settings-header {
+        background: var(--bg-secondary) !important;
+        border-bottom: 2px solid var(--border-color) !important;
+    }
+
+    body.theme-auto .setting-item select {
+        background: var(--bg-secondary) !important;
+        border: 2px solid var(--border-color) !important;
+        color: var(--text-primary) !important;
+    }
+
+    body.theme-auto input[type="range"] {
+        background: var(--border-color) !important;
+    }
+
+    body.theme-auto input[type="range"]::-webkit-slider-thumb {
+        background: var(--primary) !important;
     }
 }
 

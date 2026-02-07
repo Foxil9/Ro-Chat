@@ -2,17 +2,51 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+
+  <!-- CRITICAL: Apply theme BEFORE any CSS loads to prevent flash -->
+  <script>
+    (function() {
+      try {
+        const saved = localStorage.getItem('rochat-settings');
+        let theme = 'auto'; // Default to auto (system preference)
+
+        if (saved) {
+          const settings = JSON.parse(saved);
+          theme = settings.theme || 'auto';
+        }
+
+        // Determine theme class
+        let themeClass;
+        if (theme === 'auto') {
+          // Use system preference (matches main process logic)
+          const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          themeClass = isDark ? 'theme-dark' : 'theme-light';
+        } else {
+          themeClass = 'theme-' + theme;
+        }
+
+        // Apply to html immediately (BLOCKING - runs before CSS loads)
+        document.documentElement.className = themeClass;
+      } catch (e) {
+        // Fallback to system preference on error
+        const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.className = isDark ? 'theme-dark' : 'theme-light';
+      }
+    })();
+  </script>
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com; img-src 'self' https: data:;">
   <title>RoChat - Settings</title>
   <link rel="stylesheet" href="../css/main.css">
   <link rel="stylesheet" href="../css/themes.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
   <style>
     body {
       margin: 0;
       padding: 0;
-      background: var(--bg-dark-base);
+      background: var(--bg-primary); /* Use theme variable instead of hardcoded dark */
       border-radius: 16px;
       overflow: hidden;
     }
